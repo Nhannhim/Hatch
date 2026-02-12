@@ -56,6 +56,7 @@ body{font-family:'Quicksand',sans-serif;background:#FFFEF9;color:#333334;margin:
 @keyframes eggWobble{0%,100%{transform:rotate(0)}20%{transform:rotate(-8deg)}40%{transform:rotate(6deg)}60%{transform:rotate(-4deg)}80%{transform:rotate(2deg)}}
 @keyframes eggGlow{0%,100%{filter:drop-shadow(0 2px 8px rgba(180,130,20,.35)) drop-shadow(0 0 0 rgba(255,215,0,0))}50%{filter:drop-shadow(0 4px 14px rgba(180,130,20,.5)) drop-shadow(0 0 10px rgba(255,223,107,.25))}}
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes slideDown{from{transform:translateY(0)}to{transform:translateY(100%)}}
 @keyframes eggFlipOpen{0%{transform:perspective(400px) rotateY(0deg) scale(1)}50%{transform:perspective(400px) rotateY(90deg) scale(.9)}100%{transform:perspective(400px) rotateY(180deg) scale(.75)}}
 @keyframes eggFlipClose{0%{transform:perspective(400px) rotateY(180deg) scale(.75)}50%{transform:perspective(400px) rotateY(90deg) scale(.9)}100%{transform:perspective(400px) rotateY(0deg) scale(1)}}
 @keyframes rayBurst{from{opacity:0;transform:translate(var(--rx),var(--ry)) scale(.3)}to{opacity:1;transform:translate(var(--tx),var(--ty)) scale(1)}}
@@ -208,7 +209,7 @@ function MiniChart({ data, color, chartId, onHover }) {
         {pts.map((p, i) => <text key={"t" + i} x={p.x} y={H - 1} textAnchor="middle" fill="#A09080" fontSize="9" fontFamily="Quicksand" fontWeight="600">{p.l}</text>)}
         {tip && <g><line x1={tip.x} y1={PY} x2={tip.x} y2={H - PY} stroke={color} strokeWidth="1" strokeDasharray="4,4" opacity=".4" /><circle cx={tip.x} cy={tip.y} r="6" fill={color} stroke="#fff" strokeWidth="3" /></g>}
       </svg>
-      {tip && <div style={{ position: "absolute", top: 6, right: 6, background: "#fff", border: "1px solid #33333440", borderRadius: 12, padding: "6px 12px", fontFamily: "JetBrains Mono", fontSize: 12 }}><span style={{ color: "#33333480" }}>{tip.l}</span><span style={{ marginLeft: 8, color, fontWeight: 700 }}>{fmt(tip.v)}</span></div>}
+      {tip && <div style={{ position: "absolute", top: 6, right: 6, background: "#fff", borderRadius: 12, padding: "6px 12px", fontFamily: "JetBrains Mono", fontSize: 12 }}><span style={{ color: "#33333480" }}>{tip.l}</span><span style={{ marginLeft: 8, color, fontWeight: 700 }}>{fmt(tip.v)}</span></div>}
     </div>
   );
 }
@@ -313,7 +314,7 @@ function CalendarPage({ onNavigate }) {
         {/* Calendar / List View */}
         <div>
           {viewMode === "calendar" && (
-            <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden" }}>
+            <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
               {/* Day headers */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
@@ -396,7 +397,7 @@ function CalendarPage({ onNavigate }) {
         {/* Detail Panel */}
         {selectedDate && (
           <div className="calendar-sidebar" style={{ animation: "slideRight .3s ease both" }}>
-            <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 20, position: "sticky", top: 80 }}>
+            <div style={{ background: "#fff", borderRadius: 14, padding: 20, position: "sticky", top: 80 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
                 <div>
                   <div style={{ fontSize: 11, color: "#33333480", fontWeight: 700, textTransform: "uppercase" }}>
@@ -458,7 +459,7 @@ function CalendarPage({ onNavigate }) {
       </div>
 
       {/* Upcoming Events Timeline */}
-      <div style={{ marginTop: 24, background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, animation: "fadeUp .5s ease .2s both" }}>
+      <div style={{ marginTop: 24, background: "#fff", borderRadius: 14, padding: 12, animation: "fadeUp .5s ease .2s both" }}>
         <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Coming Up Next</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 6 }}>
           {upcoming.map((ev, i) => {
@@ -495,7 +496,7 @@ function CalendarWidget({ onViewAll }) {
   const upcoming = calendarEvents.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 12, padding: "8px 10px", animation: "fadeUp .5s ease .35s both" }}>
+    <div style={{ background: "#fff", borderRadius: 12, padding: "8px 10px", animation: "fadeUp .5s ease .35s both" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
           <span style={{ fontSize: 10 }}></span>
@@ -602,7 +603,7 @@ function AlertsPage({ alerts }) {
 
       {/* ── Active Alerts ── */}
       {filtered.map((a, i) => (
-        <div key={a.id} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: "18px 22px", marginBottom: 12, borderLeft: "4px solid " + sCol[a.severity], animation: "fadeUp .4s ease " + (i * .05) + "s both" }}>
+        <div key={a.id} style={{ background: "#fff", borderRadius: 14, padding: "18px 22px", marginBottom: 12, borderLeft: "4px solid " + sCol[a.severity], animation: "fadeUp .4s ease " + (i * .05) + "s both" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <Icon name={a.icon} size={12} />
             <div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{a.title}</div></div>
@@ -629,7 +630,7 @@ function CreateBasketModal({ onClose, onCreate }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(45,32,22,.4)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onClose}>
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 16, width: "calc(100% - 24px)", maxWidth: 360, maxHeight: "90vh", overflow: "auto", animation: "popIn .4s ease" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: "#fff", borderRadius: 16, width: "calc(100% - 24px)", maxWidth: 360, maxHeight: "90vh", overflow: "auto", animation: "popIn .4s ease" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "2px solid #F0E6D0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 12 }}></span><div><div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Create Your Own Hatch</div><div style={{ fontSize: 11, color: "#33333480" }}>Step {step}/2</div></div></div>
           <button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 11, color: "#33333480" }}>✕</button>
@@ -706,7 +707,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
   return (
     <div style={{ animation: "slideRight .4s ease both" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-        <button onClick={onBack} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>←</button>
+        <button onClick={onBack} style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>←</button>
         <Icon name={basket.icon} size={36} />
         <div style={{ flex: 1 }}><div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{basket.name}</div><div style={{ fontSize: 12, color: "#33333480" }}>{basket.strategy} · {stocks.length} instruments</div></div>
         {rm && <button onClick={() => setShowMetrics(!showMetrics)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 14, border: "1.5px solid " + (showMetrics ? c.a : "#F0E6D0"), background: showMetrics ? c.l : "#fff", cursor: "pointer", fontSize: 11, fontWeight: 800, fontFamily: "Quicksand", color: showMetrics ? c.a : "#8A7040", transition: "all .2s" }}>
@@ -716,14 +717,14 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
         <StatCard label="Value" value={fmt(tv)} icon={basket.icon} color={basket.color} /><StatCard label="Total P&L" value={fmtS(tp)} sub={pct((tp / tc) * 100)} icon={tp >= 0 ? "chart-up" : "chart-down"} color={tp >= 0 ? "sage" : "coral"} /><StatCard label="Today" value={fmtS(dp)} icon="bolt" color={dp >= 0 ? "sage" : "coral"} /><StatCard label="Cost" value={fmt(tc)} icon="money" color="golden" />
       </div>
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 10 }}><div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Performance</div><MiniChart data={history} color={c.a} chartId={"d_" + basket.id} /></div>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 10 }}><div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Performance</div><MiniChart data={history} color={c.a} chartId={"d_" + basket.id} /></div>
 
       {/* ── Risk Metrics Panel ── */}
       {showMetrics && rm ? (
         <div style={{ animation: "fadeUp .3s ease both", marginBottom: 10 }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 6 }}>
             {/* Key Ratios */}
-            <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, padding: 6 }}>
+            <div style={{ background: "#fff", borderRadius: 10, padding: 6 }}>
               <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Key Ratios</div>
               {[
                 { label: "Sharpe", val: rm.sharpe.toFixed(2), good: rm.sharpe > 1 },
@@ -740,7 +741,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
               ))}
             </div>
             {/* Risk Profile */}
-            <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, padding: 6 }}>
+            <div style={{ background: "#fff", borderRadius: 10, padding: 6 }}>
               <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Risk Profile</div>
               {[
                 { label: "Beta", val: rm.beta.toFixed(2), good: rm.beta < 1.3, bar: rm.beta / 2 },
@@ -781,7 +782,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
             stocks.forEach(s => { const a = s.asset || "equity"; assetCounts[a] = (assetCounts[a] || 0) + 1; });
             const total = stocks.length;
             return (
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 18, padding: "14px 18px", marginBottom: 8 }}>
+              <div style={{ background: "#fff", borderRadius: 18, padding: "14px 18px", marginBottom: 8 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Asset Composition</div>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -814,7 +815,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
             <span style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: c.a, fontSize: 9 }}>Tap a stock below to {editMode}</span>
             <div style={{ display: "flex", gap: 4 }}><button onClick={() => setEditMode(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "#fff", fontWeight: 800, cursor: "pointer", fontSize: 10 }}>Cancel</button><button onClick={() => setEditMode(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: c.a, color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: 10 }}>Apply</button></div>
           </div>}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden" }}>
+          <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
             <div style={{ padding: "8px 12px", borderBottom: "1.5px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Holdings</span>
               <span style={{ fontSize: 8, color: "#33333480", fontWeight: 600 }}>{stocks.length} instruments</span>
@@ -866,7 +867,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
           </div>
 
           {/* ── Portfolio Risk Metrics ── */}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginTop: 8 }}>
+          <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 8 }}>
               {[
@@ -894,7 +895,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
           </div>
 
           {/* ── Per-Basket Risk Metrics ── */}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginTop: 8 }}>
+          <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Per-Hatch Metrics</div>
             <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #F0E6D0" }}>
               <div className="basket-metrics-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
@@ -911,7 +912,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
           </div>
 
           {/* ── Factor Exposures ── */}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginTop: 8 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginTop: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Factor Exposures</div>
             {factorExposures.map((f, fi) => {
               const overweight = f.exposure > f.benchmark;
@@ -1058,7 +1059,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
     <div style={{ animation: "slideRight .3s ease both" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <button onClick={onBack} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>←</button>
+        <button onClick={onBack} style={{ background: "#fff", borderRadius: 10, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>←</button>
         <StockLogo ticker={ticker} size={40} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{stockName}</div>
@@ -1071,7 +1072,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
 
       {/* Loading state */}
       {loading && (
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 16, padding: "40px 14px", textAlign: "center", marginBottom: 8 }}>
+        <div style={{ background: "#fff", borderRadius: 16, padding: "40px 14px", textAlign: "center", marginBottom: 8 }}>
           <div style={{ fontSize: 20, marginBottom: 6, animation: "spin 1s linear infinite", display: "inline-block" }}>
             <Icon name="rotate" size={20} color="#C48830" />
           </div>
@@ -1080,7 +1081,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
       )}
 
       {/* Price Hero */}
-      {(price > 0 || !loading) && <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 16, padding: "14px 14px 10px", marginBottom: 8 }}>
+      {(price > 0 || !loading) && <div style={{ background: "#fff", borderRadius: 16, padding: "14px 14px 10px", marginBottom: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", letterSpacing: "-1px" }}>
@@ -1119,7 +1120,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
       </div>}
 
       {/* Key Stats */}
-      {summary && <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+      {summary && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Key Stats</div>
         {[
           { label: "Prev Close", val: "$" + (summary.previousClose || 0).toFixed(2) },
@@ -1139,7 +1140,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
       </div>}
 
       {/* Technical Indicators */}
-      {summary && (summary.sma50 || summary.sma200 || summary.rsi) && <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+      {summary && (summary.sma50 || summary.sma200 || summary.rsi) && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Technical Indicators</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
           {summary.sma50 && (
@@ -1181,7 +1182,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
       </div>}
 
       {/* Performance Returns */}
-      {summary?.returns && Object.keys(summary.returns).length > 0 && <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+      {summary?.returns && Object.keys(summary.returns).length > 0 && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Performance</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
           {Object.entries(summary.returns).map(([key, val]) => (
@@ -1194,7 +1195,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
       </div>}
 
       {/* Portfolio Holdings */}
-      {holdings.length > 0 && <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+      {holdings.length > 0 && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Your Holdings</div>
         {holdings.map((h, i) => {
           const pl = (h.current - h.avgCost) * h.shares * ((h.dir || "long") === "short" ? -1 : 1);
@@ -1229,7 +1230,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
       </div>}
 
       {/* Buy / Sell */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           <button onClick={() => setOrderType(orderType === "buy" ? null : "buy")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "#5B8C5A" : "#EDF5ED", color: orderType === "buy" ? "#fff" : "#5B8C5A", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy</button>
           <button onClick={() => setOrderType(orderType === "sell" ? null : "sell")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "sell" ? "#EF5350" : "#FFEBEE", color: orderType === "sell" ? "#fff" : "#EF5350", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Sell</button>
@@ -1264,7 +1265,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
         const related = terminalFeed.filter(n => n.assets && n.assets.includes(ticker)).slice(0, 3);
         if (related.length === 0) return null;
         return (
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Related News</div>
             {related.map((n, i) => (
               <div key={n.id} style={{ padding: "6px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
@@ -1285,7 +1286,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
         const events = calendarEvents.filter(e => e.ticker === ticker).slice(0, 3);
         if (events.length === 0) return null;
         return (
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Upcoming Events</div>
             {events.map((e, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
@@ -1366,7 +1367,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
     <div style={{ animation: "slideRight .3s ease both" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <button onClick={onBack} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>←</button>
+        <button onClick={onBack} style={{ background: "#fff", borderRadius: 10, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>←</button>
         <StockLogo ticker={stock.ticker} size={40} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{stock.name}</div>
@@ -1378,7 +1379,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
       </div>
 
       {/* Price hero */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 16, padding: "14px 14px 10px", marginBottom: 8 }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "14px 14px 10px", marginBottom: 8 }}>
         <div style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", letterSpacing: "-1px" }}>${stock.current >= 1000 ? stock.current.toLocaleString() : stock.current.toFixed(2)}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
           <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color }}>{isUp ? "▲" : "▼"} {isUp ? "+" : ""}{stock.change}%</span>
@@ -1395,7 +1396,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
       </div>
 
       {/* Your Position */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>Your Position</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {[
@@ -1415,7 +1416,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
       </div>
 
       {/* Key Stats */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Key Stats</div>
         {[
           { label: "Prev Close", val: "$" + (stock._prevClose || stock.current).toFixed(2) },
@@ -1432,7 +1433,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
       </div>
 
       {/* Buy / Sell Actions */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
           <button onClick={() => setOrderType(orderType === "buy" ? null : "buy")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "#5B8C5A" : "#EDF5ED", color: orderType === "buy" ? "#fff" : "#5B8C5A", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy</button>
           <button onClick={() => setOrderType(orderType === "sell" ? null : "sell")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "sell" ? "#EF5350" : "#FFEBEE", color: orderType === "sell" ? "#fff" : "#EF5350", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Sell</button>
@@ -1475,7 +1476,8 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
 // ═══════════════ AI EXECUTION AGENT ═══════════════
 
 function AIAgent({ onNotify, onNavigate, agentInsights }) {
-  const [mode, setMode] = useState("closed"); // "closed" | "chat"
+  const [mode, setMode] = useState("closed"); // "closed" | "chat" | "closing"
+  const closeChat = () => { setMode("closing"); setTimeout(() => setMode("closed"), 350); };
   const [chatMode, setChatMode] = useState("agent"); // "agent" | "plan" | "ask"
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -1719,18 +1721,16 @@ BEHAVIOR:
   return (
     <>
 
-      {/* Golden Egg Button — white circle extension of nav bar */}
-      {/* Circle with matching border */}
-      <div style={{ position: "absolute", bottom: 8, left: "50%", marginLeft: -26, width: 52, height: 52, borderRadius: "50%", background: "#fff", border: "1px solid #33333420", zIndex: 201 }} />
-      {/* White cover to hide bottom border + nav border-top, fusing circle into bar */}
-      <div style={{ position: "absolute", bottom: 0, left: "50%", marginLeft: -27, width: 54, height: 30, background: "#fff", zIndex: 202 }} />
-      <button onClick={() => setMode(mode === "closed" ? "chat" : "closed")}
-        style={{ position: "absolute", bottom: 9, left: "50%", marginLeft: -25, width: 50, height: 50, borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", zIndex: 210, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", animation: mode === "closed" ? "eggGlow 2.5s ease infinite" : "none" }}>
+      {/* Oval behind egg with border — 7px even gap from egg */}
+      <div style={{ position: "absolute", bottom: 6, left: "50%", marginLeft: -22, width: 44, height: 57, borderRadius: "50%", background: "#fff", border: "1px solid #33333420", zIndex: 201 }} />
+      {/* Golden Egg Button */}
+      <button onClick={() => mode === "closed" ? setMode("chat") : closeChat()}
+        style={{ position: "absolute", bottom: 7, left: "50%", marginLeft: -23, width: 46, height: 56, borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", zIndex: 210, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", animation: mode === "closed" ? "eggGlow 2.5s ease infinite" : "none" }}>
         <GoldenEgg size={46} />
       </button>
 
-      {/* Chat Panel — full page slide up */}
-      {mode === "chat" && (() => {
+      {/* Chat Panel — full page slide up/down */}
+      {(mode === "chat" || mode === "closing") && (() => {
         const modeConfig = {
           agent: { icon: "bolt", label: "Agent", color: "#C48830", desc: "Autonomous execution", placeholder: "Tell Hatch what to do..." },
           plan: { icon: "compass", label: "Plan", color: "#AB47BC", desc: "Strategy before action", placeholder: "What should we plan?" },
@@ -1738,7 +1738,7 @@ BEHAVIOR:
         };
         const mc = modeConfig[chatMode];
         return (
-        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 310, display: "flex", flexDirection: "column", overflow: "hidden", animation: "slideUp .35s cubic-bezier(.22,.68,.36,1) forwards" }}>
+        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 310, display: "flex", flexDirection: "column", overflow: "hidden", animation: `${mode === "closing" ? "slideDown" : "slideUp"} .35s cubic-bezier(.22,.68,.36,1) forwards` }}>
           {/* Header */}
           <div style={{ padding: "10px 16px", borderBottom: "1px solid #F0F0F0", background: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
@@ -1750,7 +1750,7 @@ BEHAVIOR:
               style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #E8E8E8", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Icon name="plus" size={13} color="#888" />
             </button>
-            <button onClick={() => setMode("closed")}
+            <button onClick={closeChat}
               style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "#f5f5f5", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Icon name="chevron-down" size={14} color="#888" />
             </button>
@@ -1976,7 +1976,7 @@ function MacroTidesPage() {
       </div>
 
       {/* ── Tide Controller ── */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 18, padding: "16px 22px", marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
+      <div style={{ background: "#fff", borderRadius: 18, padding: "16px 22px", marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 12 }}></span>
@@ -2137,7 +2137,7 @@ function MacroTidesPage() {
           </div>
 
           {/* Right: Cascade Effects */}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 12 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
               <span style={{ fontSize: 11 }}></span>
               <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>When This Tide Rolls Over</div>
@@ -2184,7 +2184,7 @@ function MacroTidesPage() {
       )}
 
       {/* ── All Assets Ranked Table ── */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, animation: "fadeUp .4s ease .25s both" }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, animation: "fadeUp .4s ease .25s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
           <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Full Tide Map — Ranked by Elevation</div>
           <div style={{ fontSize: 10, color: "#33333480" }}>Tap any row to see cascade</div>
@@ -2425,7 +2425,7 @@ function MyBasketsPage({ onSelectBasket }) {
       </div>; })()}
 
       {/* ═══════════════ HEDGING SEESAW ═══════════════ */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: "10px 22px 18px", marginBottom: 8, animation: "fadeUp .4s ease .12s both" }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: "10px 22px 18px", marginBottom: 8, animation: "fadeUp .4s ease .12s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hedging Seesaw</div>
@@ -2537,7 +2537,7 @@ function MyBasketsPage({ onSelectBasket }) {
       </div>
 
       {/* ═══════════════ CORRELATION NETWORK ═══════════════ */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden", marginBottom: 8, animation: "fadeUp .4s ease .18s both" }}>
+      <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", marginBottom: 8, animation: "fadeUp .4s ease .18s both" }}>
         <div style={{ padding: "18px 22px", borderBottom: "2px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Correlation Network</div>
@@ -2659,7 +2659,7 @@ function MyBasketsPage({ onSelectBasket }) {
             </div>
 
             {/* Correlations list */}
-            <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, maxHeight: 300, overflow: "auto" }}>
+            <div style={{ background: "#fff", borderRadius: 14, padding: 12, maxHeight: 300, overflow: "auto" }}>
               <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>All Correlations for {node.ticker}</div>
               <div style={{ fontSize: 11, color: "#33333480", marginBottom: 12 }}>Click any row to load into seesaw · red = hedge opportunity</div>
               {nodeCorrs.map((c, i) => {
@@ -2699,7 +2699,7 @@ function MyBasketsPage({ onSelectBasket }) {
       {/* ── Top Hedges & Risk ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8, animation: "fadeUp .4s ease .25s both" }}>
         {/* Best Hedging Pairs */}
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12 }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Best Hedging Pairs</div>
           {topHedges.map((c, i) => {
             const pA = macroProducts.find(p => p.id === c.a);
@@ -2726,7 +2726,7 @@ function MyBasketsPage({ onSelectBasket }) {
         </div>
 
         {/* Asset Class Diversification */}
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12 }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Macro Diversification Score</div>
           {cats.map(cat => {
             const cc = catConfig[cat] || { color: "#33333480", icon: "chart-bar" };
@@ -2933,7 +2933,7 @@ function BrokeragesPage() {
           {available.map((broker, i) => {
             const isConnecting = connecting === broker.id;
             return (
-              <div key={broker.id} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: "18px 20px", transition: "all .3s", animation: "fadeUp .4s ease " + (i * .04) + "s both" }}
+              <div key={broker.id} style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", transition: "all .3s", animation: "fadeUp .4s ease " + (i * .04) + "s both" }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = broker.color + "44"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
@@ -2964,7 +2964,7 @@ function BrokeragesPage() {
       </div>
 
       {/* ── Order Routing Preferences ── */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginTop: 10, animation: "fadeUp .4s ease .2s both" }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginTop: 10, animation: "fadeUp .4s ease .2s both" }}>
         <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Execution Settings</div>
         <div style={{ fontSize: 11, color: "#33333480", marginBottom: 7 }}>Control how BasketTrade routes orders across your linked accounts</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
@@ -3123,7 +3123,7 @@ function NewsPage() {
       </div>
 
       {/* ── Hatch Guides & Hedging ── */}
-      {showGuides && <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease both" }}>
+      {showGuides && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hatch Guides & Hedging</div>
           <span style={{ fontSize: 8, color: "#33333480" }}>{guides.length} articles</span>
@@ -3160,7 +3160,7 @@ function NewsPage() {
       </div>}
 
       {/* ── News from X ── */}
-      {showX && <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .05s both" }}>
+      {showX && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .05s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>𝕏 Trending on X</div>
           <span style={{ fontSize: 8, color: "#5B8C5A", fontWeight: 700 }}>● Live</span>
@@ -3189,7 +3189,7 @@ function NewsPage() {
       </div>}
 
       {/* ── Analyst Reports ── */}
-      {showAnalyst && <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
+      {showAnalyst && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Analyst Reports</div>
           <span style={{ fontSize: 8, color: "#33333480" }}>{analystNotes.length} notes</span>
@@ -3213,7 +3213,7 @@ function NewsPage() {
       </div>}
 
       {/* ── Global Sector News ── */}
-      {showSector && <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
+      {showSector && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Global Sector News</div>
           <span style={{ fontSize: 8, color: "#33333480" }}>6 sectors</span>
@@ -3292,7 +3292,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
   if (acctSection === "trades") return (
     <div>
       <BackHeader title="Trade History" icon="clipboard" />
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden" }}>
+      <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1.3fr .5fr .5fr .5fr .7fr", padding: "8px 12px", borderBottom: "2px solid #F0E6D0", fontSize: 10, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, background: "#fff" }}><div>Basket</div><div>Action</div><div>Date</div><div>Status</div><div style={{ textAlign: "right" }}>Amount</div></div>
         {recentTrades.map((t, i) => <div key={t.id} style={{ display: "grid", gridTemplateColumns: "1.3fr .5fr .5fr .5fr .7fr", padding: "8px 12px", borderBottom: i < recentTrades.length - 1 ? "1px solid #F0E6D0" : "none", alignItems: "center", transition: "background .2s" }} onMouseEnter={e => e.currentTarget.style.background = "#fff"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}><Icon name={t.icon} size={10} /><span style={{ fontWeight: 800, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{t.basket}</span></div>
@@ -3311,7 +3311,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
   if (acctSection === "profile") return (
     <div>
       <BackHeader title="Profile" icon="person" />
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 14 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
         <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24, paddingBottom: 20, borderBottom: "2px solid #F0E6D0" }}>
           <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
           <div>
@@ -3342,7 +3342,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
   if (acctSection === "security") return (
     <div>
       <BackHeader title="Login & Security" icon="lock" />
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 14 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
         <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "#6B5A2E" }}>Authentication</div>
         <div style={{ padding: "14px 0", borderBottom: "1px solid #33333420", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -3376,7 +3376,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
   if (acctSection === "notifications") return (
     <div>
       <BackHeader title="Notifications" icon="bell" />
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 14 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
         <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#6B5A2E" }}>Communication</div>
         <Toggle on={emailNotifs} onToggle={() => setEmailNotifs(!emailNotifs)} label="Email notifications" />
         <Toggle on={pushNotifs} onToggle={() => setPushNotifs(!pushNotifs)} label="Push notifications" />
@@ -3393,7 +3393,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
   if (acctSection === "privacy") return (
     <div>
       <BackHeader title="Privacy" icon="shield" />
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 14 }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
         <Toggle on={dataSharing} onToggle={() => setDataSharing(!dataSharing)} label="Share anonymized data for product improvement" />
         <Toggle on={analytics} onToggle={() => setAnalytics(!analytics)} label="Usage analytics" />
         <div style={{ padding: "14px 0", borderBottom: "1px solid #33333420", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -3411,7 +3411,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
   if (acctSection === "policies") return (
     <div>
       <BackHeader title="Legal & Policies" icon="document" />
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden" }}>
+      <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
         {[
           { title: "Terms of Service", ver: "v3.2 — Updated Jan 2026", icon: "scroll" },
           { title: "Privacy Policy", ver: "v2.8 — Updated Dec 2025", icon: "lock" },
@@ -3443,7 +3443,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
     <div>
       <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
         {/* Profile header */}
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: "14px 24px", display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: "14px 24px", display: "flex", gap: 8, alignItems: "center" }}>
           <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif", flexShrink: 0 }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{user?.displayName || "Trader"}</div>
@@ -3463,7 +3463,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
       {/* ── Menu Sections ── */}
       <div style={{ display: "grid", gap: 6 }}>
         {/* Account */}
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .05s both" }}>
+        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .05s both" }}>
           <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Account</div>
           </div>
@@ -3473,7 +3473,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
         </div>
 
         {/* Security & Privacy */}
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .1s both" }}>
+        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .1s both" }}>
           <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Security & Privacy</div>
           </div>
@@ -3483,7 +3483,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
         </div>
 
         {/* Legal */}
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .15s both" }}>
+        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .15s both" }}>
           <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Legal & Support</div>
           </div>
@@ -3493,7 +3493,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
         </div>
 
         {/* Danger zone */}
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .2s both" }}>
+        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .2s both" }}>
           <MenuItem icon="door" label="Sign Out" danger onClick={onSignOut} />
         </div>
       </div>
@@ -3607,7 +3607,7 @@ function HoroscopePage() {
         {/* Signals */}
         <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Active Celestial Signals</div>
         {celestialWeather.signals.map((s, i) => (
-          <div key={i} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+          <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
               <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                 <Icon name={s.icon} size={12} />
@@ -3620,7 +3620,7 @@ function HoroscopePage() {
         ))}
 
         {/* Historical lunar pattern */}
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, padding: "8px 10px", marginTop: 6 }}>
+        <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginTop: 6 }}>
           <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Lunar Cycle → Market Pattern (50yr data)</div>
           <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 50, marginBottom: 4 }}>
             {[3,5,7,8,10,9,7,4,2,-1,-3,-4,-2,0,2,4,6,8,9,10,8,6,4,3,2,1,0,-1,3,5].map((v, i) => (
@@ -3685,7 +3685,7 @@ function HoroscopePage() {
       {view === "cycles" && <div>
         <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Astronomical Cycles × Market Correlation</div>
         {cycles.map((c, i) => (
-          <div key={i} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
+          <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                 <Icon name={c.icon} size={14} />
@@ -3809,7 +3809,7 @@ function WeatherMarketPage() {
       {view === "current" && <div>
         <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>US Regional Weather & Market Impact</div>
         {regions.map((r, i) => (
-          <div key={i} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
+          <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                 <Icon name={r.icon} size={14} />
@@ -3858,7 +3858,7 @@ function WeatherMarketPage() {
         ))}
 
         {/* Seasonal Calendar Mini */}
-        <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, padding: "8px 10px", marginTop: 6 }}>
+        <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginTop: 6 }}>
           <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Weather-Sensitive Calendar</div>
           <div className="month-grid" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 2 }}>
             {["J","F","M","A","M","J","J","A","S","O","N","D"].map((m, i) => {
@@ -3884,7 +3884,7 @@ function WeatherMarketPage() {
       {view === "alpha" && <div>
         <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Weather-Driven Trade Signals</div>
         {weatherAlpha.signals.map((s, i) => (
-          <div key={i} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
+          <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
               <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: s.color }}>{s.signal}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -3971,7 +3971,7 @@ function CurrenciesScenarioPage() {
           </button>
         ))}
       </div>
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
+      <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{p.name}</div>
           <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700 }}>{p.price} <span style={{ color: p.clr, fontSize: 9 }}>{p.change}</span></div>
@@ -4022,7 +4022,7 @@ function MacroDashboardPage({ onGoRiskLab, regime }) {
       </div>
 
       {/* ── Macro Indicators Grid ── */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 12, padding: 10, marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
+      <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Key Indicators</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {macroIndicators.map(ind => {
@@ -4046,7 +4046,7 @@ function MacroDashboardPage({ onGoRiskLab, regime }) {
       </div>
 
       {/* ── Regime History ── */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 12, padding: 10, marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Regime Timeline</div>
         {[
           { regime: "Reflation", start: "Jan 15", end: "Present", duration: "23 days", color: "#EF5350", icon: "fire", active: true },
@@ -4120,7 +4120,7 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
       </div>
 
       {/* ── 2. Hedge Recommendations (with expiration) ── */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
           <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Hedge Recommendations</div>
           <div style={{ display: "flex", gap: 2, background: "#FFFDF5", borderRadius: 8, padding: 2 }}>
@@ -4179,7 +4179,7 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
       </div>
 
       {/* ── 3. Stress Test ── */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
+      <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Stress Test Scenarios</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(80px,1fr))", gap: 6, marginBottom: 8 }}>
           {stressScenarios.map(s => {
@@ -4225,7 +4225,7 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
       </div>
 
       {/* ── 4. Portfolio Risk Metrics ── */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .2s both" }}>
+      <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .2s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
           {[
@@ -4249,7 +4249,7 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
       </div>
 
       {/* ── 5. Basket Correlations (END) ── */}
-      <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .3s both" }}>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .3s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Basket Correlations</div>
         <div className="correlation-scroll mobile-scroll-x" style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 9 }}>
           <div />
@@ -4393,6 +4393,7 @@ export default function App() {
   const goToStock = (ticker) => { if (/^[A-Z.]{1,6}$/.test(ticker)) { setViewStockTicker(ticker); setPage("stock"); setSelectedBasket(null); setPortfolioView(false); } };
 
   const filteredExplorer = activeScenario ? explorerBaskets.filter(b => b.scenario === activeScenario) : explorerBaskets;
+  const maxExplorerYoY = Math.max(...filteredExplorer.map(b => b.stocks.reduce((sum, t) => sum + (stockYoYReturns[t] || 0), 0) / b.stocks.length));
   const critCount = macroAlerts.filter(a => a.severity === "critical").length;
   const todayEvents = calendarEvents.filter(e => e.date === "2026-02-06").length;
 
@@ -4513,7 +4514,7 @@ export default function App() {
               </div>
 
               {/* Portfolio Value Hero */}
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 16, padding: 14, marginBottom: 8 }}>
+              <div style={{ background: "#fff", borderRadius: 16, padding: 14, marginBottom: 8 }}>
                 <div style={{ fontSize: 8, fontWeight: 700, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>Total Portfolio Value</div>
                 <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", letterSpacing: "-1px" }}>{fmt(tv)}</div>
                 <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
@@ -4523,7 +4524,7 @@ export default function App() {
               </div>
 
               {/* Basket Breakdown */}
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+              <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Basket Breakdown</div>
                 {myBaskets.map((b, i) => {
                   const c = CL[b.color] || CL.terracotta;
@@ -4548,7 +4549,7 @@ export default function App() {
               </div>
 
               {/* All Holdings (sparkline rows) */}
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden", marginBottom: 8 }}>
+              <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", marginBottom: 8 }}>
                 <div style={{ padding: "8px 12px", borderBottom: "1.5px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>All Holdings</span>
                   <span style={{ fontSize: 8, color: "#33333480", fontWeight: 600 }}>{allStks.length} instruments</span>
@@ -4593,7 +4594,7 @@ export default function App() {
               </div>
 
               {/* Portfolio Risk Metrics */}
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+              <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 8 }}>
                   {[
@@ -4621,7 +4622,7 @@ export default function App() {
               </div>
 
               {/* Per-Hatch Metrics */}
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+              <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Per-Hatch Metrics</div>
                 <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #F0E6D0" }}>
                   <div style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
@@ -4638,7 +4639,7 @@ export default function App() {
               </div>
 
               {/* Factor Exposures */}
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+              <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Factor Exposures</div>
                 {factorExposures.map((f, fi) => {
                   const overweight = f.exposure > f.benchmark;
@@ -4661,7 +4662,7 @@ export default function App() {
               </div>
 
               {/* Basket Correlations */}
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+              <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Basket Correlations</div>
                 <div className="correlation-scroll mobile-scroll-x" style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 9 }}>
                   <div />
@@ -4701,7 +4702,7 @@ export default function App() {
           </div>
 
           {/* ── Portfolio Hero ── */}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 18, padding: "18px 16px 14px", marginBottom: 7, animation: "fadeUp .4s ease .05s both", position: "relative", overflow: "hidden" }}>
+          <div style={{ background: "#fff", borderRadius: 18, padding: "18px 16px 14px", marginBottom: 7, animation: "fadeUp .4s ease .05s both", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 8, right: 50, fontSize: 11, opacity: 0.12, animation: "float 4s ease-in-out infinite" }}></div>
             <div style={{ position: "absolute", top: 30, right: 16, fontSize: 12, opacity: 0.08, animation: "float 3.5s ease-in-out .5s infinite" }}></div>
             <div style={{ position: "relative", zIndex: 1 }}>
@@ -4743,7 +4744,7 @@ export default function App() {
           </div>
 
           {/* ── Trade Signals ── */}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 18, padding: "8px 12px", marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
+          <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 11 }}></span>
@@ -4757,7 +4758,7 @@ export default function App() {
                 const sigCol = { BUY: "#C48830", SELL: "#EF5350", HOLD: "#FFA726", TRIM: "#FFA726" };
                 const sigBg = { BUY: "#FFF8EE", SELL: "#FFEBEE", HOLD: "#FFF3E0", TRIM: "#FFF3E0" };
                 return (
-                  <div key={s.id} onClick={() => goToStock(s.ticker)} style={{ flex: "1 1 calc(50% - 4px)", minWidth: 0, background: "#FFFDF5", border: "1px solid #F0E6D0", borderRadius: 10, padding: "7px 10px", cursor: "pointer" }}>
+                  <div key={s.id} onClick={() => goToStock(s.ticker)} style={{ flex: "1 1 calc(50% - 4px)", minWidth: 0, background: "#fff", border: "1px solid #33333420", borderRadius: 12, padding: "7px 10px", cursor: "pointer" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
                       <span style={{ fontSize: 8, fontWeight: 900, padding: "1px 5px", borderRadius: 4, background: sigBg[s.signal], color: sigCol[s.signal] }}>{s.signal}</span>
                       <span style={{ fontSize: 8, color: "#33333480" }}>{s.time}</span>
@@ -4778,8 +4779,8 @@ export default function App() {
             </div>
           </div>
 
-          {/* ── My Baskets (container box) ── */}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: "8px 12px", marginBottom: 8, animation: "fadeUp .5s ease .3s both" }}>
+          {/* ── My Baskets ── */}
+          <div style={{ marginBottom: 8, animation: "fadeUp .5s ease .3s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>My Baskets</div>
@@ -4890,7 +4891,7 @@ export default function App() {
           </div>
 
           {/* ── Realized P&L (closed trades only) ── */}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, animation: "fadeUp .5s ease .5s both" }}>
+          <div style={{ animation: "fadeUp .5s ease .5s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
               <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Realized P&L</div>
               <span style={{ fontSize: 8, color: "#33333480", fontWeight: 600 }}>Closed trades only</span>
@@ -4914,6 +4915,7 @@ export default function App() {
                     <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, color: "#EF5350" }}>{fmtS(Math.round(losses.reduce((s, t) => s + t.pl, 0)))}</div>
                   </div>
                 </div>
+                <div style={{ background: "#fff", borderRadius: 12, padding: "4px 10px", overflow: "hidden" }}>
                 {realizedTrades.map((t, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
                     <Icon name={t.icon} size={14} />
@@ -4927,6 +4929,7 @@ export default function App() {
                     </div>
                   </div>
                 ))}
+                </div>
               </>;
             })()}
           </div>
@@ -5023,7 +5026,7 @@ export default function App() {
           </div>
 
           {/* ── Stock Search Bar ── */}
-          <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 12, padding: "8px 12px", marginBottom: 10 }}>
+          <div style={{ background: "#fff", borderRadius: 12, padding: "8px 12px", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 14, color: "#33333480" }}></span>
               <input
@@ -5047,13 +5050,13 @@ export default function App() {
               return ticker.toUpperCase().includes(q) || name.includes(q);
             }).slice(0, 8);
             if (allStocks.length === 0) return (
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 12, padding: "16px", marginBottom: 10, textAlign: "center" }}>
+              <div style={{ background: "#fff", borderRadius: 12, padding: "16px", marginBottom: 10, textAlign: "center" }}>
                 <div style={{ fontSize: 24, marginBottom: 4 }}></div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480" }}>No stocks found for "{stockSearch}"</div>
               </div>
             );
             return (
-              <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
+              <div style={{ background: "#fff", borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
                 <div style={{ padding: "6px 12px", background: "#FFFDF5", borderBottom: "1px solid #33333420" }}>
                   <span style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Individual Stocks</span>
                 </div>
@@ -5097,6 +5100,7 @@ export default function App() {
               const isFlipped = !!flippedCards[b.id];
               const basketYoY = b.stocks.reduce((sum, t) => sum + (stockYoYReturns[t] || 0), 0) / b.stocks.length;
               const retColor = basketYoY >= 0 ? "#5B8C5A" : "#EF5350";
+              const isTopPerformer = basketYoY === maxExplorerYoY;
               return (
                 <div key={b.id} style={{ perspective: 800, animation: "fadeUp .3s ease " + (i * .03) + "s both" }}>
                   <div style={{
@@ -5107,17 +5111,24 @@ export default function App() {
                     {/* ═══ FRONT ═══ */}
                     <div style={{
                       position: "absolute", inset: 0, backfaceVisibility: "hidden",
-                      background: "#fff", border: "2px solid " + (inCart ? "#5B8C5A" : clr.a + "44"),
+                      backgroundImage: isTopPerformer ? "url(/gold-texture.jpeg)" : undefined,
+                      backgroundSize: isTopPerformer ? "cover" : undefined,
+                      backgroundPosition: isTopPerformer ? "center" : undefined,
+                      background: isTopPerformer ? undefined : "#fff",
                       borderRadius: 14, padding: "10px 10px 8px", cursor: "pointer",
                       display: "flex", flexDirection: "column", overflow: "hidden",
                     }}
-                      onMouseEnter={e => { if (!isFlipped) { e.currentTarget.style.borderColor = inCart ? "#5B8C5A" : clr.a; e.currentTarget.style.boxShadow = "0 6px 18px " + clr.a + "18"; }}}
-                      onMouseLeave={e => { if (!isFlipped) { e.currentTarget.style.borderColor = inCart ? "#5B8C5A" : clr.a + "44"; e.currentTarget.style.boxShadow = ""; }}}>
+                      onMouseEnter={e => { if (!isFlipped) { e.currentTarget.style.borderColor = "#33333466"; e.currentTarget.style.boxShadow = "0 6px 18px #33333412"; }}}
+                      onMouseLeave={e => { if (!isFlipped) { e.currentTarget.style.borderColor = "#33333440"; e.currentTarget.style.boxShadow = ""; }}}>
+
+                      {/* 80% white overlay to lighten gold */}
+                      {isTopPerformer && <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.8)", borderRadius: 12, pointerEvents: "none", zIndex: 0 }} />}
 
                       {/* Top row: YoY return badge + chart flip icon on far right */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "JetBrains Mono", color: retColor, background: retColor + "12", padding: "2px 6px", borderRadius: 5 }}>
-                          {basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}% <span style={{ fontSize: 6, fontWeight: 700, opacity: .7 }}>YoY</span>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, position: "relative", zIndex: 1 }}>
+                        <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "JetBrains Mono", color: isTopPerformer ? "#8B6914" : retColor, background: isTopPerformer ? "#DAA52025" : retColor + "12", padding: "2px 6px", borderRadius: 5 }}>
+                          {isTopPerformer && <span style={{ fontSize: 9, marginRight: 2 }}>👑</span>}
+                          {basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}% <span style={{ fontSize: 6, fontWeight: 700, opacity: .8 }}>YoY</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           {inCart && <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#5B8C5A", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#fff", fontSize: 8, fontWeight: 900 }}>✓</span></div>}
@@ -5129,14 +5140,14 @@ export default function App() {
                       </div>
 
                       {/* Big emoji + bold name */}
-                      <div style={{ textAlign: "center", marginBottom: 4 }} onClick={() => setSelectedShopBasket({ ...b, relevance })}>
+                      <div style={{ textAlign: "center", marginBottom: 4, position: "relative", zIndex: 1 }} onClick={() => setSelectedShopBasket({ ...b, relevance })}>
                         <div style={{ lineHeight: 1, marginBottom: 3, fontSize: 32 }}>{b.emoji}</div>
                         <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.15 }}>{b.name}</div>
                         <div style={{ fontSize: 7, color: "#33333480", fontWeight: 700, marginTop: 2 }}>{b.strategy} · {b.risk}</div>
                       </div>
 
                       {/* Ticker list — max 5 + overflow */}
-                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, margin: "4px 0 6px" }} onClick={() => setSelectedShopBasket({ ...b, relevance })}>
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, margin: "4px 0 6px", position: "relative", zIndex: 1 }} onClick={() => setSelectedShopBasket({ ...b, relevance })}>
                         {b.stocks.slice(0, 5).map(t => {
                           const yoy = stockYoYReturns[t] || 0;
                           const yoyC = yoy >= 0 ? "#5B8C5A" : "#EF5350";
@@ -5144,8 +5155,8 @@ export default function App() {
                             <div key={t} onClick={(e) => { e.stopPropagation(); goToStock(t); }} style={{
                               display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
                               fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: "#333334",
-                              background: clr.a + "08", padding: "4px 8px", borderRadius: 6,
-                              border: "1px solid " + clr.a + "18", cursor: "pointer",
+                              background: isTopPerformer ? "rgba(255,255,255,0.5)" : "#33333406", padding: "4px 8px", borderRadius: 6,
+                              border: "1px solid " + (isTopPerformer ? "rgba(218,165,32,0.15)" : "#33333410"), cursor: "pointer",
                             }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                                 <StockLogo ticker={t} size={16} />
@@ -5156,7 +5167,7 @@ export default function App() {
                           );
                         })}
                         {b.stocks.length > 5 && (
-                          <div style={{ textAlign: "center", fontSize: 8, fontWeight: 800, color: clr.a, padding: "2px 0" }}>+{b.stocks.length - 5} more</div>
+                          <div style={{ textAlign: "center", fontSize: 8, fontWeight: 800, color: "#33333480", padding: "2px 0" }}>+{b.stocks.length - 5} more</div>
                         )}
                       </div>
 
@@ -5165,11 +5176,18 @@ export default function App() {
                     {/* ═══ BACK: Metrics ═══ */}
                     <div style={{
                       position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)",
-                      background: "#fff", border: "2px solid " + clr.a + "44", borderRadius: 14, padding: "8px",
+                      backgroundImage: isTopPerformer ? "url(/gold-texture.jpeg)" : undefined,
+                      backgroundSize: isTopPerformer ? "cover" : undefined,
+                      backgroundPosition: isTopPerformer ? "center" : undefined,
+                      background: isTopPerformer ? undefined : "#fff",
+                      border: "1px solid #33333440", borderRadius: 14, padding: "8px",
                       display: "flex", flexDirection: "column", overflow: "hidden",
                     }}>
+                      {/* 80% white overlay to lighten gold */}
+                      {isTopPerformer && <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.8)", borderRadius: 12, pointerEvents: "none", zIndex: 0 }} />}
+
                       {/* Back header */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6, position: "relative", zIndex: 1 }}>
                         <Icon name={b.icon} size={12} color={clr.a} />
                         <div>
                           <div style={{ fontSize: 9, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{b.name}</div>
@@ -5178,13 +5196,13 @@ export default function App() {
                       </div>
 
                       {/* Basket YoY Return */}
-                      <div style={{ background: retColor + "0C", borderRadius: 8, padding: "6px 6px", textAlign: "center", marginBottom: 6 }}>
+                      <div style={{ background: isTopPerformer ? "#DAA52018" : retColor + "0C", borderRadius: 8, padding: "6px 6px", textAlign: "center", marginBottom: 6, position: "relative", zIndex: 1 }}>
                         <div style={{ fontSize: 6, color: "#33333480", fontWeight: 700, textTransform: "uppercase", marginBottom: 1 }}>Basket YoY Return</div>
-                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 16, fontWeight: 900, color: retColor }}>{basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}%</div>
+                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 16, fontWeight: 900, color: isTopPerformer ? "#8B6914" : retColor }}>{isTopPerformer && "👑 "}{basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}%</div>
                       </div>
 
                       {/* Risk Metrics */}
-                      {rm && <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3 }}>
+                      {rm && <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3, position: "relative", zIndex: 1 }}>
                         {[
                           { label: "Sharpe", val: rm.sharpe.toFixed(2), good: rm.sharpe > 1, icon: "ruler" },
                           { label: "Beta", val: rm.beta.toFixed(2), good: rm.beta < 1.5, icon: "chart-down" },
@@ -5203,7 +5221,7 @@ export default function App() {
                       </div>}
 
                       {/* Risk level bar */}
-                      <div style={{ marginTop: 4, padding: "4px 8px", background: clr.a + "0C", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ marginTop: 4, padding: "4px 8px", background: "#33333408", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", zIndex: 1 }}>
                         <span style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Risk Level</span>
                         <span style={{ fontSize: 9, fontWeight: 900, color: b.risk === "Low" ? "#5B8C5A" : b.risk === "Medium" ? "#FFA726" : "#EF5350" }}>{b.risk}</span>
                       </div>
@@ -5226,7 +5244,7 @@ export default function App() {
 
         {/* ══ RISK LAB ══ */}
         {page === "risklab" && !selectedBasket && <div>
-          <div style={{ display: "flex", gap: 2, background: "#fff", borderRadius: 10, padding: 2, marginBottom: 10, border: "1px solid #33333440", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 2, background: "#fff", borderRadius: 10, padding: 2, marginBottom: 10, flexWrap: "wrap" }}>
             {[{ id: "risklab", label: "Risk", icon: "flask" }, { id: "tides", label: "Tides", icon: "wave" }, { id: "weather", label: "Weather", icon: "cloud-sun" }, { id: "currencies", label: "FX", icon: "dollar" }, { id: "myeggs", label: "Eggs", icon: "egg" }, { id: "horoscope", label: "Horoscope", icon: "sparkle" }].map(t => (
               <button key={t.id} onClick={() => setRiskLabTab(t.id)}
                 style={{ flex: "1 1 auto", padding: "6px 6px", borderRadius: 7, border: "none", background: riskLabTab === t.id ? "#C48830" : "transparent", color: riskLabTab === t.id ? "#fff" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", transition: "all .2s", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}><Icon name={t.icon} size={9} color={riskLabTab === t.id ? "#fff" : "#A09080"} />{t.label}</button>
@@ -5258,6 +5276,8 @@ export default function App() {
 
         {/* ── Bottom Tab Bar with Center Egg ── */}
         <div style={{ flexShrink: 0, background: "#fff", borderTop: "1px solid #33333420", padding: "4px 0 calc(env(safe-area-inset-bottom, 6px) + 2px)", display: "flex", justifyContent: "space-around", alignItems: "flex-end", zIndex: 200, position: "relative" }}>
+          {/* Hide nav borderTop behind the oval so oval border connects to nav border */}
+          <div style={{ position: "absolute", top: -1, left: "50%", marginLeft: -22, width: 44, height: 3, background: "#fff", zIndex: 1 }} />
           {navItemsLeft.map(p => {
             const isActive = page === p.id && !selectedBasket;
             return (
