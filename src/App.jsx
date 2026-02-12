@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useAuth } from './contexts/AuthContext';
+import AuthPage from './components/AuthPage';
 import { useAgentSystem } from './hooks/useAgentSystem';
 import { Icon, EIcon, EMOJI_TO_ICON } from './components/Icons';
 import { useStockPrices } from './hooks/useStockPrices';
@@ -38,7 +40,9 @@ import {
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:wght@400;600&family=Quicksand:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;transition:all 200ms ease}
-body{font-family:'Quicksand',sans-serif;background:#FFFEF9;color:#333334}
+html{height:100%;height:100dvh;background:#FFFEF9}
+body{font-family:'Quicksand',sans-serif;background:#FFFEF9;color:#333334;margin:0 auto;padding:0;width:100%;max-width:393px;height:100%;height:100dvh;overflow:hidden}
+#root{height:100%;width:100%;overflow:hidden}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#333334;border-radius:3px;opacity:0.3}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes popIn{0%{opacity:0;transform:scale(0.9)}70%{transform:scale(1.03)}100%{opacity:1;transform:scale(1)}}
@@ -50,10 +54,43 @@ body{font-family:'Quicksand',sans-serif;background:#FFFEF9;color:#333334}
 @keyframes blink{0%,100%{box-shadow:0 0 0 0 rgba(76,175,80,0.4)}50%{box-shadow:0 0 0 8px rgba(76,175,80,0)}}
 @keyframes alertProgress{0%{width:0%}100%{width:100%}}
 @keyframes eggWobble{0%,100%{transform:rotate(0)}20%{transform:rotate(-8deg)}40%{transform:rotate(6deg)}60%{transform:rotate(-4deg)}80%{transform:rotate(2deg)}}
+@keyframes eggGlow{0%,100%{filter:drop-shadow(0 2px 8px rgba(180,130,20,.35)) drop-shadow(0 0 0 rgba(255,215,0,0))}50%{filter:drop-shadow(0 4px 14px rgba(180,130,20,.5)) drop-shadow(0 0 10px rgba(255,223,107,.25))}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes eggFlipOpen{0%{transform:perspective(400px) rotateY(0deg) scale(1)}50%{transform:perspective(400px) rotateY(90deg) scale(.9)}100%{transform:perspective(400px) rotateY(180deg) scale(.75)}}
+@keyframes eggFlipClose{0%{transform:perspective(400px) rotateY(180deg) scale(.75)}50%{transform:perspective(400px) rotateY(90deg) scale(.9)}100%{transform:perspective(400px) rotateY(0deg) scale(1)}}
+@keyframes rayBurst{from{opacity:0;transform:translate(var(--rx),var(--ry)) scale(.3)}to{opacity:1;transform:translate(var(--tx),var(--ty)) scale(1)}}
+@keyframes rayFade{from{opacity:1;transform:translate(var(--tx),var(--ty)) scale(1)}to{opacity:0;transform:translate(var(--tx),var(--ty)) scale(.8)}}
+@keyframes shimmer{0%,100%{opacity:.15}50%{opacity:.35}}
 @keyframes basketBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @keyframes cartPop{0%{transform:scale(1)}50%{transform:scale(1.25)}100%{transform:scale(1)}}
 @keyframes freshGlow{0%,100%{box-shadow:0 0 0 0 rgba(76,175,80,0.15)}50%{box-shadow:0 0 20px 4px rgba(76,175,80,0.1)}}
 .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+.mobile-scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.mobile-scroll-x::-webkit-scrollbar{display:none}
+.mobile-scroll-x{-ms-overflow-style:none;scrollbar-width:none}
+html,body{overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{touch-action:manipulation;-webkit-appearance:none}
+img{max-width:100%;height:auto}
+@media(max-width:480px){
+  .calendar-detail-grid{grid-template-columns:1fr!important}
+  .calendar-sidebar{display:none!important}
+  .ai-chat-label{display:none!important}
+  .tide-table-row,.tide-table-header{min-width:420px}
+  .holdings-grid{grid-template-columns:1fr 1fr!important}
+  .basket-metrics-grid{grid-template-columns:1fr 1fr!important}
+  .trading-table-header,.trading-table-row{grid-template-columns:auto 1fr 48px 32px 34px 44px!important}
+  .correlation-scroll{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+  .correlation-scroll::-webkit-scrollbar{display:none}
+  .explorer-card-grid{grid-template-columns:1fr 1fr!important}
+  .controls-row{flex-direction:column!important;align-items:stretch!important}
+  .controls-row>div{justify-content:center!important}
+}
+@media(max-width:360px){
+  .explorer-card-grid{grid-template-columns:1fr!important}
+  .holdings-grid{grid-template-columns:1fr!important}
+  .stat-cards-row{flex-direction:column!important}
+  .trading-table-header,.trading-table-row{grid-template-columns:auto 1fr 44px 30px 30px 40px!important;font-size:7px!important}
+}
 `;
 
 const CL = {
@@ -252,7 +289,7 @@ function CalendarPage({ onNavigate }) {
       </div>
 
       {/* Controls */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6, animation: "fadeUp .4s ease .1s both" }}>
+      <div className="controls-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6, animation: "fadeUp .4s ease .1s both" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button onClick={() => setViewMonth(Math.max(0, viewMonth - 1))} disabled={viewMonth === 0}
             style={{ width: 36, height: 36, borderRadius: 12, border: "1px solid #33333440", background: "#fff", cursor: viewMonth === 0 ? "default" : "pointer", fontSize: 12, opacity: viewMonth === 0 ? 0.4 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
@@ -272,7 +309,7 @@ function CalendarPage({ onNavigate }) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: selectedDate ? "1fr 360px" : "1fr", gap: 8, animation: "fadeUp .5s ease .15s both" }}>
+      <div className="calendar-detail-grid" style={{ display: "grid", gridTemplateColumns: selectedDate ? "1fr 360px" : "1fr", gap: 8, animation: "fadeUp .5s ease .15s both" }}>
         {/* Calendar / List View */}
         <div>
           {viewMode === "calendar" && (
@@ -358,7 +395,7 @@ function CalendarPage({ onNavigate }) {
 
         {/* Detail Panel */}
         {selectedDate && (
-          <div style={{ animation: "slideRight .3s ease both" }}>
+          <div className="calendar-sidebar" style={{ animation: "slideRight .3s ease both" }}>
             <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 20, position: "sticky", top: 80 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
                 <div>
@@ -860,7 +897,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
           <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginTop: 8 }}>
             <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Per-Hatch Metrics</div>
             <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #F0E6D0" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
+              <div className="basket-metrics-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
                 <div>Basket</div><div>Sharpe</div><div>Beta</div><div>Alpha</div>
               </div>
               {myBaskets.map((mb, mi) => { const brm = basketRiskMetrics[mb.id]; if (!brm) return null; return (
@@ -1173,7 +1210,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
                 </div>
                 <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>{pl >= 0 ? "+" : ""}{plPct.toFixed(1)}%</span>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4 }}>
+              <div className="holdings-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4 }}>
                 {[
                   { label: "Shares", val: h.shares.toString() },
                   { label: "Avg Cost", val: "$" + h.avgCost.toFixed(2) },
@@ -1438,11 +1475,13 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
 // ═══════════════ AI EXECUTION AGENT ═══════════════
 
 function AIAgent({ onNotify, onNavigate, agentInsights }) {
-  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState("closed"); // "closed" | "chat"
+  const [chatMode, setChatMode] = useState("agent"); // "agent" | "plan" | "ask"
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [executedActions, setExecutedActions] = useState(new Set());
+  const [chatTopic, setChatTopic] = useState(null);
   const chatRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -1478,6 +1517,57 @@ HEDGE RECOMMENDATIONS: ${(agentInsights?.hedges || hedgeRecommendations).map(h =
 OPTIMAL ALLOCATION (for ${(agentInsights?.regime || currentRegime).name}): ${optimalAllocation.map(a => `${a.basket}: ${a.current}% → ${a.optimal}% (${a.delta > 0 ? "+" : ""}${a.delta}%)`).join(", ")}`;
   };
 
+  const openChat = (topic, prompt) => {
+    setChatTopic(topic);
+    setMode("chat");
+    setMessages([]);
+    setTimeout(() => inputRef.current?.focus(), 200);
+    if (prompt) sendMessage(prompt);
+  };
+
+  const modeSystemPrompts = {
+    agent: `You are the AI Execution Agent for Hatch, a macro-driven portfolio management platform. You TAKE ACTIONS autonomously. Analyze data, make decisions, and execute trades.
+
+${portfolioContext()}
+
+BEHAVIOR:
+- Be decisive and action-oriented. Don't just suggest — DO.
+- Automatically include ACTION blocks for every recommendation.
+- Execute multi-step strategies: analyze → decide → act.
+- Reference live portfolio data, macro regime, and risk metrics.
+- Keep responses under 200 words. Be direct like a trading terminal.
+
+ACTION FORMAT (include on its own line):
+[ACTION:TYPE:DETAILS:LABEL]
+TYPE: REBALANCE, BUY, SELL, TRIM, HEDGE, ROTATE, ANALYZE
+Include multiple actions when needed.`,
+
+    plan: `You are the AI Planning Agent for Hatch. You CREATE DETAILED PLANS but do NOT execute. You outline step-by-step strategies for user approval.
+
+${portfolioContext()}
+
+BEHAVIOR:
+- Structure responses as numbered plans with clear steps.
+- For each step, explain the WHY, WHAT, and EXPECTED OUTCOME.
+- Include risk considerations and alternative approaches.
+- Use data from the portfolio to make plans specific and quantified.
+- End with a summary: estimated impact, timeline, and risks.
+- Do NOT include ACTION blocks — plans are for review, not execution.
+- Keep responses under 300 words. Use bullet points and structure.`,
+
+    ask: `You are the AI Research Assistant for Hatch. You ANSWER QUESTIONS and provide analysis. You do NOT suggest trades or actions unless explicitly asked.
+
+${portfolioContext()}
+
+BEHAVIOR:
+- Focus on education, explanation, and analysis.
+- Explain market concepts, portfolio metrics, and macro trends.
+- Reference the user's actual portfolio data when relevant.
+- Be conversational but precise with numbers.
+- Do NOT include ACTION blocks — this is informational only.
+- Keep responses under 250 words. Be clear and helpful.`
+  };
+
   const sendMessage = async (text) => {
     if (!text.trim() || loading) return;
     const userMsg = { role: "user", content: text };
@@ -1493,26 +1583,8 @@ OPTIMAL ALLOCATION (for ${(agentInsights?.regime || currentRegime).name}): ${opt
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `You are the AI Execution Agent for BasketTrade, a macro-driven portfolio management platform. You help users analyze their portfolio, rebalance baskets, execute trades, and make macro-informed investment decisions.
-
-You have access to the user's full portfolio data below. Use it to give specific, actionable advice.
-
-${portfolioContext()}
-
-RESPONSE FORMAT RULES:
-1. Be concise and direct — this is a trading terminal, not a blog.
-2. Use numbers and specifics from the portfolio data.
-3. When suggesting an action, include an ACTION block on its own line in exactly this format:
-   [ACTION:TYPE:DETAILS:LABEL]
-   Where TYPE is one of: REBALANCE, BUY, SELL, TRIM, HEDGE, ROTATE, ANALYZE
-   DETAILS is a short description
-   LABEL is the button text
-4. You can include multiple actions.
-5. Always reference the current macro regime when relevant.
-6. If asked to rebalance, compute the specific % shifts needed.
-7. If asked about risk, reference Sharpe, Beta, VaR, etc.
-8. Keep responses under 200 words.`,
+          max_tokens: 1200,
+          system: modeSystemPrompts[chatMode],
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
         }),
       });
@@ -1528,25 +1600,19 @@ RESPONSE FORMAT RULES:
 
   const executeAction = (action, idx) => {
     setExecutedActions(prev => new Set([...prev, idx]));
-    onNotify("✓ " + action.label + " — executed");
+    onNotify("\u2713 " + action.label + " — executed");
   };
 
   const parseMessage = (text) => {
     const parts = [];
     const lines = text.split("\n");
     let currentText = [];
-
     lines.forEach(line => {
       const actionMatch = line.match(/\[ACTION:(\w+):([^:]+):([^\]]+)\]/);
       if (actionMatch) {
-        if (currentText.length > 0) {
-          parts.push({ type: "text", content: currentText.join("\n") });
-          currentText = [];
-        }
+        if (currentText.length > 0) { parts.push({ type: "text", content: currentText.join("\n") }); currentText = []; }
         parts.push({ type: "action", actionType: actionMatch[1], details: actionMatch[2], label: actionMatch[3] });
-      } else {
-        currentText.push(line);
-      }
+      } else { currentText.push(line); }
     });
     if (currentText.length > 0) parts.push({ type: "text", content: currentText.join("\n") });
     return parts;
@@ -1554,89 +1620,211 @@ RESPONSE FORMAT RULES:
 
   const formatText = (text) => {
     return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return <strong key={i} style={{ fontWeight: 800, color: "#333334" }}>{part.slice(2, -2)}</strong>;
-      }
+      if (part.startsWith("**") && part.endsWith("**")) return <strong key={i} style={{ fontWeight: 800, color: "#333334" }}>{part.slice(2, -2)}</strong>;
       return part;
     });
   };
 
-  const quickActions = [
-    { label: "Portfolio Analysis", prompt: "Give me a full analysis of my portfolio — what's working, what's not, and what I should do about it given the current macro regime." },
-    { label: "Rebalance Plan", prompt: "Create a specific rebalance plan for my portfolio based on the current macro regime. Show me exactly what % to shift and why." },
-    { label: "Hedge Strategy", prompt: "What hedges should I put on right now given the macro environment? Be specific about instruments, sizing, and cost." },
-    { label: "Fix Clean Energy", prompt: "My Clean Energy basket is down badly. Should I cut losses, average down, or restructure it? What would you do?" },
-    { label: "Risk Check", prompt: "Run a risk check on my portfolio. What are the biggest risks I'm exposed to right now and how should I address them?" },
-    { label: "Macro Outlook", prompt: "What's the macro outlook right now? How should I position my portfolio for the next 3-6 months?" },
+  // Menu items with sun-ray positions (fan upward from center egg)
+  const menuItems = [
+    { icon: "chart-pie", label: "Portfolio", color: "#C48830", angle: 220, dist: 115, prompt: "Give me a full analysis of my portfolio — what's working, what's not, and what I should do about it given the current macro regime." },
+    { icon: "trending-up", label: "Trades", color: "#5B8C5A", angle: 252, dist: 110, prompt: "Create a specific rebalance plan for my portfolio based on the current macro regime. Show me exactly what % to shift and why." },
+    { icon: "message-circle", label: "Chat", color: "#D4A03C", angle: 270, dist: 120, prompt: null },
+    { icon: "globe", label: "Macro", color: "#42A5F5", angle: 288, dist: 110, prompt: "What's the macro outlook right now? How should I position my portfolio for the next 3-6 months?" },
+    { icon: "shield", label: "Risk", color: "#AB47BC", angle: 320, dist: 115, prompt: "What hedges should I put on right now given the macro environment? Be specific about instruments, sizing, and cost." },
   ];
+
+  // Compute x,y from angle+distance for sun-ray positioning
+  const rayPos = (angle, dist) => ({
+    tx: Math.cos(angle * Math.PI / 180) * dist + "px",
+    ty: Math.sin(angle * Math.PI / 180) * dist + "px",
+  });
+
+  // Auto-close menu after 4 seconds
+  const menuTimer = useRef(null);
+  const [menuClosing, setMenuClosing] = useState(false);
+  useEffect(() => {
+    if (mode === "menu") {
+      setMenuClosing(false);
+      menuTimer.current = setTimeout(() => {
+        setMenuClosing(true);
+        setTimeout(() => setMode("closed"), 400);
+      }, 4000);
+    }
+    return () => { if (menuTimer.current) clearTimeout(menuTimer.current); };
+  }, [mode]);
+
+  const handleMenuClick = (item) => {
+    if (menuTimer.current) clearTimeout(menuTimer.current);
+    openChat(item.label, item.prompt);
+  };
+
+  // Golden Egg SVG — clean bright warm 3D gold
+  const GoldenEgg = ({ size = 56 }) => (
+    <svg width={size} height={size * 1.25} viewBox="0 0 56 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="eggBase" cx="50%" cy="38%" r="62%" fx="48%" fy="34%">
+          <stop offset="0%" stopColor="#FFE07A" />
+          <stop offset="25%" stopColor="#F0C048" />
+          <stop offset="50%" stopColor="#DDA630" />
+          <stop offset="75%" stopColor="#C08A20" />
+          <stop offset="100%" stopColor="#9A6A14" />
+        </radialGradient>
+        <radialGradient id="eggHighlight" cx="55%" cy="22%" r="40%" fx="53%" fy="18%">
+          <stop offset="0%" stopColor="#FFF4C8" stopOpacity="0.95" />
+          <stop offset="35%" stopColor="#FFE78A" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#F0C048" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="eggLeftDark" cx="10%" cy="50%" r="42%">
+          <stop offset="0%" stopColor="#8A6010" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#8A6010" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="eggRightEdge" cx="92%" cy="45%" r="32%">
+          <stop offset="0%" stopColor="#9A6A14" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="#9A6A14" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="eggBottom" cx="50%" cy="92%" r="38%">
+          <stop offset="0%" stopColor="#7A5510" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="#7A5510" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="28" cy="37" rx="22" ry="28" fill="url(#eggBase)" />
+      <ellipse cx="28" cy="37" rx="22" ry="28" fill="url(#eggLeftDark)" />
+      <ellipse cx="28" cy="37" rx="22" ry="28" fill="url(#eggRightEdge)" />
+      <ellipse cx="28" cy="37" rx="22" ry="28" fill="url(#eggBottom)" />
+      <ellipse cx="28" cy="37" rx="22" ry="28" fill="url(#eggHighlight)" />
+      <ellipse cx="30" cy="23" rx="8" ry="8" fill="#FFF4C8" opacity="0.25" />
+    </svg>
+  );
+
+  const GoldenEggSmall = ({ size = 20 }) => (
+    <svg width={size} height={size * 1.25} viewBox="0 0 56 70" fill="none">
+      <defs>
+        <radialGradient id="eggSm" cx="50%" cy="38%" r="62%">
+          <stop offset="0%" stopColor="#FFE07A" />
+          <stop offset="35%" stopColor="#DDA630" />
+          <stop offset="70%" stopColor="#C08A20" />
+          <stop offset="100%" stopColor="#9A6A14" />
+        </radialGradient>
+        <radialGradient id="eggSmHi" cx="55%" cy="22%" r="38%">
+          <stop offset="0%" stopColor="#FFF4C8" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#F0C048" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="28" cy="37" rx="22" ry="28" fill="url(#eggSm)" />
+      <ellipse cx="28" cy="37" rx="22" ry="28" fill="url(#eggSmHi)" />
+    </svg>
+  );
 
   return (
     <>
-      {/* Floating Button */}
-      <button onClick={() => { setOpen(!open); if (!open) setTimeout(() => inputRef.current?.focus(), 200); }}
-        style={{ position: "fixed", bottom: 24, right: 24, width: 58, height: 58, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", color: "#fff", border: "none", cursor: "pointer", fontSize: 12, zIndex: 1200, boxShadow: "0 6px 24px rgba(212,113,78,.4)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .3s", transform: open ? "rotate(45deg)" : "none" }}
-        onMouseEnter={e => e.currentTarget.style.transform = open ? "rotate(45deg) scale(1.1)" : "scale(1.1)"}
-        onMouseLeave={e => e.currentTarget.style.transform = open ? "rotate(45deg)" : "none"}>
-        {open ? "✕" : "robot"}
-      </button>
-      {!open && <div style={{ position: "fixed", bottom: 28, right: 88, background: "#fff", borderRadius: 14, padding: "8px 16px", fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#C48830", boxShadow: "0 4px 16px rgba(0,0,0,.08)", border: "1.5px solid #FFF8EE", zIndex: 1200, animation: "fadeUp .5s ease 2s both", whiteSpace: "nowrap" }}>AI Agent</div>}
 
-      {/* Chat Panel */}
-      {open && (
-        <div style={{ position: "fixed", bottom: 94, right: 24, width: 420, height: 560, background: "#fff", borderRadius: 14, boxShadow: "0 12px 48px rgba(45,32,22,.18)", border: "1px solid #33333440", zIndex: 1200, display: "flex", flexDirection: "column", overflow: "hidden", animation: "popIn .3s ease" }}>
+      {/* Golden Egg Button — white circle extension of nav bar */}
+      {/* Circle with matching border */}
+      <div style={{ position: "absolute", bottom: 8, left: "50%", marginLeft: -26, width: 52, height: 52, borderRadius: "50%", background: "#fff", border: "1px solid #33333420", zIndex: 201 }} />
+      {/* White cover to hide bottom border + nav border-top, fusing circle into bar */}
+      <div style={{ position: "absolute", bottom: 0, left: "50%", marginLeft: -27, width: 54, height: 30, background: "#fff", zIndex: 202 }} />
+      <button onClick={() => setMode(mode === "closed" ? "chat" : "closed")}
+        style={{ position: "absolute", bottom: 9, left: "50%", marginLeft: -25, width: 50, height: 50, borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", zIndex: 210, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", animation: mode === "closed" ? "eggGlow 2.5s ease infinite" : "none" }}>
+        <GoldenEgg size={46} />
+      </button>
+
+      {/* Chat Panel — full page slide up */}
+      {mode === "chat" && (() => {
+        const modeConfig = {
+          agent: { icon: "bolt", label: "Agent", color: "#C48830", desc: "Autonomous execution", placeholder: "Tell Hatch what to do..." },
+          plan: { icon: "compass", label: "Plan", color: "#AB47BC", desc: "Strategy before action", placeholder: "What should we plan?" },
+          ask: { icon: "search", label: "Ask", color: "#26A69A", desc: "Research & learn", placeholder: "Ask anything..." },
+        };
+        const mc = modeConfig[chatMode];
+        return (
+        <div style={{ position: "absolute", inset: 0, background: "#fff", zIndex: 310, display: "flex", flexDirection: "column", overflow: "hidden", animation: "slideUp .35s cubic-bezier(.22,.68,.36,1) forwards" }}>
           {/* Header */}
-          <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "linear-gradient(135deg,#fff,#FFF8EE)", display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 12, background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}></div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>AI Execution Agent</div>
-              <div style={{ fontSize: 10, color: "#33333480" }}>Analyze · Rebalance · Execute · Hedge</div>
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid #F0F0F0", background: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
+              <GoldenEggSmall size={18} />
+              <span style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#2C2C2C" }}>Hatch AI</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: mc.color, background: mc.color + "14", padding: "2px 8px", borderRadius: 10, fontFamily: "Quicksand" }}>{mc.label}</span>
             </div>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#C48830", animation: "pulse 2s ease infinite" }} />
+            <button onClick={() => { setMessages([]); setChatTopic(null); setExecutedActions(new Set()); }}
+              style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #E8E8E8", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Icon name="plus" size={13} color="#888" />
+            </button>
+            <button onClick={() => setMode("closed")}
+              style={{ width: 28, height: 28, borderRadius: 8, border: "none", background: "#f5f5f5", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Icon name="chevron-down" size={14} color="#888" />
+            </button>
           </div>
 
-          {/* Messages */}
-          <div ref={chatRef} style={{ flex: 1, overflowY: "auto", padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
-            {messages.length === 0 && (
-              <div style={{ animation: "fadeUp .4s ease both" }}>
-                <div style={{ textAlign: "center", padding: "10px 0 16px" }}>
-                  <div style={{ fontSize: 32, marginBottom: 6 }}></div>
-                  <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>What can I help with?</div>
-                  <div style={{ fontSize: 11, color: "#33333480", marginTop: 2 }}>I have full visibility into your portfolio, macro data, and risk metrics.</div>
+          {/* Messages area */}
+          <div ref={chatRef} style={{ flex: 1, overflowY: "auto", padding: "16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* Welcome screen */}
+            {messages.length === 0 && !loading && (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: "20px 0" }}>
+                <GoldenEggSmall size={44} />
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#2C2C2C", marginBottom: 4 }}>What can I help with?</div>
+                  <div style={{ fontSize: 11, color: "#999" }}>Choose a mode to get started</div>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {quickActions.map((qa, i) => (
-                    <button key={i} onClick={() => sendMessage(qa.prompt)} style={{ textAlign: "left", background: "#fff", border: "1px solid #33333440", borderRadius: 12, padding: "7px 10px", cursor: "pointer", fontSize: 12, fontWeight: 700, fontFamily: "Quicksand", color: "#6B5A2E", transition: "all .2s" }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#C48830"; e.currentTarget.style.background = "#FFF8EE"; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#F0E6D0"; e.currentTarget.style.background = "#fff"; }}>
-                      {qa.label}
+
+                {/* Mode selector cards */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 340 }}>
+                  {[
+                    { id: "agent", icon: "bolt", label: "Agent Mode", desc: "I'll analyze your portfolio and take actions autonomously. Execute trades, rebalance, hedge — I handle it.", color: "#C48830", examples: ["Rebalance for current macro", "Execute best trades now", "Hedge my downside risk"] },
+                    { id: "plan", icon: "compass", label: "Plan Mode", desc: "I'll create a detailed step-by-step strategy for your review. No execution until you approve.", color: "#AB47BC", examples: ["Build a Q1 strategy", "Plan sector rotation", "Design a hedging plan"] },
+                    { id: "ask", icon: "search", label: "Ask Mode", desc: "I'll research and explain. Market insights, portfolio analysis, education — no trades, just answers.", color: "#26A69A", examples: ["Why is my Sharpe low?", "Explain macro regime", "What drives gold prices?"] },
+                  ].map(m => (
+                    <button key={m.id} onClick={() => { setChatMode(m.id); setTimeout(() => inputRef.current?.focus(), 100); }}
+                      style={{ display: "flex", gap: 12, padding: "14px 16px", borderRadius: 14, border: chatMode === m.id ? `2px solid ${m.color}` : "1.5px solid #E8E8E8", background: chatMode === m.id ? m.color + "08" : "#fff", cursor: "pointer", textAlign: "left", transition: "all .15s" }}
+                      onMouseEnter={e => { if (chatMode !== m.id) e.currentTarget.style.borderColor = m.color + "50"; }}
+                      onMouseLeave={e => { if (chatMode !== m.id) e.currentTarget.style.borderColor = "#E8E8E8"; }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 10, background: chatMode === m.id ? m.color : m.color + "14", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .15s" }}>
+                        <Icon name={m.icon} size={16} color={chatMode === m.id ? "#fff" : m.color} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: "#2C2C2C", fontFamily: "Quicksand", marginBottom: 2 }}>{m.label}</div>
+                        <div style={{ fontSize: 10, color: "#777", lineHeight: 1.4 }}>{m.desc}</div>
+                        <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
+                          {m.examples.map((ex, i) => (
+                            <span key={i} onClick={e => { e.stopPropagation(); setChatMode(m.id); sendMessage(ex); }}
+                              style={{ fontSize: 9, padding: "3px 8px", borderRadius: 8, background: m.color + "10", color: m.color, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand" }}>{ex}</span>
+                          ))}
+                        </div>
+                      </div>
+                      {chatMode === m.id && <div style={{ width: 8, height: 8, borderRadius: "50%", background: m.color, flexShrink: 0, marginTop: 4 }} />}
                     </button>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Message bubbles */}
             {messages.map((msg, mi) => (
-              <div key={mi} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", animation: "fadeUp .2s ease both" }}>
-                <div style={{ maxWidth: "88%", borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "7px 10px", background: msg.role === "user" ? "linear-gradient(135deg,#C48830,#EF5350)" : "#FFF5E6", color: msg.role === "user" ? "#fff" : "#5C4A1E", fontSize: 12, lineHeight: 1.6 }}>
+              <div key={mi} style={{ display: "flex", gap: 8, justifyContent: msg.role === "user" ? "flex-end" : "flex-start", animation: "fadeUp .2s ease both" }}>
+                {msg.role !== "user" && (
+                  <div style={{ width: 24, height: 30, display: "flex", alignItems: "flex-start", justifyContent: "center", flexShrink: 0, paddingTop: 2 }}>
+                    <GoldenEggSmall size={16} />
+                  </div>
+                )}
+                <div style={{ maxWidth: "80%", borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "10px 14px", background: msg.role === "user" ? "#2C2C2C" : "#F7F7F8", color: msg.role === "user" ? "#fff" : "#2C2C2C", fontSize: 12, lineHeight: 1.6 }}>
                   {msg.role === "user" ? msg.content : (
                     <div>
                       {parseMessage(msg.content).map((part, pi) => {
-                        if (part.type === "text") {
-                          return <div key={pi} style={{ whiteSpace: "pre-wrap" }}>{formatText(part.content)}</div>;
-                        }
+                        if (part.type === "text") return <div key={pi} style={{ whiteSpace: "pre-wrap" }}>{formatText(part.content)}</div>;
                         const actionIdx = mi + "_" + pi;
                         const executed = executedActions.has(actionIdx);
-                        const aCol = { REBALANCE: "#42A5F5", BUY: "#C48830", SELL: "#EF5350", TRIM: "#FFA726", HEDGE: "#AB47BC", ROTATE: "#42A5F5", ANALYZE: "#C48830" };
+                        const aCol = { REBALANCE: "#FFA726", BUY: "#26A69A", SELL: "#EF5350", TRIM: "#FFA726", HEDGE: "#AB47BC", ROTATE: "#42A5F5", ANALYZE: "#C48830" };
                         return (
                           <button key={pi} onClick={() => !executed && executeAction(part, actionIdx)}
-                            style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", margin: "8px 0", padding: "7px 10px", borderRadius: 12, border: `2px solid ${executed ? "#C48830" : (aCol[part.actionType] || "#C48830")}`, background: executed ? "#FFF8EE" : "#fff", cursor: executed ? "default" : "pointer", transition: "all .2s", textAlign: "left" }}>
-                            <div style={{ width: 28, height: 28, borderRadius: 8, background: executed ? "#C48830" : (aCol[part.actionType] || "#C48830"), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 900, flexShrink: 0 }}>
-                              {executed ? "✓" : part.actionType.charAt(0)}
+                            style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", margin: "6px 0", padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${executed ? "#26A69A" : "#E8E8E8"}`, background: executed ? "#F0FFF4" : "#fff", cursor: executed ? "default" : "pointer", transition: "all .2s", textAlign: "left" }}>
+                            <div style={{ width: 26, height: 26, borderRadius: 8, background: executed ? "#26A69A" : (aCol[part.actionType] || "#C48830"), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 900, flexShrink: 0 }}>
+                              {executed ? "\u2713" : part.actionType.charAt(0)}
                             </div>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: executed ? "#C48830" : "#5C4A1E" }}>{executed ? "Executed: " : ""}{part.label}</div>
-                              <div style={{ fontSize: 9, color: "#8A7040" }}>{part.details}</div>
+                              <div style={{ fontSize: 10, fontWeight: 800, color: "#2C2C2C" }}>{executed ? "Done: " : ""}{part.label}</div>
+                              <div style={{ fontSize: 9, color: "#888" }}>{part.details}</div>
                             </div>
-                            {!executed && <span style={{ fontSize: 9, fontWeight: 800, color: aCol[part.actionType] || "#C48830", whiteSpace: "nowrap" }}>Execute →</span>}
+                            {!executed && <span style={{ fontSize: 9, fontWeight: 800, color: aCol[part.actionType] || "#C48830", whiteSpace: "nowrap" }}>Run</span>}
                           </button>
                         );
                       })}
@@ -1646,39 +1834,48 @@ RESPONSE FORMAT RULES:
               </div>
             ))}
             {loading && (
-              <div style={{ display: "flex", gap: 6, padding: "7px 10px", animation: "fadeUp .2s ease both" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}></div>
-                <div style={{ background: "#FFF5E6", borderRadius: "14px 14px 14px 4px", padding: "12px 16px", display: "flex", gap: 4, alignItems: "center" }}>
-                  {[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#A09080", animation: `pulse 1.2s ease ${i * 0.15}s infinite` }} />)}
+              <div style={{ display: "flex", gap: 8, padding: "4px 0", animation: "fadeUp .2s ease both" }}>
+                <div style={{ width: 24, height: 30, display: "flex", alignItems: "flex-start", justifyContent: "center", flexShrink: 0, paddingTop: 2 }}><GoldenEggSmall size={16} /></div>
+                <div style={{ background: "#F7F7F8", borderRadius: "14px 14px 14px 4px", padding: "12px 16px", display: "flex", gap: 4, alignItems: "center" }}>
+                  {[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: mc.color, animation: `pulse 1.2s ease ${i * 0.15}s infinite` }} />)}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Input */}
-          <div style={{ padding: "12px 16px", borderTop: "2px solid #F0E6D0", background: "#FFFDF5" }}>
-            {messages.length > 0 && (
-              <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap", paddingBottom: 4 }}>
-                {[
-                  { label: "Rebalance", prompt: "Rebalance my portfolio for the current macro regime. Show exact changes." },
-                  { label: "Hedge", prompt: "Suggest hedges for my current positions." },
-                  { label: "Analyze", prompt: "Quick analysis — what needs attention right now?" },
-                ].map((qa, i) => (
-                  <button key={i} onClick={() => sendMessage(qa.prompt)} style={{ flexShrink: 0, padding: "4px 10px", borderRadius: 8, border: "1px solid #F0E6D0", background: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", color: "#8A7040", whiteSpace: "nowrap" }}>{qa.label}</button>
-                ))}
+          {/* Input area */}
+          <div style={{ padding: "12px 16px", borderTop: "1px solid #F0F0F0", background: "#fff" }}>
+            {/* Mode switcher pills */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+              {[
+                { id: "agent", icon: "bolt", label: "Agent", color: "#C48830" },
+                { id: "plan", icon: "compass", label: "Plan", color: "#AB47BC" },
+                { id: "ask", icon: "search", label: "Ask", color: "#26A69A" },
+              ].map(m => (
+                <button key={m.id} onClick={() => setChatMode(m.id)}
+                  style={{ padding: "5px 12px", borderRadius: 20, border: chatMode === m.id ? `1.5px solid ${m.color}` : "1.5px solid #E8E8E8", background: chatMode === m.id ? m.color + "10" : "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", color: chatMode === m.id ? m.color : "#888", display: "flex", alignItems: "center", gap: 4, fontFamily: "Quicksand", transition: "all .15s" }}>
+                  <Icon name={m.icon} size={10} color={chatMode === m.id ? m.color : "#aaa"} /> {m.label}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+              <div style={{ flex: 1, position: "relative" }}>
+                <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
+                  placeholder={mc.placeholder}
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: 22, border: "1.5px solid #E8E8E8", fontSize: 12, fontFamily: "Quicksand", outline: "none", background: "#F7F7F8", boxSizing: "border-box" }}
+                  onFocus={e => { e.target.style.borderColor = mc.color; e.target.style.background = "#fff"; }}
+                  onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.background = "#F7F7F8"; }} />
               </div>
-            )}
-            <div style={{ display: "flex", gap: 8 }}>
-              <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
-                placeholder="Ask me to analyze, rebalance, hedge..."
-                style={{ flex: 1, padding: "7px 10px", borderRadius: 12, border: "1px solid #33333440", fontSize: 12, fontFamily: "Quicksand", outline: "none", background: "#fff" }} />
               <button onClick={() => sendMessage(input)} disabled={loading || !input.trim()}
-                style={{ padding: "6px 10px", borderRadius: 12, border: "none", background: loading || !input.trim() ? "#F0E6D0" : "linear-gradient(135deg,#C48830,#EF5350)", color: "#fff", fontSize: 11, cursor: loading || !input.trim() ? "default" : "pointer", fontWeight: 900 }}>→</button>
+                style={{ width: 36, height: 36, borderRadius: "50%", border: "none", background: loading || !input.trim() ? "#E8E8E8" : mc.color, color: "#fff", cursor: loading || !input.trim() ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .15s" }}>
+                <Icon name="send" size={14} color="#fff" />
+              </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
     </>
   );
 }
@@ -1992,8 +2189,8 @@ function MacroTidesPage() {
           <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Full Tide Map — Ranked by Elevation</div>
           <div style={{ fontSize: 10, color: "#33333480" }}>Tap any row to see cascade</div>
         </div>
-        <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #F0E6D0" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr .6fr .4fr .4fr .4fr .6fr", padding: "6px 10px", background: "#fff", borderBottom: "2px solid #F0E6D0", fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>
+        <div className="mobile-scroll-x" style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #F0E6D0" }}>
+          <div className="tide-table-header" style={{ display: "grid", gridTemplateColumns: "1.2fr .6fr .4fr .4fr .4fr .6fr", padding: "6px 10px", background: "#fff", borderBottom: "2px solid #F0E6D0", fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>
             <div>Asset</div><div>Instrument</div><div>Level</div><div>Fair</div><div>Gap</div><div style={{ textAlign: "right" }}>Tide Effect</div>
           </div>
           {[...tideAssets].sort((a, b) => getAdjustedLevel(b) - getAdjustedLevel(a)).map((asset, i) => {
@@ -2003,7 +2200,7 @@ function MacroTidesPage() {
             const isSel = selectedAsset === asset.id;
             const isAbove = adj > 50;
             return (
-              <div key={asset.id} onClick={() => setSelectedAsset(isSel ? null : asset.id)}
+              <div key={asset.id} className="tide-table-row" onClick={() => setSelectedAsset(isSel ? null : asset.id)}
                 style={{ display: "grid", gridTemplateColumns: "1.2fr .6fr .4fr .4fr .4fr .6fr", padding: "6px 10px", borderBottom: i < tideAssets.length - 1 ? "1px solid #F0E6D0" : "none", alignItems: "center", cursor: "pointer", background: isSel ? asset.color + "12" : "transparent", transition: "background .2s" }}
                 onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "#fff"; }} onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent"; }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2205,27 +2402,27 @@ function MyBasketsPage({ onSelectBasket }) {
       </div>
 
       {/* ── Basket Cards ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6, marginBottom: 8, animation: "fadeUp .4s ease .08s both" }}>
-        {myBaskets.map(b => { const clr = CL[b.color] || CL.terracotta; return (
-          <div key={b.id} onClick={() => onSelectBasket && onSelectBasket(b)} style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 18, padding: "8px 10px", cursor: "pointer", transition: "all .2s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = clr.a; e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
+      {(() => { const _macroMaxChg = Math.max(...myBaskets.map(b => b.change)); const _macroMaxRet = Math.max(...myBaskets.filter(b => b.costBasis > 0).map(b => b.totalPL / b.costBasis)); return <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6, marginBottom: 8, animation: "fadeUp .4s ease .08s both" }}>
+        {myBaskets.map(b => { const clr = CL[b.color] || CL.terracotta; const retPct = b.costBasis > 0 ? b.totalPL / b.costBasis : 0; const isHighestReturn = retPct === _macroMaxRet && _macroMaxRet > 0; const isTrendiest = b.change === _macroMaxChg && _macroMaxChg > 0; return (
+          <div key={b.id} onClick={() => onSelectBasket && onSelectBasket(b)} style={{ background: isHighestReturn ? "#FFFDF0" : "#fff", border: `1px solid ${isHighestReturn ? "#DAA52066" : "#33333440"}`, borderRadius: 18, padding: "8px 10px", cursor: "pointer", transition: "all .2s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA520" : clr.a; e.currentTarget.style.transform = "translateY(-2px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA52066" : "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-              <Icon name={b.icon} size={12} />
+              {isHighestReturn ? <Icon name="egg" size={14} color="#DAA520" /> : <Icon name={b.icon} size={12} />}
               <div>
-                <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{b.name}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: isHighestReturn ? "#B8860B" : undefined }}>{b.name}</div>
                 <div style={{ fontSize: 9, color: "#33333480" }}>{(basketStocks[b.id] || []).length} positions · {b.strategy}</div>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700 }}>${(b.value / 1000).toFixed(1)}k</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: b.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{b.change >= 0 ? "+" : ""}{b.change}%</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: isHighestReturn ? "#DAA520" : undefined }}>${(b.value / 1000).toFixed(1)}k</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>{isTrendiest && !isHighestReturn && <Icon name="fire" size={12} color="#FF6B35" />}<span style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: isHighestReturn ? "#DAA520" : b.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{b.change >= 0 ? "+" : ""}{b.change}%</span></div>
             </div>
             <div style={{ height: 4, background: "#FFF5E6", borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
               <div style={{ height: "100%", width: b.allocation + "%", background: clr.a, borderRadius: 2 }} />
             </div>
           </div>); })}
-      </div>
+      </div>; })()}
 
       {/* ═══════════════ HEDGING SEESAW ═══════════════ */}
       <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: "10px 22px 18px", marginBottom: 8, animation: "fadeUp .4s ease .12s both" }}>
@@ -3045,7 +3242,7 @@ function NewsPage() {
   );
 }
 
-function MyAccountPage({ onNavigate }) {
+function MyAccountPage({ onNavigate, onSignOut, user }) {
   const [acctSection, setAcctSection] = useState(null);
   const [twoFA, setTwoFA] = useState(true);
   const [biometric, setBiometric] = useState(false);
@@ -3116,16 +3313,16 @@ function MyAccountPage({ onNavigate }) {
       <BackHeader title="Profile" icon="person" />
       <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 14 }}>
         <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24, paddingBottom: 20, borderBottom: "2px solid #F0E6D0" }}>
-          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>JD</div>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>John Doe</div>
-            <div style={{ fontSize: 10, color: "#33333480" }}>john.doe@email.com</div>
+            <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{user?.displayName || "Trader"}</div>
+            <div style={{ fontSize: 10, color: "#33333480" }}>{user?.email || ""}</div>
             <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830", marginTop: 4, display: "inline-block" }}>Pro Member</span>
           </div>
         </div>
         {[
-          { label: "Full Name", val: "John Doe" },
-          { label: "Email", val: "john.doe@email.com" },
+          { label: "Full Name", val: user?.displayName || "Trader" },
+          { label: "Email", val: user?.email || "" },
           { label: "Phone", val: "+1 (555) 234-5678" },
           { label: "Date of Birth", val: "March 15, 1992" },
           { label: "Country", val: "United States" },
@@ -3247,10 +3444,10 @@ function MyAccountPage({ onNavigate }) {
       <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
         {/* Profile header */}
         <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: "14px 24px", display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif", flexShrink: 0 }}>JD</div>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif", flexShrink: 0 }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>John Doe</div>
-            <div style={{ fontSize: 12, color: "#33333480" }}>john.doe@email.com</div>
+            <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{user?.displayName || "Trader"}</div>
+            <div style={{ fontSize: 12, color: "#33333480" }}>{user?.email || ""}</div>
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
               <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>Pro Member</span>
               <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>{connectedBrokers.length} Broker{connectedBrokers.length !== 1 ? "s" : ""} Linked</span>
@@ -3297,7 +3494,7 @@ function MyAccountPage({ onNavigate }) {
 
         {/* Danger zone */}
         <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .2s both" }}>
-          <MenuItem icon="door" label="Sign Out" danger onClick={() => {}} />
+          <MenuItem icon="door" label="Sign Out" danger onClick={onSignOut} />
         </div>
       </div>
 
@@ -3663,7 +3860,7 @@ function WeatherMarketPage() {
         {/* Seasonal Calendar Mini */}
         <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 10, padding: "8px 10px", marginTop: 6 }}>
           <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Weather-Sensitive Calendar</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 2 }}>
+          <div className="month-grid" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 2 }}>
             {["J","F","M","A","M","J","J","A","S","O","N","D"].map((m, i) => {
               const isCurrent = i === 1;
               const risk = i >= 5 && i <= 10 ? "#EF5350" : i >= 0 && i <= 2 ? "#42A5F5" : i >= 2 && i <= 4 ? "#5B8C5A" : "#FFA726";
@@ -4054,7 +4251,7 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
       {/* ── 5. Basket Correlations (END) ── */}
       <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .3s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Basket Correlations</div>
-        <div style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 9 }}>
+        <div className="correlation-scroll mobile-scroll-x" style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 9 }}>
           <div />
           {myBaskets.map(b => <div key={b.id} style={{ textAlign: "center", fontWeight: 800, padding: 4, fontSize: 8 }}><Icon name={b.icon} size={8} /> {b.name.split(" ")[0]}</div>)}
           {myBaskets.map((b, ri) => (
@@ -4099,11 +4296,11 @@ function CheckoutModal({ cart, onClose, onExecute }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(45,32,22,.4)", backdropFilter: "blur(12px)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "18vh", zIndex: 1000 }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 16, width: "calc(100% - 24px)", maxWidth: 360, maxHeight: "65vh", overflow: "auto", animation: "popIn .4s ease" }} onClick={e => e.stopPropagation()}>
-        <div style={{ padding: "18px 24px", borderBottom: "2px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 12 }}></span><span style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{step === "review" ? "Checkout" : step === "executing" ? "Processing..." : "Done!"}</span></div><button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 11, color: "#33333480" }}>✕</button></div>
+        <div style={{ padding: "18px 24px", borderBottom: "2px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 12 }}>🧺</span><span style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{step === "review" ? "Checkout" : step === "executing" ? "Processing..." : "Done!"}</span></div><button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 11, color: "#33333480" }}>✕</button></div>
         <div style={{ padding: "18px 24px" }}>
           {step === "review" && <div>{cart.map((b, i) => <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < cart.length - 1 ? "1px solid #F0E6D0" : "none" }}><div style={{ display: "flex", gap: 6, alignItems: "center" }}><Icon name={b.icon} size={11} /><div><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{b.name}</div><div style={{ fontSize: 10, color: "#33333480" }}>{b.stocks.length} stocks</div></div></div><div style={{ fontFamily: "JetBrains Mono", fontWeight: 700 }}>{fmt(b.price)}</div></div>)}<div style={{ display: "flex", justifyContent: "space-between", paddingTop: 14, borderTop: "2px solid #F0E6D0", marginTop: 6 }}><span style={{ fontWeight: 800 }}>Total</span><span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 12, fontWeight: 900, color: "#C48830" }}>{fmt(total)}</span></div><button onClick={() => { setStep("executing"); setTimeout(() => setStep("done"), 2200); }} style={{ width: "100%", marginTop: 16, padding: 13, background: "linear-gradient(135deg,#C48830,#EF5350)", color: "#fff", border: "none", borderRadius: 16, fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Execute</button></div>}
-          {step === "executing" && <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 48, animation: "wiggle .5s ease infinite", marginBottom: 8 }}></div><div style={{ width: 40, height: 40, borderRadius: "50%", border: "4px solid #F0E6D0", borderTopColor: "#C48830", margin: "0 auto 18px", animation: "spin .8s linear infinite" }} /><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Filling your Hatch...</div></div>}
-          {step === "done" && <div style={{ textAlign: "center", padding: "36px 0" }}><div style={{ fontSize: 52, animation: "popIn .5s ease" }}></div><div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", margin: "10px 0" }}>Complete!</div><button onClick={() => { onExecute(); onClose(); }} style={{ marginTop: 14, padding: "10px 28px", background: "#C48830", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer" }}>Dashboard</button></div>}
+          {step === "executing" && <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 48, animation: "wiggle .5s ease infinite", marginBottom: 8 }}>🚀</div><div style={{ width: 40, height: 40, borderRadius: "50%", border: "4px solid #F0E6D0", borderTopColor: "#C48830", margin: "0 auto 18px", animation: "spin .8s linear infinite" }} /><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Filling your Hatch...</div></div>}
+          {step === "done" && <div style={{ textAlign: "center", padding: "36px 0" }}><div style={{ fontSize: 52, animation: "popIn .5s ease" }}>🎉</div><div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", margin: "10px 0" }}>Complete!</div><button onClick={() => { onExecute(); onClose(); }} style={{ marginTop: 14, padding: "10px 28px", background: "#C48830", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer" }}>Dashboard</button></div>}
         </div>
       </div>
     </div>
@@ -4113,6 +4310,7 @@ function CheckoutModal({ cart, onClose, onExecute }) {
 // ═══════════════════���═══════ MAIN APP ═══════════════════════════
 
 export default function App() {
+  const { user, loading, logout, isFirebaseConfigured } = useAuth();
   const [page, setPage] = useState("dashboard");
   const [cart, setCart] = useState([]);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -4144,7 +4342,7 @@ export default function App() {
   const { agentState, runAgents, hasAIData } = useAgentSystem();
 
   // Live stock prices from Yahoo Finance
-  const { isLive, explorerPrices: liveExplorerPrices, lastUpdate: priceLastUpdate, status: priceStatus } = useStockPrices();
+  const { isLive, prices: livePrices, explorerPrices: liveExplorerPrices, lastUpdate: priceLastUpdate, status: priceStatus } = useStockPrices();
   const explorerStockPrices = isLive ? liveExplorerPrices : INITIAL_EXPLORER_PRICES;
 
   // Use agent data with fallbacks
@@ -4157,6 +4355,38 @@ export default function App() {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
   }, [page]);
 
+  // Reset to home when user signs in
+  React.useEffect(() => {
+    if (user) {
+      setPage("dashboard");
+      setSelectedBasket(null);
+      setPortfolioView(false);
+      setViewStockTicker(null);
+    }
+  }, [user]);
+
+  // Auth gates — render after all hooks
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFEF9", fontFamily: "'Quicksand',sans-serif" }}>
+        <style>{STYLES}</style>
+        <div style={{ textAlign: "center", animation: "fadeUp 0.4s ease both" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🥚</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#33333480" }}>Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div style={{ fontFamily: "'Quicksand',sans-serif", background: "#FFFDF5", height: "100%", width: "100%", display: "flex", flexDirection: "column", paddingTop: "env(safe-area-inset-top, 0px)", overflow: "hidden" }}>
+        <style>{STYLES}</style>
+        <AuthPage />
+      </div>
+    );
+  }
+
   const notify = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 2200); };
   const addToCart = (b) => { if (cart.find(c => c.id === b.id)) setCart(cart.filter(c => c.id !== b.id)); else { setCart([...cart, b]); notify(b.icon + " " + b.name + " added to cart!"); } };
   const handleCreate = (data) => { const nb = { id: Date.now(), name: data.name, icon: data.icon, strategy: data.strategy, color: "terracotta", stocks: data.instruments.map(i => i.ticker), value: 0, change: 0, allocation: 0, desc: data.instruments.length + " instruments · " + data.strategy, costBasis: 0, dayPL: 0, totalPL: 0 }; setCustomBaskets([...customBaskets, nb]); notify(data.icon + " " + data.name + " created!"); };
@@ -4166,42 +4396,28 @@ export default function App() {
   const critCount = macroAlerts.filter(a => a.severity === "critical").length;
   const todayEvents = calendarEvents.filter(e => e.date === "2026-02-06").length;
 
-  const navItems = [
+  const navItemsLeft = [
     { id: "dashboard", label: "Home", icon: "home" },
     { id: "risklab", label: "Risk Lab", icon: "flask" },
+  ];
+  const navItemsRight = [
     { id: "explorer", label: "Market", icon: "cart" },
-    { id: "news", label: "News", icon: "newspaper" },
     { id: "account", label: "Account", icon: "person" },
   ];
 
   return (
-    <div style={{ fontFamily: "'Quicksand',sans-serif", background: "#E8E4E0", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "10px 0" }}>
+    <div style={{ fontFamily: "'Quicksand',sans-serif", background: "#FFFDF5", height: "100%", width: "100%", position: "relative", display: "flex", flexDirection: "column", overflowX: "hidden", overflow: "hidden" }}>
       <style>{STYLES}</style>
 
-      {/* ═══ iPHONE FRAME ═══ */}
-      <div style={{ width: 393, height: 852, background: "#FFFDF5", borderRadius: 48, border: "8px solid #1A1A1A", position: "relative", overflow: "hidden", boxShadow: "0 40px 80px rgba(0,0,0,.25), 0 0 0 2px #333, inset 0 0 0 1px #444", display: "flex", flexDirection: "column" }}>
-
-        {/* ── Dynamic Island ── */}
-        <div style={{ position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)", width: 126, height: 34, borderRadius: 14, background: "#1A1A1A", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#0D3B66", border: "1.5px solid #333" }} />
-        </div>
-        {/* Status bar text */}
-        <div style={{ position: "absolute", top: 14, left: 28, fontSize: 12, fontWeight: 700, color: "#1A1A1A", fontFamily: "'Instrument Serif', serif", zIndex: 250 }}>9:41</div>
-        <div style={{ position: "absolute", top: 14, right: 24, display: "flex", gap: 5, alignItems: "center", zIndex: 250 }}>
-          <svg width="16" height="12" viewBox="0 0 16 12"><rect x="0" y="6" width="3" height="6" rx="0.5" fill="#1A1A1A" opacity="0.4"/><rect x="4.5" y="3.5" width="3" height="8.5" rx="0.5" fill="#1A1A1A" opacity="0.6"/><rect x="9" y="1" width="3" height="11" rx="0.5" fill="#1A1A1A" opacity="0.8"/><rect x="13.5" y="0" width="3" height="12" rx="0.5" fill="#1A1A1A"/></svg>
-          <svg width="15" height="12" viewBox="0 0 15 12"><path d="M7.5 2.5C9.8 2.5 11.8 3.5 13.2 5L14.5 3.5C12.7 1.5 10.2 0.3 7.5 0.3S2.3 1.5 0.5 3.5L1.8 5C3.2 3.5 5.2 2.5 7.5 2.5z" fill="#1A1A1A" opacity="0.4"/><path d="M7.5 5.5c1.5 0 2.9.6 3.9 1.6L12.8 5.6c-1.4-1.3-3.2-2.1-5.3-2.1s-3.9.8-5.3 2.1L3.6 7.1c1-.9 2.4-1.6 3.9-1.6z" fill="#1A1A1A" opacity="0.7"/><circle cx="7.5" cy="10" r="2" fill="#1A1A1A"/></svg>
-          <svg width="26" height="12" viewBox="0 0 26 12"><rect x="0" y="1" width="22" height="10" rx="3" stroke="#1A1A1A" strokeWidth="1.2" fill="none" opacity="0.5"/><rect x="2" y="3" width="16" height="6" rx="1.5" fill="#1A1A1A"/><rect x="23" y="4" width="2.5" height="4" rx="1" fill="#1A1A1A" opacity="0.4"/></svg>
-        </div>
-
-        {/* ── Top Header Bar (Dashboard only, collapses on scroll) ── */}
-        <div style={{
+        {/* ── Top Header Bar (Dashboard/Home only, collapses on scroll) ── */}
+        {page === "dashboard" && <div style={{
           background: "#fff", borderBottom: "1.5px solid #F0E6D0", flexShrink: 0, zIndex: 200,
-          paddingTop: 52,
-          maxHeight: page === "dashboard" ? (headerCollapsed ? 52 : 110) : 52,
+          paddingTop: "env(safe-area-inset-top, 12px)",
+          maxHeight: headerCollapsed ? 0 : 110,
           overflow: "hidden",
           transition: "max-height .3s ease",
         }}>
-          {page === "dashboard" && <div style={{
+          <div style={{
             display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 18px 10px",
             opacity: headerCollapsed ? 0 : 1, transform: headerCollapsed ? "translateY(-10px)" : "translateY(0)",
             transition: "opacity .25s ease, transform .25s ease",
@@ -4238,12 +4454,16 @@ export default function App() {
                 </span>}
               </div>
             </div>
-            {/* Alert + Calendar */}
+            {/* Alerts + News + Calendar */}
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <button onClick={() => { setPage("alerts"); setSelectedBasket(null); }}
                 style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "alerts" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "alerts" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
                 <Icon name="bell" size={12} />
                 {critCount > 0 && <span style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#EF5350", color: "#fff", fontSize: 7, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{critCount}</span>}
+              </button>
+              <button onClick={() => { setPage("news"); setSelectedBasket(null); }}
+                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "news" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "news" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
+                <Icon name="newspaper" size={12} />
               </button>
               <button onClick={() => { setPage("calendar"); setSelectedBasket(null); }}
                 style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "calendar" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "calendar" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
@@ -4251,8 +4471,8 @@ export default function App() {
                 {todayEvents > 0 && <span style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#FFA726", color: "#fff", fontSize: 7, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{todayEvents}</span>}
               </button>
             </div>
-          </div>}
-        </div>
+          </div>
+        </div>}
 
         {notification && <div style={{ position: "absolute", top: 58, left: "50%", transform: "translateX(-50%)", zIndex: 350, background: "#fff", color: "#C48830", padding: "7px 16px", borderRadius: 12, fontSize: 11, fontWeight: 800, animation: "popIn .3s ease", boxShadow: "0 6px 20px rgba(0,0,0,.1)", border: "1px solid #33333440", whiteSpace: "nowrap" }}>{notification}</div>}
 
@@ -4443,7 +4663,7 @@ export default function App() {
               {/* Basket Correlations */}
               <div style={{ background: "#fff", border: "1px solid #33333440", borderRadius: 14, padding: 12, marginBottom: 8 }}>
                 <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Basket Correlations</div>
-                <div style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 9 }}>
+                <div className="correlation-scroll mobile-scroll-x" style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 9 }}>
                   <div />
                   {myBaskets.map(b => <div key={b.id} style={{ textAlign: "center", fontWeight: 800, padding: 4, fontSize: 8 }}><Icon name={b.icon} size={8} /> {b.name.split(" ")[0]}</div>)}
                   {myBaskets.map((b, ri) => (
@@ -4583,14 +4803,14 @@ export default function App() {
             </div>
 
             {/* ── Baskets View (rich cards, clickable) ── */}
-            {basketView === "baskets" && <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
-              {[...myBaskets, ...customBaskets].map((b, i) => { const c = CL[b.color] || CL.terracotta; const health = getBasketHealth(b); const isBad = health.status === "critical" || health.status === "warning"; return (
-                <div key={b.id} onClick={() => { if (basketStocks[b.id]) setSelectedBasket(b); }} style={{ background: "#FFFDF5", border: `2px solid ${isBad ? health.clr + "44" : "#F0E6D0"}`, borderRadius: 18, cursor: "pointer", transition: "all .3s", overflow: "hidden" }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = c.a; e.currentTarget.style.transform = "translateY(-2px)"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = isBad ? health.clr + "44" : "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
-                  <div style={{ background: c.l, padding: "10px 16px 8px" }}>
+            {basketView === "baskets" && (() => { const _allBkts = [...myBaskets, ...customBaskets]; const _maxChg = Math.max(..._allBkts.map(b => b.change)); const _maxRetPct = Math.max(..._allBkts.filter(b => b.costBasis > 0).map(b => b.totalPL / b.costBasis)); return <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
+              {_allBkts.map((b, i) => { const c = CL[b.color] || CL.terracotta; const health = getBasketHealth(b); const isBad = health.status === "critical" || health.status === "warning"; const retPct = b.costBasis > 0 ? b.totalPL / b.costBasis : 0; const isHighestReturn = retPct === _maxRetPct && _maxRetPct > 0; const isTrendiest = b.change === _maxChg && _maxChg > 0; return (
+                <div key={b.id} onClick={() => { if (basketStocks[b.id]) setSelectedBasket(b); }} style={{ background: isHighestReturn ? "#FFFDF0" : "#FFFDF5", border: `2px solid ${isHighestReturn ? "#DAA52066" : isBad ? health.clr + "44" : "#F0E6D0"}`, borderRadius: 18, cursor: "pointer", transition: "all .3s", overflow: "hidden" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA520" : c.a; e.currentTarget.style.transform = "translateY(-2px)"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA52066" : isBad ? health.clr + "44" : "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
+                  <div style={{ background: isHighestReturn ? "linear-gradient(135deg, #FFF8E1, #FFF3CD)" : c.l, padding: "10px 16px 8px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}><Icon name={b.icon} size={12} /><div><div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{b.name}</div><div style={{ fontSize: 9, color: c.a, fontWeight: 700, textTransform: "uppercase" }}>{b.strategy}</div></div></div>
-                      <div style={{ textAlign: "right" }}><div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700 }}>{b.value > 0 ? fmt(b.value) : "—"}</div>{b.change !== 0 && <div style={{ fontSize: 10, fontWeight: 700, color: b.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{b.change >= 0 ? "+" : ""}{b.change}%</div>}</div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{isHighestReturn ? <Icon name="egg" size={14} color="#DAA520" /> : <Icon name={b.icon} size={12} />}<div><div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: isHighestReturn ? "#B8860B" : undefined }}>{b.name}</div><div style={{ fontSize: 9, color: isHighestReturn ? "#DAA520" : c.a, fontWeight: 700, textTransform: "uppercase" }}>{b.strategy}</div></div></div>
+                      <div style={{ textAlign: "right" }}><div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: isHighestReturn ? "#DAA520" : undefined }}>{b.value > 0 ? fmt(b.value) : "—"}</div>{b.change !== 0 && <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end" }}>{isTrendiest && !isHighestReturn && <Icon name="fire" size={12} color="#FF6B35" />}<span style={{ fontSize: 10, fontWeight: 700, color: isHighestReturn ? "#DAA520" : b.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{b.change >= 0 ? "+" : ""}{b.change}%</span></div>}</div>
                     </div>
                   </div>
                   <div style={{ padding: "8px 16px 12px" }}>
@@ -4605,7 +4825,7 @@ export default function App() {
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>{b.stocks.slice(0, 5).map(s => <span key={s} onClick={(e) => { e.stopPropagation(); goToStock(s); }} style={{ fontSize: 9, fontFamily: "JetBrains Mono", fontWeight: 600, background: c.l, color: c.a, padding: "2px 6px", borderRadius: 6, cursor: "pointer" }}>{s}</span>)}{b.stocks.length > 5 && <span style={{ fontSize: 9, color: "#33333480" }}>+{b.stocks.length - 5}</span>}</div>
                   </div>
                 </div>); })}
-            </div>}
+            </div>; })()}
 
             {/* ── Stocks List View (sparkline rows) ── */}
             {basketView === "stocks" && <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #F0E6D0", background: "#fff" }}>
@@ -4723,17 +4943,21 @@ export default function App() {
             const setShareCount = (ticker, delta) => { setShopShares(prev => { const key = b.id + "_" + ticker; return { ...prev, [key]: Math.max(1, (prev[key] || 1) + delta) }; }); };
             const totalCost = b.stocks.reduce((sum, s) => sum + (explorerStockPrices[s] || 0) * getShares(s), 0);
             const inCart = !!cart.find(cc => cc.id === b.id);
-            const tickerIcons = { XOM:"gas-pump", CVX:"gas-pump", GLD:"gold-medal", "BRK.B":"building", COST:"store", AAPL:"apple-fruit", MSFT:"window", GOOGL:"search", AMZN:"package", NVDA:"gamepad", AMD:"diamond", AVGO:"satellite", TSLA:"bolt", COIN:"coin", LMT:"plane", RTX:"rocket", GD:"shield", NOC:"helicopter", O:"home", AMT:"satellite", XLU:"lightbulb", TLT:"scroll", PLD:"construction", JNJ:"pill", PG:"soap", WMT:"cart", KO:"drink", MCD:"burger", PEP:"drink", MMM:"wrench", ENPH:"sun", SEDG:"sun", FSLR:"sun-face", RUN:"runner", PLUG:"plug", PLTR:"eye", PATH:"robot", ISRG:"hospital", TQQQ:"chart-up", SPXL:"chart-bar", ARKK:"rocket", UNH:"hospital", LLY:"syringe", ABBV:"pill", MRK:"dna", TMO:"microscope" };
+            const tickerEmojis = { XOM:"⛽", CVX:"⛽", GLD:"🥇", "BRK.B":"🏢", COST:"🏪", AAPL:"🍎", MSFT:"🪟", GOOGL:"🔍", AMZN:"📦", NVDA:"🎮", AMD:"💎", AVGO:"🛰️", TSLA:"⚡", COIN:"🪙", LMT:"✈️", RTX:"🚀", GD:"🛡️", NOC:"🚁", O:"🏠", AMT:"🛰️", XLU:"💡", TLT:"📜", PLD:"🏗️", JNJ:"💊", PG:"🧼", WMT:"🛒", KO:"🥤", MCD:"🍔", PEP:"🥤", MMM:"🔧", ENPH:"☀️", SEDG:"☀️", FSLR:"🌞", RUN:"🏃", PLUG:"🔌", PLTR:"👁️", PATH:"🤖", ISRG:"🏥", TQQQ:"📈", SPXL:"📊", ARKK:"🚀", UNH:"🏥", LLY:"💉", ABBV:"💊", MRK:"🧬", TMO:"🔬" };
             return (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(45,32,22,.5)", backdropFilter: "blur(14px)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 1000 }} onClick={() => setSelectedShopBasket(null)}>
-                <div style={{ background: "#FFFDF8", borderRadius: "22px 22px 0 0", width: "100%", maxWidth: 393, maxHeight: "88vh", overflow: "auto", animation: "fadeUp .35s ease both" }} onClick={e => e.stopPropagation()}>
+              <div style={{ position: "absolute", inset: 0, background: "rgba(45,32,22,.5)", backdropFilter: "blur(14px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setSelectedShopBasket(null)}>
+                <div style={{ background: "#FFFDF8", borderRadius: 22, width: "calc(100% - 24px)", maxHeight: 700, overflow: "auto", animation: "popIn .35s ease both" }} onClick={e => e.stopPropagation()}>
                   <div style={{ background: `linear-gradient(135deg, ${clr.a}12, ${clr.a}06)`, padding: "18px 16px 14px", textAlign: "center", position: "relative" }}>
                     <button onClick={() => setSelectedShopBasket(null)} style={{ position: "absolute", top: 12, right: 14, width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(255,255,255,.8)", cursor: "pointer", fontSize: 12, color: "#33333480" }}>✕</button>
+                    {isLive && <div style={{ position: "absolute", top: 12, left: 14, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#5B8C5A", animation: "pulse 2s infinite" }} />
+                      <span style={{ fontSize: 7, fontWeight: 700, color: "#5B8C5A", textTransform: "uppercase", letterSpacing: .5 }}>Live</span>
+                    </div>}
                     <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 6px" }}>
-                      <div style={{ fontSize: 46, lineHeight: 1 }}></div>
+                      <div style={{ fontSize: 46, lineHeight: 1 }}>🧺</div>
                       {b.stocks.slice(0, 4).map((t, i) => {
                         const positions = [{ top: -6, left: -8 }, { top: -8, right: -8 }, { top: 22, left: -14 }, { top: 20, right: -14 }];
-                        return <span key={t} style={{ position: "absolute", ...positions[i], fontSize: 15, animation: `float ${3 + i * .5}s ease-in-out ${i * .2}s infinite` }}>{tickerIcons[t] || "chart-up"}</span>;
+                        return <span key={t} style={{ position: "absolute", ...positions[i], fontSize: 15, animation: `float ${3 + i * .5}s ease-in-out ${i * .2}s infinite` }}>{tickerEmojis[t] || "📈"}</span>;
                       })}
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Icon name={b.icon} size={16} />{b.name}</span></div>
@@ -4743,20 +4967,23 @@ export default function App() {
                     <p style={{ fontSize: 8, color: "#8A7040", lineHeight: 1.4, marginTop: 6, maxWidth: 280, margin: "6px auto 0" }}>{b.desc}</p>
                   </div>
                   <div style={{ padding: "0 12px 12px" }}>
-                    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr 58px 40px 52px", padding: "8px 4px 5px", fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
-                      <div style={{ width: 24 }}></div><div>Item</div><div style={{ textAlign: "right" }}>Price</div><div style={{ textAlign: "center" }}>Qty</div><div></div>
+                    <div className="trading-table-header" style={{ display: "grid", gridTemplateColumns: "auto 1fr 58px 36px 40px 52px", padding: "8px 4px 5px", fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
+                      <div style={{ width: 24 }}></div><div>Item</div><div style={{ textAlign: "right" }}>Price</div><div style={{ textAlign: "right" }}>Chg</div><div style={{ textAlign: "center" }}>Qty</div><div></div>
                     </div>
                     {b.stocks.map((ticker, ti) => {
                       const price = explorerStockPrices[ticker] || 0;
                       const shares = getShares(ticker);
+                      const tickerData = livePrices[ticker];
+                      const chgPct = tickerData?.changePercent ?? 0;
+                      const chgColor = chgPct >= 0 ? "#5B8C5A" : "#EF5350";
                       return (
-                        <div key={ticker} style={{ display: "grid", gridTemplateColumns: "auto 1fr 58px 40px 52px", padding: "7px 4px", alignItems: "center", borderBottom: "1px solid #FFF5E6" }}>
+                        <div key={ticker} className="trading-table-row" style={{ display: "grid", gridTemplateColumns: "auto 1fr 58px 36px 40px 52px", padding: "7px 4px", alignItems: "center", borderBottom: "1px solid #FFF5E6" }}>
                           <div style={{ width: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <StockLogo ticker={ticker} size={20} />
-                            <span style={{ fontSize: 13, display: "none" }}>{tickerIcons[ticker] || "chart-up"}</span>
                           </div>
                           <div onClick={() => goToStock(ticker)} style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 10, cursor: "pointer", color: "#C48830" }}>{ticker}</div>
                           <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 9, color: "#6B5A2E" }}>${price >= 1000 ? (price / 1000).toFixed(1) + "k" : price.toFixed(0)}</div>
+                          <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 700, color: chgColor }}>{chgPct >= 0 ? "+" : ""}{chgPct.toFixed(1)}%</div>
                           <div style={{ textAlign: "center", fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800 }}>{shares}</div>
                           <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
                             <button onClick={() => setShareCount(ticker, -1)} style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 10, color: "#EF5350", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
@@ -4770,7 +4997,12 @@ export default function App() {
                         <div style={{ fontSize: 7, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Basket Total</div>
                         <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 15, fontWeight: 900, color: "#333334" }}>${totalCost >= 1000 ? (totalCost / 1000).toFixed(1) + "k" : totalCost.toFixed(0)}</div>
                       </div>
-                      <button onClick={() => addToCart(b)} style={{ background: inCart ? "#5B8C5A" : "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 12, padding: "9px 18px", fontSize: 10, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>{inCart ? "✓ In Basket" : "Add to Basket"}</button>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <button onClick={() => addToCart(b)} style={{ width: 34, height: 34, borderRadius: 10, border: inCart ? "2px solid #5B8C5A" : "1.5px solid #F0E6D0", background: inCart ? "#E8F5E9" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {inCart ? <span style={{ fontSize: 14 }}>✅</span> : <Icon name="cart" size={14} />}
+                        </button>
+                        <button onClick={() => { addToCart(b); setShowCheckout(true); setSelectedShopBasket(null); }} style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 12, padding: "9px 18px", fontSize: 10, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy Now</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4856,7 +5088,7 @@ export default function App() {
           </div>
 
           {/* ── 2-Column Flippable Card Grid ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div className="explorer-card-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {filteredExplorer.map((b, i) => {
               const clr = CL[b.color] || CL.terracotta;
               const inCart = !!cart.find(cc => cc.id === b.id);
@@ -5009,7 +5241,7 @@ export default function App() {
         </div>}
 
         {/* ══ MY ACCOUNT ══ */}
-        {page === "account" && !selectedBasket && <MyAccountPage onNavigate={setPage} />}
+        {page === "account" && !selectedBasket && <MyAccountPage onNavigate={setPage} onSignOut={logout} user={user} />}
 
         {/* ══ NEWS ══ */}
         {page === "news" && !selectedBasket && <NewsPage />}
@@ -5024,31 +5256,39 @@ export default function App() {
         )}
         </div>
 
-        {/* ── Bottom Tab Bar ── */}
-        <div style={{ flexShrink: 0, background: "#fff", borderTop: "1px solid #33333420", padding: "4px 6px 26px", display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 200 }}>
-          {navItems.map(p => {
+        {/* ── Bottom Tab Bar with Center Egg ── */}
+        <div style={{ flexShrink: 0, background: "#fff", borderTop: "1px solid #33333420", padding: "4px 0 calc(env(safe-area-inset-bottom, 6px) + 2px)", display: "flex", justifyContent: "space-around", alignItems: "flex-end", zIndex: 200, position: "relative" }}>
+          {navItemsLeft.map(p => {
             const isActive = page === p.id && !selectedBasket;
             return (
               <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); }}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 4px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s" }}>
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 8px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s", flex: 1 }}>
                 <Icon name={p.icon} size={19} color={isActive ? "#C48830" : "#A09080"} />
                 <span style={{ fontSize: 8, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>
                 {isActive && <div style={{ position: "absolute", top: -3, width: 4, height: 4, borderRadius: "50%", background: "#C48830" }} />}
-                {p.id === "alerts" && critCount > 0 && <span style={{ position: "absolute", top: 0, right: 2, width: 14, height: 14, borderRadius: "50%", background: "#EF5350", color: "#fff", fontSize: 7, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{critCount}</span>}
+              </button>
+            );
+          })}
+          {/* Center Egg Spacer */}
+          <div style={{ width: 56, flexShrink: 0 }} />
+          {navItemsRight.map(p => {
+            const isActive = page === p.id && !selectedBasket;
+            return (
+              <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); }}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 8px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s", flex: 1 }}>
+                <Icon name={p.icon} size={19} color={isActive ? "#C48830" : "#A09080"} />
+                <span style={{ fontSize: 8, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>
+                {isActive && <div style={{ position: "absolute", top: -3, width: 4, height: 4, borderRadius: "50%", background: "#C48830" }} />}
               </button>
             );
           })}
         </div>
 
-        {/* ── Home Indicator ── */}
-        <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", width: 134, height: 5, borderRadius: 3, background: "#1A1A1A", opacity: 0.2, zIndex: 250 }} />
-
-        {/* ── Modals (inside phone frame) ── */}
+        {/* ── Modals ── */}
         {showCreate && <CreateBasketModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
         {showCheckout && cart.length > 0 && <CheckoutModal cart={cart} onClose={() => setShowCheckout(false)} onExecute={() => setCart([])} />}
-        {showCheckout && cart.length === 0 && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.3)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowCheckout(false)}><div style={{ background: "#fff", borderRadius: 16, padding: "36px 28px", textAlign: "center", animation: "popIn .4s ease", margin: 20 }} onClick={e => e.stopPropagation()}><div style={{ fontSize: 42, marginBottom: 8 }}></div><div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#8B6914" }}>Your cart is empty!</div><div style={{ fontSize: 12, color: "#33333480", marginBottom: 12 }}>Browse our fresh Hatches and add some eggs</div><button onClick={() => { setShowCheckout(false); setPage("explorer"); }} style={{ padding: "10px 24px", background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer", fontSize: 10, fontFamily: "Quicksand" }}>Start Shopping</button></div></div>}
+        {showCheckout && cart.length === 0 && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowCheckout(false)}><div style={{ background: "#fff", borderRadius: 16, padding: "36px 28px", textAlign: "center", animation: "popIn .4s ease", margin: 20 }} onClick={e => e.stopPropagation()}><div style={{ fontSize: 42, marginBottom: 8 }}>🧺</div><div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#8B6914" }}>Your cart is empty!</div><div style={{ fontSize: 12, color: "#33333480", marginBottom: 12 }}>Browse our fresh Hatches and add some eggs</div><button onClick={() => { setShowCheckout(false); setPage("explorer"); }} style={{ padding: "10px 24px", background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer", fontSize: 10, fontFamily: "Quicksand" }}>Start Shopping</button></div></div>}
         <AIAgent onNotify={notify} onNavigate={setPage} agentInsights={agentState} />
-      </div>
     </div>
   );
 }
