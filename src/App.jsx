@@ -104,6 +104,118 @@ const fmtS = (n) => (n >= 0 ? "+" : "-") + fmt(Math.abs(n));
 const fmtD = (n) => "$" + n.toFixed(2);
 const pct = (n) => (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
 
+// ── Macro Dashboard Data (used by both MacroDashboardPage and IndicatorDetailPage) ──
+// Helper to generate quarterly date labels going back N years from Feb '26
+const _qDates = (years) => { const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; const out = []; for (let y = 2026 - years; y <= 2026; y++) for (let q = 0; q < 4; q++) { if (y === 2026 && q > 0) break; out.push(`${m[q*3]} '${String(y).slice(2)}`); } return out; };
+const _mDates = (months) => { const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]; const out = []; let y = 2026, mo = 1; for (let i = 0; i < months; i++) { const idx = months - 1 - i; const tm = mo - idx; const ty = y + Math.floor((tm < 0 ? tm - 11 : tm) / 12); const rm = ((tm % 12) + 12) % 12; out.push(`${m[rm]} '${String(ty).slice(2)}`); } return out; };
+
+const macroDashboardData = [
+  { id: "bls-cpi", name: "CPI (YoY)", value: 3.4, prev: 3.1, unit: "%", signal: "bearish", release: "Feb 11", freq: "Monthly", source: "BLS", weight: 0.2,
+    periods: {
+      "1Y": { dates: _mDates(12), data: [3.2,3.4,3.1,2.9,3.0,3.1,3.2,3.0,3.1,3.2,3.4,3.4] },
+      "2Y": { dates: _mDates(24), data: [6.4,6.0,5.0,4.9,4.0,3.7,3.2,3.1,3.2,3.4,3.1,2.9,3.2,3.4,3.1,2.9,3.0,3.1,3.2,3.0,3.1,3.2,3.4,3.4] },
+      "5Y": { dates: _qDates(5), data: [2.3,2.6,1.4,1.2,1.4,5.4,5.3,6.2,7.0,8.5,9.1,8.3,7.1,6.5,6.0,5.0,4.0,3.2,3.1,3.0,3.4] },
+      "10Y": { dates: _qDates(10), data: [0.8,0.1,-0.1,0.2,0.7,1.0,1.3,1.6,2.1,2.1,2.3,2.4,2.9,2.4,1.5,1.8,2.3,2.6,1.4,1.2,1.4,5.4,5.3,6.2,7.0,8.5,9.1,8.3,7.1,6.5,6.0,5.0,4.0,3.2,3.1,3.0,3.2,3.0,3.1,3.2,3.4] },
+    }},
+  { id: "bls-corecpi", name: "Core CPI (YoY)", value: 3.9, prev: 3.9, unit: "%", signal: "bearish", release: "Feb 11", freq: "Monthly", source: "BLS", weight: 0.15,
+    periods: {
+      "1Y": { dates: _mDates(12), data: [3.9,4.0,3.9,3.7,3.6,3.6,3.7,3.8,3.8,3.9,3.9,3.9] },
+      "2Y": { dates: _mDates(24), data: [5.5,5.3,5.1,4.8,4.5,4.3,4.1,4.0,3.9,4.0,3.9,3.7,3.9,4.0,3.9,3.7,3.6,3.6,3.7,3.8,3.8,3.9,3.9,3.9] },
+      "5Y": { dates: _qDates(5), data: [2.3,1.6,1.3,1.4,3.0,4.5,4.0,6.0,6.6,6.3,5.9,5.5,5.1,4.8,4.3,3.9,3.7,3.6,3.8,3.9,3.9] },
+      "10Y": { dates: _qDates(10), data: [1.6,1.8,2.0,2.2,2.1,2.2,2.1,2.2,2.3,2.4,2.2,2.3,2.2,1.9,1.7,1.7,2.3,1.6,1.3,1.4,3.0,4.5,4.0,6.0,6.6,6.3,5.9,5.5,5.1,4.8,4.3,3.9,3.7,3.6,3.8,3.8,3.7,3.8,3.9,3.9,3.9] },
+    }},
+  { id: "bls-nfp", name: "Nonfarm Payrolls", value: 353, prev: 333, unit: "K", signal: "bullish", release: "Feb 7", freq: "Monthly", source: "BLS", weight: 0.15,
+    periods: {
+      "1Y": { dates: _mDates(12), data: [216,150,256,216,150,232,165,199,333,353,353,353] },
+      "2Y": { dates: _mDates(24), data: [472,326,165,281,339,209,236,187,105,150,216,150,216,150,256,216,150,232,165,199,333,353,353,353] },
+      "5Y": { dates: _qDates(5), data: [225,1500,916,-306,-140,559,379,714,431,368,517,390,261,236,165,187,216,150,232,199,353] },
+      "10Y": { dates: _qDates(10), data: [192,245,230,184,151,224,261,199,231,176,266,208,223,148,196,127,225,1500,916,-306,-140,559,379,714,431,368,517,390,261,236,165,187,216,150,232,199,165,199,333,353,353] },
+    }},
+  { id: "bls-urate", name: "Unemployment Rate", value: 3.7, prev: 3.7, unit: "%", signal: "neutral", release: "Feb 7", freq: "Monthly", source: "BLS", weight: 0.1,
+    periods: {
+      "1Y": { dates: _mDates(12), data: [3.6,3.7,3.8,3.7,3.6,3.7,3.7,3.7,3.7,3.7,3.7,3.7] },
+      "2Y": { dates: _mDates(24), data: [3.4,3.5,3.4,3.6,3.6,3.5,3.8,3.8,3.7,3.9,3.7,3.6,3.6,3.7,3.8,3.7,3.6,3.7,3.7,3.7,3.7,3.7,3.7,3.7] },
+      "5Y": { dates: _qDates(5), data: [3.5,3.5,14.7,11.1,6.7,6.3,6.0,5.4,4.8,3.9,3.6,3.5,3.4,3.5,3.6,3.8,3.7,3.7,3.6,3.7,3.7] },
+      "10Y": { dates: _qDates(10), data: [5.7,5.5,5.3,5.0,5.0,4.9,4.7,4.6,4.4,4.1,4.0,3.9,3.8,3.7,3.9,3.6,3.5,3.5,14.7,11.1,6.7,6.3,6.0,5.4,4.8,3.9,3.6,3.5,3.4,3.5,3.6,3.8,3.7,3.7,3.6,3.7,3.7,3.7,3.7,3.7,3.7] },
+    }},
+  { id: "fred-m2", name: "Net Liquidity (M2)", value: 21.2, prev: 21.0, unit: "T", signal: "neutral", release: "Jan 28", freq: "Monthly", source: "FRED", weight: 0.1,
+    periods: {
+      "1Y": { dates: _mDates(12), data: [20.9,20.9,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.2,21.2] },
+      "2Y": { dates: _mDates(24), data: [21.5,21.3,21.1,20.9,20.8,20.7,20.6,20.7,20.8,20.8,20.9,20.9,20.9,20.9,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.0,21.2,21.2] },
+      "5Y": { dates: _qDates(5), data: [15.4,16.2,18.4,19.1,19.4,20.6,21.0,21.6,21.7,21.5,21.3,21.1,20.8,20.6,20.7,20.8,20.9,21.0,21.0,21.0,21.2] },
+      "10Y": { dates: _qDates(10), data: [11.5,11.7,11.9,12.1,12.3,12.6,12.9,13.1,13.3,13.6,13.8,14.0,14.2,14.4,14.6,14.8,15.4,16.2,18.4,19.1,19.4,20.6,21.0,21.6,21.7,21.5,21.3,21.1,20.8,20.6,20.7,20.8,20.9,21.0,21.0,21.0,21.0,21.0,21.0,21.2,21.2] },
+    }},
+  { id: "fred-10y", name: "10Y Treasury Yield", value: 4.52, prev: 4.38, unit: "%", signal: "bearish", release: "Daily", freq: "Daily", source: "FRED", weight: 0.2,
+    periods: {
+      "1Y": { dates: _mDates(12), data: [4.25,4.10,3.95,4.15,4.25,4.38,4.52,4.62,4.25,4.10,4.38,4.52] },
+      "2Y": { dates: _mDates(24), data: [3.45,3.70,3.80,3.95,4.05,4.28,4.57,4.88,4.73,4.62,4.25,4.10,4.25,4.10,3.95,4.15,4.25,4.38,4.52,4.62,4.25,4.10,4.38,4.52] },
+      "5Y": { dates: _qDates(5), data: [1.92,0.66,0.70,0.93,1.74,1.52,1.63,1.51,2.32,2.98,3.83,4.25,3.88,4.57,4.88,4.73,4.25,3.95,4.15,4.38,4.52] },
+      "10Y": { dates: _qDates(10), data: [2.17,1.73,2.14,2.27,2.40,2.33,2.35,1.79,2.68,2.86,3.05,3.23,2.69,2.01,1.92,1.88,1.92,0.66,0.70,0.93,1.74,1.52,1.63,1.51,2.32,2.98,3.83,4.25,3.88,4.57,4.88,4.73,4.25,3.95,4.15,4.25,4.10,4.15,4.25,4.38,4.52] },
+    }},
+];
+
+// ── Indicator Detail Enrichment ──
+const INDICATOR_DETAILS = {
+  "bls-cpi": { fullName: "Consumer Price Index (Year-over-Year)", desc: "Tracks changes in consumer prices. Persistent high CPI pressures the Fed to maintain higher rates, hurting growth assets.", impactAssets: ["TLT", "GLD", "SPY"], keyLevels: { hot: 3.5, target: 2.0 }, related: ["bls-corecpi", "fred-10y", "bls-urate"], category: "Inflation", icon: "fire" },
+  "bls-corecpi": { fullName: "Core CPI excl. Food & Energy (YoY)", desc: "Strips volatile food and energy prices. The Fed's preferred inflation gauge for policy decisions. Sticky readings signal persistent inflation.", impactAssets: ["TLT", "SPY", "IEF"], keyLevels: { hot: 4.0, target: 2.0 }, related: ["bls-cpi", "fred-10y", "bls-urate"], category: "Inflation", icon: "fire" },
+  "bls-nfp": { fullName: "U.S. Nonfarm Payrolls (Monthly Change)", desc: "Number of jobs added/lost excluding farms. Strong readings signal economic resilience but may delay Fed cuts. Weak prints trigger risk-off.", impactAssets: ["SPY", "IWM", "TLT"], keyLevels: { strong: 300, moderate: 150, weak: 50 }, related: ["bls-urate", "bls-cpi", "fred-10y"], category: "Labor", icon: "chart-up" },
+  "bls-urate": { fullName: "U.S. Unemployment Rate (U-3)", desc: "Percentage of labor force without jobs. Rising unemployment signals economic slowdown and potential Fed rate cuts.", impactAssets: ["SPY", "IWM", "XLU"], keyLevels: { full: 4.0, rising: 5.0 }, related: ["bls-nfp", "bls-cpi", "fred-m2"], category: "Labor", icon: "person" },
+  "fred-m2": { fullName: "M2 Money Supply (Trillions USD)", desc: "Broad measure of money supply including cash, deposits, and money market funds. Expanding M2 fuels asset prices; contracting M2 tightens liquidity.", impactAssets: ["SPY", "BTC-USD", "GLD"], keyLevels: { expansion: 21.5, neutral: 21.0 }, related: ["bls-cpi", "fred-10y", "bls-urate"], category: "Liquidity", icon: "dollar" },
+  "fred-10y": { fullName: "U.S. 10-Year Treasury Yield", desc: "Benchmark risk-free rate. Rising yields pressure equities (higher discount rate) and signal inflation expectations.", impactAssets: ["TLT", "IEF", "VNQ", "XLU"], keyLevels: { high: 5.0, elevated: 4.0, normal: 3.0 }, related: ["bls-cpi", "bls-corecpi", "fred-m2"], category: "Bonds", icon: "chart-bar" },
+};
+
+const INDICATOR_NEWS_MAP = {
+  "bls-cpi": { cats: ["MACRO", "RATES"], keywords: ["CPI", "inflation", "price", "consumer"] },
+  "bls-corecpi": { cats: ["MACRO", "RATES"], keywords: ["CPI", "core", "inflation", "price"] },
+  "bls-nfp": { cats: ["MACRO"], keywords: ["job", "labor", "employment", "payroll", "claims", "nonfarm"] },
+  "bls-urate": { cats: ["MACRO"], keywords: ["unemployment", "labor", "job", "claims"] },
+  "fred-m2": { cats: ["MACRO", "RATES"], keywords: ["M2", "liquidity", "money supply", "Fed"] },
+  "fred-10y": { cats: ["BONDS", "RATES"], keywords: ["yield", "treasury", "bond", "10Y", "duration"] },
+};
+
+function analyzeHistory(history) {
+  const n = history.length;
+  if (n < 5) return { patterns: [], trendDirection: "flat", ma5: 0, ma10: 0, maSignal: "neutral", support: 0, resistance: 0, volatility: 0, roc5: 0, streak: 0, min: 0, max: 0, range: 0, percentile: 0, avgChange: 0, trendStrength: 0, slope: 0 };
+  const xMean = (n - 1) / 2;
+  const yMean = history.reduce((a, b) => a + b, 0) / n;
+  let num = 0, den = 0;
+  history.forEach((y, x) => { num += (x - xMean) * (y - yMean); den += (x - xMean) ** 2; });
+  const slope = num / den;
+  const trendStrength = Math.abs(slope) / (yMean || 1);
+  const trendDirection = slope > 0.005 ? "rising" : slope < -0.005 ? "falling" : "flat";
+  const diffs = [];
+  for (let i = 1; i < n; i++) diffs.push(history[i] - history[i - 1]);
+  const volatility = Math.sqrt(diffs.reduce((s, d) => s + d * d, 0) / diffs.length);
+  const avgChange = diffs.reduce((s, d) => s + Math.abs(d), 0) / diffs.length;
+  const sorted = [...history].sort((a, b) => a - b);
+  const support = sorted[Math.floor(n * 0.1)];
+  const resistance = sorted[Math.floor(n * 0.9)];
+  const current = history[n - 1];
+  const posInRange = (resistance - support) ? (current - support) / (resistance - support) : 0.5;
+  const ma5 = history.slice(-5).reduce((a, b) => a + b, 0) / 5;
+  const ma10 = history.slice(-Math.min(10, n)).reduce((a, b) => a + b, 0) / Math.min(10, n);
+  const maSignal = ma5 > ma10 + 0.01 ? "bullish" : ma5 < ma10 - 0.01 ? "bearish" : "neutral";
+  const roc5 = n >= 6 ? ((current - history[n - 6]) / (history[n - 6] || 1)) * 100 : 0;
+  let streak = 0;
+  for (let i = n - 1; i > 0; i--) {
+    if (history[i] > history[i - 1]) { if (streak >= 0) streak++; else break; }
+    else if (history[i] < history[i - 1]) { if (streak <= 0) streak--; else break; }
+    else break;
+  }
+  const patterns = [];
+  if (Math.abs(streak) >= 3) patterns.push({ label: streak > 0 ? "Sustained Uptrend" : "Sustained Downtrend", type: streak > 0 ? "bullish" : "bearish" });
+  if (posInRange < 0.2) patterns.push({ label: "Near Support Level", type: "bullish" });
+  if (posInRange > 0.8) patterns.push({ label: "Near Resistance Level", type: "bearish" });
+  if (trendStrength > 0.015) patterns.push({ label: "Strong Directional Move", type: "neutral" });
+  if (volatility > avgChange * 1.5) patterns.push({ label: "Elevated Volatility", type: "bearish" });
+  if (current >= Math.max(...history)) patterns.push({ label: "At Period High", type: "neutral" });
+  if (current <= Math.min(...history)) patterns.push({ label: "At Period Low", type: "neutral" });
+  if (maSignal === "bullish") patterns.push({ label: "MA Bullish Cross", type: "bullish" });
+  if (maSignal === "bearish") patterns.push({ label: "MA Bearish Cross", type: "bearish" });
+  if (Math.abs(roc5) > 5) patterns.push({ label: roc5 > 0 ? "Strong Momentum Up" : "Strong Momentum Down", type: roc5 > 0 ? "bullish" : "bearish" });
+  return { slope, trendDirection, trendStrength, volatility, avgChange, support, resistance, ma5, ma10, maSignal, roc5, streak, patterns, min: Math.min(...history), max: Math.max(...history), range: Math.max(...history) - Math.min(...history), percentile: Math.round(posInRange * 100) };
+}
+
 // Stock logo component
 const StockLogo = ({ ticker, size = 20 }) => (
   <img
@@ -878,14 +990,72 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
                 { label: "VaR 95%", val: fmtS(portfolioRisk.var95), good: false, icon: "warning" },
                 { label: "Calmar", val: portfolioRisk.calmar.toFixed(2), good: portfolioRisk.calmar > 1, icon: "target" },
               ].map((m, mi) => (
-                <div key={mi} style={{ background: m.good ? "#EDF5ED" : "#FFEBEE", borderRadius: 8, padding: "6px 6px", textAlign: "center" }}>
+                <div key={mi} style={{ background: "#fff", borderRadius: 8, padding: "6px 6px", textAlign: "center", border: "1px solid #F0E6D0" }}>
                   <div style={{ marginBottom: 1 }}><Icon name={m.icon} size={11} color={m.good ? "#5B8C5A" : "#EF5350"} /></div>
                   <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</div>
                 </div>
               ))}
             </div>
-            <div style={{ padding: "6px 8px", background: portfolioRisk.sectorConcentration > 40 ? "#FFEBEE" : "#FFF8EE", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+
+            {/* ── Portfolio Allocation Pie Chart (3D Interactive) ── */}
+            {(() => {
+              const allStocks = myBaskets.flatMap(b => (basketStocks[b.id] || []).filter(s => s.asset === "equity").map(s => ({ ...s, basket: b.name })));
+              const totalVal = allStocks.reduce((sum, s) => sum + s.current * s.shares, 0);
+              const holdings = allStocks.reduce((acc, s) => {
+                const existing = acc.find(h => h.ticker === s.ticker);
+                if (existing) { existing.value += s.current * s.shares; }
+                else { acc.push({ ticker: s.ticker, name: s.name, value: s.current * s.shares }); }
+                return acc;
+              }, []).sort((a, b) => b.value - a.value);
+              const slices = holdings.map(h => ({ ...h, pct: (h.value / totalVal) * 100 }));
+              const pieColors = ["#C48830","#5B8C5A","#42A5F5","#EF5350","#AB47BC","#FFA726","#26A69A","#7E57C2","#EF6C00","#5C6BC0","#8D6E63","#78909C","#D4E157","#EC407A"];
+              const hhi = slices.reduce((sum, s) => sum + Math.pow(s.pct, 2), 0);
+              const maxHHI = 10000;
+              const minHHI = maxHHI / slices.length;
+              const diversScore = Math.max(0, Math.min(100, ((maxHHI - hhi) / (maxHHI - minHHI)) * 100));
+              const divLabel = diversScore > 70 ? "Well Diversified" : diversScore > 40 ? "Moderate" : "Concentrated";
+              const divColor = diversScore > 70 ? "#5B8C5A" : diversScore > 40 ? "#FFA726" : "#EF5350";
+
+              // 3D pie: ellipse-based for perspective
+              const cx = 100, cy = 85, rx = 85, ry = 50, depth = 18;
+              let cumAngle = 0;
+              const arcs = slices.map((s, i) => {
+                const angle = (s.pct / 100) * 360;
+                const startAngle = cumAngle;
+                const midAngle = cumAngle + angle / 2;
+                cumAngle += angle;
+                const startRad = (startAngle - 90) * Math.PI / 180;
+                const endRad = (cumAngle - 90) * Math.PI / 180;
+                const midRad = (midAngle - 90) * Math.PI / 180;
+                const largeArc = angle > 180 ? 1 : 0;
+                const x1 = cx + rx * Math.cos(startRad);
+                const y1 = cy + ry * Math.sin(startRad);
+                const x2 = cx + rx * Math.cos(endRad);
+                const y2 = cy + ry * Math.sin(endRad);
+                // Top face path
+                const topD = `M${cx},${cy} L${x1},${y1} A${rx},${ry} 0 ${largeArc},1 ${x2},${y2} Z`;
+                // Side face (3D depth) — only render for slices with visible bottom edge
+                const sideD = `M${x1},${y1} A${rx},${ry} 0 ${largeArc},1 ${x2},${y2} L${x2},${y2 + depth} A${rx},${ry} 0 ${largeArc},0 ${x1},${y1 + depth} Z`;
+                return { ...s, color: pieColors[i % pieColors.length], topD, sideD, startAngle, midAngle, endAngle: cumAngle, midRad };
+              });
+
+              // Darken color for 3D side
+              const darken = (hex, amt) => {
+                const num = parseInt(hex.slice(1), 16);
+                const r = Math.max(0, (num >> 16) - amt);
+                const g = Math.max(0, ((num >> 8) & 0xFF) - amt);
+                const b = Math.max(0, (num & 0xFF) - amt);
+                return `rgb(${r},${g},${b})`;
+              };
+
+              return (
+                <PieChartInteractive arcs={arcs} slices={slices} cx={cx} cy={cy} rx={rx} ry={ry} depth={depth}
+                  darken={darken} divColor={divColor} divLabel={divLabel} diversScore={diversScore} totalVal={totalVal} />
+              );
+            })()}
+
+            <div style={{ padding: "6px 8px", background: "#fff", borderRadius: 8, border: "1px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div>
                 <div style={{ fontSize: 7, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div>
@@ -3993,13 +4163,447 @@ function CurrenciesScenarioPage() {
   );
 }
 
+// ═══════════════ INDICATOR DETAIL PAGE ═══════════════
+function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
+  const ind = macroDashboardData.find(i => i.id === indicatorId);
+  const details = INDICATOR_DETAILS[indicatorId] || {};
+  const newsMap = INDICATOR_NEWS_MAP[indicatorId] || { cats: [], keywords: [] };
+  const [chartHover, setChartHover] = useState(null);
+  const [period, setPeriod] = useState("2Y");
+  const chartRef = useRef(null);
+  if (!ind) return <div style={{ padding: 20, textAlign: "center", color: "#A09080" }}>Indicator not found</div>;
+
+  const periodData = ind.periods?.[period] || ind.periods?.["2Y"] || { dates: [], data: [] };
+  const pts = periodData.data;
+  const dates = periodData.dates;
+  const n = pts.length;
+  const baseVal = pts[0];
+
+  const analysis = analyzeHistory(pts);
+  const sc = { bullish: "#5B8C5A", bearish: "#EF5350", neutral: "#A09080" };
+  const delta = ind.value - ind.prev;
+  const clr = sc[ind.signal] || "#A09080";
+
+  // Related alerts & news
+  const relatedAlerts = macroAlerts.filter(a =>
+    a.tags.some(t => newsMap.keywords.some(kw => t.toLowerCase().includes(kw.toLowerCase()))) ||
+    newsMap.keywords.some(kw => a.title.toLowerCase().includes(kw.toLowerCase()))
+  );
+  const relatedNews = terminalFeed.filter(f =>
+    newsMap.cats.includes(f.cat) ||
+    newsMap.keywords.some(kw => f.headline.toLowerCase().includes(kw.toLowerCase()))
+  ).slice(0, 5);
+
+  // Chart dimensions
+  const W = 640, H = 170, PX = 42, PY = 18;
+  const cW = W - PX * 2, cH = H - PY * 2;
+  const spMin = analysis.min * 0.95, spMax = analysis.max * 1.02, spRange = (spMax - spMin) || 1;
+  const step = cW / (n - 1);
+  const chartPts = pts.map((v, i) => ({ x: PX + i * step, y: PY + (1 - (v - spMin) / spRange) * cH, v, i, label: dates[i] || (i === n - 1 ? "Now" : `T-${n - 1 - i}`) }));
+  const linePath = chartPts.map((p, i) => { if (!i) return `M${p.x},${p.y}`; const pr = chartPts[i - 1]; return `C${pr.x + step * .4},${pr.y} ${p.x - step * .4},${p.y} ${p.x},${p.y}`; }).join(" ");
+  const areaPath = linePath + ` L${chartPts[n - 1].x},${H - PY} L${chartPts[0].x},${H - PY} Z`;
+  const toY = (v) => PY + (1 - (v - spMin) / spRange) * cH;
+
+  // Chart hover handler
+  const handleChartMove = (clientX) => {
+    const r = chartRef.current.getBoundingClientRect();
+    const mx = ((clientX - r.left) / r.width) * W;
+    let closest = chartPts[0], minD = Infinity;
+    chartPts.forEach(p => { const d = Math.abs(p.x - mx); if (d < minD) { minD = d; closest = p; } });
+    setChartHover(closest);
+  };
+  const handleChartLeave = () => setChartHover(null);
+
+  // Display values (update on hover)
+  const displayVal = chartHover ? chartHover.v : ind.value;
+  const displayDelta = chartHover ? (chartHover.v - baseVal) : delta;
+  const displayPct = chartHover ? ((chartHover.v - baseVal) / (baseVal || 1)) * 100 : ((delta) / (ind.prev || 1)) * 100;
+  const displayColor = displayDelta >= 0 ? "#5B8C5A" : "#EF5350";
+
+  // Grid lines
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(p => ({ y: PY + (1 - p) * cH, val: (spMin + p * spRange).toFixed(ind.unit === "%" ? 2 : 1) }));
+
+  // Key levels from details
+  const keyLevelEntries = details.keyLevels ? Object.entries(details.keyLevels).filter(([, v]) => v >= spMin && v <= spMax) : [];
+
+  return (
+    <div style={{ animation: "fadeUp .3s ease both" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <button onClick={onBack} style={{ background: "#fff", borderRadius: 12, width: 34, height: 34, border: "1.5px solid #F0E6D0", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>←</button>
+        <Icon name={details.icon || "chart-bar"} size={16} color={clr} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{ind.name}</div>
+          <div style={{ fontSize: 8, color: "#33333480" }}>{ind.source} · {ind.freq}</div>
+        </div>
+        <span style={{ fontSize: 8, fontWeight: 800, background: clr + "18", color: clr, padding: "3px 10px", borderRadius: 8, textTransform: "uppercase" }}>{ind.signal}</span>
+      </div>
+
+      {/* Combined Hero + Interactive Chart */}
+      <div style={{ background: "#fff", borderRadius: 18, padding: "18px 16px 12px", marginBottom: 8, position: "relative", overflow: "hidden" }}>
+        <div style={{ fontSize: 8, color: "#33333480", fontWeight: 700, marginBottom: 4 }}>
+          {chartHover ? <span style={{ transition: "all .15s" }}>{chartHover.label}</span> : (details.fullName || ind.name)}
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+          <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28, fontWeight: 900, color: "#333334", lineHeight: 1, transition: "all .15s" }}>
+            {typeof displayVal === "number" ? (displayVal >= 100 ? displayVal.toFixed(1) : displayVal.toFixed(2)) : displayVal}{ind.unit}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+          <span style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: displayColor, background: displayDelta >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "2px 8px", borderRadius: 8, transition: "all .15s" }}>
+            {displayDelta >= 0 ? "+" : ""}{displayPct.toFixed(2)}%
+          </span>
+          <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: displayColor, transition: "all .15s" }}>
+            {displayDelta >= 0 ? "▲" : "▼"} {displayDelta >= 0 ? "+" : ""}{displayDelta.toFixed(ind.unit === "%" ? 2 : 1)}
+          </span>
+          <span style={{ fontSize: 9, color: "#8A7A68", fontWeight: 600 }}>{chartHover ? "from start" : "vs prev"}</span>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+          <span style={{ fontSize: 7, fontWeight: 700, color: sc[analysis.maSignal], background: sc[analysis.maSignal] + "15", padding: "2px 8px", borderRadius: 6 }}>MA-5: {analysis.ma5.toFixed(2)}</span>
+          <span style={{ fontSize: 7, fontWeight: 700, color: "#33333480", background: "#F5F0E8", padding: "2px 8px", borderRadius: 6 }}>MA-10: {analysis.ma10.toFixed(2)}</span>
+          <span style={{ fontSize: 7, fontWeight: 700, color: "#C48830", background: "#FFF8EE", padding: "2px 8px", borderRadius: 6 }}>Weight: {(ind.weight * 100).toFixed(0)}%</span>
+        </div>
+
+        {/* Interactive Chart */}
+        <div style={{ position: "relative" }}>
+          <svg ref={chartRef} viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block", touchAction: "none" }}
+            onMouseMove={e => handleChartMove(e.clientX)}
+            onTouchMove={e => { if (e.touches[0]) handleChartMove(e.touches[0].clientX); }}
+            onMouseLeave={handleChartLeave}
+            onTouchEnd={handleChartLeave}>
+            {/* Grid lines */}
+            {gridLines.map((g, i) => (
+              <g key={i}>
+                <line x1={PX} y1={g.y} x2={W - PX} y2={g.y} stroke="#F0E6D0" strokeWidth=".8" />
+                <text x={PX - 6} y={g.y + 4} textAnchor="end" fontSize="9" fill="#A09080" fontFamily="JetBrains Mono">{g.val}</text>
+              </g>
+            ))}
+            {/* Support & Resistance lines */}
+            <line x1={PX} y1={toY(analysis.support)} x2={W - PX} y2={toY(analysis.support)} stroke="#5B8C5A" strokeWidth="1" strokeDasharray="4,3" />
+            <text x={W - PX + 4} y={toY(analysis.support) + 4} fontSize="8" fill="#5B8C5A" fontWeight="700">S</text>
+            <line x1={PX} y1={toY(analysis.resistance)} x2={W - PX} y2={toY(analysis.resistance)} stroke="#EF5350" strokeWidth="1" strokeDasharray="4,3" />
+            <text x={W - PX + 4} y={toY(analysis.resistance) + 4} fontSize="8" fill="#EF5350" fontWeight="700">R</text>
+            {/* MA-5 line */}
+            {n >= 5 && (() => {
+              const maPath = chartPts.map((_, i) => {
+                if (i < 4) return null;
+                const maVal = pts.slice(i - 4, i + 1).reduce((a, b) => a + b, 0) / 5;
+                return `${i === 4 ? "M" : "L"}${chartPts[i].x.toFixed(1)},${toY(maVal).toFixed(1)}`;
+              }).filter(Boolean).join(" ");
+              return <path d={maPath} fill="none" stroke="#C48830" strokeWidth="1.2" strokeDasharray="3,3" opacity="0.6" />;
+            })()}
+            {/* Key levels */}
+            {keyLevelEntries.map(([label, val], i) => (
+              <g key={i}>
+                <line x1={PX} y1={toY(val)} x2={W - PX} y2={toY(val)} stroke="#C4883060" strokeWidth="0.8" strokeDasharray="2,3" />
+                <text x={PX + 4} y={toY(val) - 4} fontSize="8" fill="#C48830" fontWeight="600">{label} ({val})</text>
+              </g>
+            ))}
+            {/* Area fill */}
+            <defs><linearGradient id={`indGrad_${indicatorId}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={clr} stopOpacity="0.15" /><stop offset="100%" stopColor={clr} stopOpacity="0" /></linearGradient></defs>
+            <path d={areaPath} fill={`url(#indGrad_${indicatorId})`} />
+            {/* Line */}
+            <path d={linePath} fill="none" stroke={clr} strokeWidth="3" strokeLinecap="round" />
+            {/* Data points */}
+            {chartPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="#fff" stroke={clr} strokeWidth="2" />)}
+            {/* X-axis labels */}
+            {[0, Math.floor(n / 4), Math.floor(n / 2), Math.floor(3 * n / 4), n - 1].map((i, idx) => (
+              <text key={idx} x={chartPts[i].x} y={H - 1} textAnchor="middle" fontSize="9" fill="#A09080" fontFamily="Quicksand" fontWeight="600">{chartPts[i].label}</text>
+            ))}
+            {/* Hover indicator */}
+            {chartHover && <g>
+              <line x1={chartHover.x} y1={PY} x2={chartHover.x} y2={H - PY} stroke={clr} strokeWidth="1" strokeDasharray="4,4" opacity=".4" />
+              <circle cx={chartHover.x} cy={chartHover.y} r="6" fill={clr} stroke="#fff" strokeWidth="3" />
+            </g>}
+          </svg>
+          {/* Hover tooltip on chart */}
+          {chartHover && <div style={{ position: "absolute", top: 6, right: 6, background: "#fff", borderRadius: 12, padding: "6px 12px", fontFamily: "JetBrains Mono", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
+            <span style={{ color: "#33333480" }}>{chartHover.label}</span>
+            <span style={{ marginLeft: 8, color: clr, fontWeight: 700 }}>{chartHover.v.toFixed(ind.unit === "%" ? 2 : 1)}{ind.unit}</span>
+          </div>}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <span style={{ fontSize: 7, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 2, background: clr, borderRadius: 1 }} />Price</span>
+            <span style={{ fontSize: 7, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #C48830" }} />MA-5</span>
+            <span style={{ fontSize: 7, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #5B8C5A" }} />S</span>
+            <span style={{ fontSize: 7, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #EF5350" }} />R</span>
+          </div>
+          <div style={{ display: "flex", gap: 1, background: "#FFFDF5", borderRadius: 8, padding: 2 }}>
+            {["1Y","2Y","5Y","10Y"].map(t => (
+              <button key={t} onClick={() => { setPeriod(t); setChartHover(null); }}
+                style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none", transition: "all .15s" }}>{t}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Pattern Recognition */}
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #C4883022" }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "#C48830" }}>Pattern Recognition</div>
+        {analysis.patterns.length > 0 ? (
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
+            {analysis.patterns.map((p, i) => (
+              <span key={i} style={{ fontSize: 7, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: sc[p.type] + "15", color: sc[p.type], border: `1px solid ${sc[p.type]}30` }}>{p.label}</span>
+            ))}
+          </div>
+        ) : <div style={{ fontSize: 8, color: "#A09080", marginBottom: 8 }}>No significant patterns detected</div>}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
+            <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Trend</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: analysis.trendDirection === "rising" ? "#5B8C5A" : analysis.trendDirection === "falling" ? "#EF5350" : "#A09080", textTransform: "capitalize" }}>{analysis.trendDirection}</div>
+            <div style={{ fontSize: 7, color: "#A09080", fontFamily: "JetBrains Mono" }}>slope {analysis.slope >= 0 ? "+" : ""}{analysis.slope.toFixed(3)}/p</div>
+          </div>
+          <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
+            <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Momentum</div>
+            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "JetBrains Mono", color: analysis.roc5 >= 0 ? "#5B8C5A" : "#EF5350" }}>{analysis.roc5 >= 0 ? "+" : ""}{analysis.roc5.toFixed(1)}%</div>
+            <div style={{ fontSize: 7, color: "#A09080" }}>5-period ROC</div>
+          </div>
+          <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
+            <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Streak</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: analysis.streak > 0 ? "#5B8C5A" : analysis.streak < 0 ? "#EF5350" : "#A09080" }}>{analysis.streak > 0 ? "+" : ""}{analysis.streak} periods</div>
+            <div style={{ fontSize: 7, color: "#A09080" }}>{analysis.streak > 0 ? "consecutive rises" : analysis.streak < 0 ? "consecutive falls" : "no streak"}</div>
+          </div>
+          <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
+            <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Volatility</div>
+            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "JetBrains Mono", color: "#333334" }}>{analysis.volatility.toFixed(3)}</div>
+            <div style={{ fontSize: 7, color: "#A09080" }}>avg chg: {analysis.avgChange.toFixed(3)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Statistical Profile */}
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Statistical Profile</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+          {[
+            { label: "Range Low", val: analysis.min.toFixed(2) + (ind.unit || ""), clr: "#5B8C5A" },
+            { label: "Range High", val: analysis.max.toFixed(2) + (ind.unit || ""), clr: "#EF5350" },
+            { label: "Range", val: analysis.range.toFixed(2), clr: "#333334" },
+            { label: "Support", val: analysis.support.toFixed(2) + (ind.unit || ""), clr: "#5B8C5A" },
+            { label: "Resistance", val: analysis.resistance.toFixed(2) + (ind.unit || ""), clr: "#EF5350" },
+            { label: "Percentile", val: analysis.percentile + "th", clr: "#C48830" },
+          ].map((s, i) => (
+            <div key={i} style={{ background: "#FAFAFA", borderRadius: 8, padding: "5px 7px", textAlign: "center" }}>
+              <div style={{ fontSize: 6, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "JetBrains Mono", color: s.clr }}>{s.val}</div>
+            </div>
+          ))}
+        </div>
+        {/* Range bar */}
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", marginBottom: 3 }}>Position in Range</div>
+          <div style={{ position: "relative", height: 8, background: "#F5F0E8", borderRadius: 4 }}>
+            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${analysis.percentile}%`, background: `linear-gradient(90deg, #5B8C5A, ${analysis.percentile > 70 ? "#EF5350" : "#C48830"})`, borderRadius: 4 }} />
+            <div style={{ position: "absolute", top: -2, left: `${analysis.percentile}%`, transform: "translateX(-50%)", width: 12, height: 12, borderRadius: "50%", background: "#fff", border: `2px solid ${clr}`, boxShadow: "0 1px 4px rgba(0,0,0,.15)" }} />
+          </div>
+        </div>
+      </div>
+
+      {/* About */}
+      {details.desc && <div style={{ background: "#FFF8EE", borderRadius: 12, padding: "10px 12px", marginBottom: 8, border: "1px solid #C4883022" }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#C48830", marginBottom: 4 }}>About {ind.name}</div>
+        <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.5 }}>{details.desc}</div>
+        {details.release && <div style={{ fontSize: 7, color: "#A09080", marginTop: 4 }}>Next release: <span style={{ fontWeight: 800, color: "#C48830" }}>{details.release}</span></div>}
+      </div>}
+
+      {/* Impact Assets */}
+      {details.impactAssets && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Impacted Assets</div>
+        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+          {details.impactAssets.map(t => (
+            <span key={t} style={{ fontSize: 8, fontWeight: 800, fontFamily: "JetBrains Mono", padding: "4px 10px", borderRadius: 8, background: "#F5F0E8", color: "#5C4A1E", cursor: "pointer" }}>{t}</span>
+          ))}
+        </div>
+      </div>}
+
+      {/* Active Alerts */}
+      {relatedAlerts.length > 0 && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Active Alerts ({relatedAlerts.length})</div>
+        {relatedAlerts.map((a, i) => {
+          const sevCol = { critical: "#EF5350", warning: "#FFA726", info: "#42A5F5" };
+          const sevBg = { critical: "#FFEBEE", warning: "#FFF3E0", info: "#E3F2FD" };
+          return (
+            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+              <Icon name={a.icon} size={11} color={sevCol[a.severity]} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 9, fontWeight: 800 }}>{a.title}</div>
+                <div style={{ fontSize: 8, color: "#33333480" }}>{a.summary}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <span style={{ fontSize: 7, fontWeight: 800, background: sevBg[a.severity], color: sevCol[a.severity], padding: "2px 6px", borderRadius: 4 }}>{a.severity.toUpperCase()}</span>
+                <div style={{ fontSize: 7, color: "#A09080", marginTop: 2 }}>{a.time} ago</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>}
+
+      {/* Related News */}
+      {relatedNews.length > 0 && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Related News</div>
+        {relatedNews.map((f, i) => (
+          <div key={f.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+              <span style={{ fontSize: 6, fontWeight: 800, padding: "2px 5px", borderRadius: 4, background: f.impact === "bullish" ? "#5B8C5A18" : f.impact === "bearish" ? "#EF535018" : "#F5F0E8", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "#A09080", flexShrink: 0, marginTop: 1 }}>{f.cat}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: "#333334", lineHeight: 1.3, marginBottom: 2 }}>{f.headline}</div>
+                <div style={{ fontSize: 7, color: "#33333480", lineHeight: 1.4 }}>{f.desc.slice(0, 100)}...</div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontSize: 7, color: "#A09080", fontFamily: "JetBrains Mono" }}>{f.time}</div>
+                <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "JetBrains Mono", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "#A09080" }}>{f.move}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>}
+
+      {/* Related Indicators */}
+      {details.related && details.related.length > 0 && <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Related Indicators</div>
+        <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+          {details.related.map(rid => {
+            const ri = macroDashboardData.find(m => m.id === rid);
+            if (!ri) return null;
+            const rClr = sc[ri.signal] || "#A09080";
+            const rDelta = ri.value - ri.prev;
+            return (
+              <div key={rid} onClick={() => onSelectIndicator && onSelectIndicator(rid)} style={{ background: "#fff", borderRadius: 10, padding: "8px 12px", border: `1px solid ${rClr}22`, cursor: "pointer", flexShrink: 0, minWidth: 100 }}>
+                <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>{ri.name}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 13, fontWeight: 900, color: "#333334" }}>{ri.value}{ri.unit}</div>
+                <div style={{ fontSize: 8, fontWeight: 700, color: rClr }}>{rDelta >= 0 ? "▲" : "▼"} {ri.signal}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+// ═══════════════ 3D PIE CHART (Interactive) ═══════════════
+function PieChartInteractive({ arcs, slices, cx, cy, rx, ry, depth, darken, divColor, divLabel, diversScore, totalVal }) {
+  const [activeIdx, setActiveIdx] = useState(null);
+  const active = activeIdx !== null ? arcs[activeIdx] : null;
+  const fmt = n => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  // Sort arcs for 3D rendering: back slices first (by midAngle, bottom half behind)
+  const sortedForSides = [...arcs.map((a, i) => ({ ...a, idx: i }))]
+    .filter(a => { const mid = a.midAngle % 360; return mid > 0 && mid < 180; })
+    .sort((a, b) => a.midAngle - b.midAngle);
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 14, padding: "12px 10px", border: "1px solid #F0E6D0", marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Portfolio Allocation</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div style={{ width: 6, height: 6, borderRadius: 3, background: divColor }} />
+          <span style={{ fontSize: 7, fontWeight: 800, color: divColor }}>{divLabel}</span>
+          <span style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 800, color: divColor }}>{diversScore.toFixed(0)}%</span>
+        </div>
+      </div>
+
+      {/* 3D Pie */}
+      <div style={{ position: "relative", width: "100%", maxWidth: 260, margin: "0 auto" }}>
+        <svg viewBox="0 0 200 180" style={{ width: "100%", height: "auto", display: "block" }}>
+          <defs>
+            <filter id="pie3d-shadow" x="-10%" y="-10%" width="130%" height="140%">
+              <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#00000015" />
+            </filter>
+          </defs>
+          {/* 3D sides (render bottom-visible slices back-to-front) */}
+          {sortedForSides.map((a) => (
+            <path key={"side-" + a.idx} d={a.sideD} fill={darken(a.color, 50)} opacity={activeIdx !== null && activeIdx !== a.idx ? 0.4 : 0.85} style={{ transition: "opacity .2s" }} />
+          ))}
+          {/* Top faces */}
+          <g filter="url(#pie3d-shadow)">
+            {arcs.map((a, i) => {
+              const isActive = activeIdx === i;
+              const pullX = isActive ? 6 * Math.cos(a.midRad) : 0;
+              const pullY = isActive ? 6 * Math.sin(a.midRad) : 0;
+              return (
+                <path key={i} d={a.topD} fill={a.color} stroke="#fff" strokeWidth="1"
+                  opacity={activeIdx !== null && !isActive ? 0.5 : 1}
+                  transform={`translate(${pullX},${pullY})`}
+                  style={{ cursor: "pointer", transition: "opacity .2s, transform .25s ease" }}
+                  onClick={() => setActiveIdx(isActive ? null : i)}
+                  onMouseEnter={() => setActiveIdx(i)}
+                  onMouseLeave={() => setActiveIdx(null)} />
+              );
+            })}
+          </g>
+          {/* Center donut hole */}
+          <ellipse cx={cx} cy={cy} rx={30} ry={18} fill="#fff" />
+          {/* Center label */}
+          {active ? (
+            <>
+              <text x={cx} y={cy - 4} textAnchor="middle" style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, fill: active.color }}>{active.pct.toFixed(1)}%</text>
+              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 7, fontWeight: 700, fill: "#A09080" }}>{active.ticker}</text>
+            </>
+          ) : (
+            <>
+              <text x={cx} y={cy - 3} textAnchor="middle" style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 900, fill: "#333334" }}>{slices.length}</text>
+              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 7, fontWeight: 700, fill: "#A09080" }}>stocks</text>
+            </>
+          )}
+        </svg>
+      </div>
+
+      {/* Tooltip card on select */}
+      {active && (
+        <div style={{ background: "#FFFDF5", borderRadius: 10, padding: "8px 10px", marginTop: 4, border: `1.5px solid ${active.color}33`, animation: "popIn .2s ease both" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: active.color }} />
+              <span style={{ fontWeight: 800, fontSize: 10, fontFamily: "'Instrument Serif', serif" }}>{active.ticker}</span>
+              <span style={{ fontSize: 8, color: "#A09080" }}>{active.name}</span>
+            </div>
+            <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 900, color: active.color }}>{active.pct.toFixed(1)}%</span>
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
+            <div><div style={{ fontSize: 7, color: "#A09080", fontWeight: 700 }}>VALUE</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800 }}>{fmt(active.value)}</div></div>
+            <div><div style={{ fontSize: 7, color: "#A09080", fontWeight: 700 }}>OF TOTAL</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800 }}>{fmt(totalVal)}</div></div>
+          </div>
+        </div>
+      )}
+
+      {/* Legend grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 10px", marginTop: 8 }}>
+        {arcs.map((a, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 4px", borderRadius: 6, cursor: "pointer", background: activeIdx === i ? "#FFFDF5" : "transparent", transition: "background .15s" }}
+            onClick={() => setActiveIdx(activeIdx === i ? null : i)}
+            onMouseEnter={() => setActiveIdx(i)} onMouseLeave={() => setActiveIdx(null)}>
+            <div style={{ width: 7, height: 7, borderRadius: 2, background: a.color, flexShrink: 0 }} />
+            <span style={{ fontSize: 8, fontWeight: 700, color: "#333334", flex: 1 }}>{a.ticker}</span>
+            <span style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 800, color: activeIdx === i ? a.color : "#333334", transition: "color .15s" }}>{a.pct.toFixed(1)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════ MACRO DASHBOARD PAGE ═══════════════
-function MacroDashboardPage({ onGoRiskLab, regime }) {
+function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSelectIndicator }) {
+  const [alertFilter, setAlertFilter] = useState("all");
+  const sCol = { critical: "#EF5350", warning: "#FFA726", info: "#42A5F5" };
+  const sBg = { critical: "#FFEBEE", warning: "#FFF3E0", info: "#E3F2FD" };
+  const filteredAlerts = alertFilter === "all" ? alerts : alerts.filter(a => a.severity === alertFilter);
+
+  // macroData is defined at module scope (macroDashboardData)
+
+  const sourceColors = { BLS: "#B7950B", FRED: "#1A5276", BEA: "#6C3483" };
+
   return (
     <div>
-      <div style={{ marginBottom: 8, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Dashboard</h1>
-        <p style={{ color: "#33333480", fontSize: 9, marginTop: 2 }}>Current regime, macro indicators & economic outlook</p>
+      {/* ── Header with Back Button ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, animation: "fadeUp .3s ease both" }}>
+        <button onClick={() => onNavigate("dashboard")} style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, border: "1.5px solid #F0E6D0", flexShrink: 0 }}>←</button>
+        <div>
+          <h1 style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Dashboard</h1>
+          <p style={{ color: "#33333480", fontSize: 9, marginTop: 1 }}>FRED + BEA + BLS economic data & regime analysis</p>
+        </div>
       </div>
 
       {/* ── Full Regime Banner ── */}
@@ -4021,54 +4625,98 @@ function MacroDashboardPage({ onGoRiskLab, regime }) {
         </div>
       </div>
 
-      {/* ── Macro Indicators Grid ── */}
+      {/* ── Key Indicators Grid ── */}
       <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Key Indicators</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-          {macroIndicators.map(ind => {
-            const sc = { bullish: "#C48830", bearish: "#EF5350", neutral: "#A09080" };
-            const bg = { bullish: "#FFF8EE", bearish: "#FFEBEE", neutral: "#fff" };
+          {macroDashboardData.map(ind => {
+            const sc = { bullish: "#5B8C5A", bearish: "#EF5350", neutral: "#A09080" };
+            const bg = { bullish: "#F0F7F0", bearish: "#FFEBEE", neutral: "#fff" };
             const delta = ind.value - ind.prev;
+            const clr = sc[ind.signal];
+            const pts = ind.periods?.["1Y"]?.data || [];
+            const spMin = Math.min(...pts);
+            const spMax = Math.max(...pts);
+            const spRange = spMax - spMin || 1;
+            const n = pts.length - 1;
+            const sparkPath = pts.map((v, i) => `${i === 0 ? "M" : "L"}${(i / n) * 100},${28 - ((v - spMin) / spRange) * 24}`).join(" ");
+            const areaPath = sparkPath + ` L100,30 L0,30 Z`;
+            const isPercent = ind.unit === "%" || ind.unit === "bp";
+            const srcClr = sourceColors[ind.source] || "#A09080";
             return (
-              <div key={ind.id} style={{ background: bg[ind.signal], borderRadius: 10, padding: "8px 10px", border: `1px solid ${sc[ind.signal]}22` }}>
-                <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, marginBottom: 3 }}>{ind.name}</div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: "#333334" }}>{ind.value}{ind.unit}</span>
-                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: sc[ind.signal] }}>
-                    {delta >= 0 ? "▲" : "▼"}{Math.abs(delta).toFixed(ind.unit === "%" ? 2 : 1)}
-                  </span>
+              <div key={ind.id} onClick={() => onSelectIndicator && onSelectIndicator(ind.id)} style={{ background: bg[ind.signal], borderRadius: 10, padding: "8px 10px", border: `1px solid ${clr}22`, cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                  <div style={{ fontSize: 7.5, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, maxWidth: "55%" }}>{ind.name}</div>
+                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: "#333334", lineHeight: 1 }}>{ind.value}{ind.unit}</span>
                 </div>
-                <div style={{ fontSize: 8, fontWeight: 800, color: sc[ind.signal], textTransform: "uppercase", marginTop: 2 }}>{ind.signal}</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: clr }}>
+                      {delta >= 0 ? "▲" : "▼"}{Math.abs(delta).toFixed(isPercent ? 2 : 1)}
+                    </span>
+                    <span style={{ fontSize: 7, fontWeight: 800, color: clr, textTransform: "uppercase" }}>{ind.signal}</span>
+                  </div>
+                  <span style={{ fontSize: 6, fontWeight: 800, color: srcClr, background: srcClr + "15", padding: "1px 5px", borderRadius: 4 }}>{ind.source}</span>
+                </div>
+                <svg viewBox="0 0 100 30" style={{ width: "100%", height: 28, display: "block" }} preserveAspectRatio="none">
+                  <defs><linearGradient id={`spk-${ind.id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={clr} stopOpacity="0.2"/><stop offset="100%" stopColor={clr} stopOpacity="0"/></linearGradient></defs>
+                  <path d={areaPath} fill={`url(#spk-${ind.id})`} />
+                  <path d={sparkPath} fill="none" stroke={clr} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="100" cy={28 - ((pts[n] - spMin) / spRange) * 24} r="2" fill={clr} />
+                </svg>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
+                  <span style={{ fontSize: 6.5, color: "#A09080" }}>{ind.freq}</span>
+                  <span style={{ fontSize: 6.5, color: "#A09080" }}>Released: {ind.release}</span>
+                </div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* ── Regime History ── */}
-      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Regime Timeline</div>
+      {/* ── Regime Cycle ── */}
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .25s both" }}>
+        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Regime Cycle</div>
         {[
-          { regime: "Reflation", start: "Jan 15", end: "Present", duration: "23 days", color: "#EF5350", icon: "fire", active: true },
-          { regime: "Goldilocks", start: "Nov 20", end: "Jan 14", duration: "55 days", color: "#5B8C5A", icon: "leaf", active: false },
-          { regime: "Risk-Off", start: "Oct 5", end: "Nov 19", duration: "45 days", color: "#42A5F5", icon: "ice", active: false },
-          { regime: "Stagflation", start: "Aug 12", end: "Oct 4", duration: "53 days", color: "#8A7040", icon: "skull", active: false },
-        ].map((r, i) => (
-          <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", padding: "6px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
-            <Icon name={r.icon} size={12} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, color: r.color, fontFamily: "'Instrument Serif', serif" }}>{r.regime} {r.active && <span style={{ fontSize: 7, background: r.color, color: "#fff", padding: "1px 5px", borderRadius: 4 }}>ACTIVE</span>}</div>
-              <div style={{ fontSize: 8, color: "#33333480" }}>{r.start} – {r.end} · {r.duration}</div>
+          { regime: "Goldilocks", duration: 55, maxDays: 90, color: "#5B8C5A", icon: "leaf", label: "Growth + Low Inflation", period: "Nov 20 – Jan 14" },
+          { regime: "Reflation", duration: 23, maxDays: 90, color: "#FFA726", icon: "fire", label: "Growth + Rising Prices", period: "Jan 15 – Present", active: true },
+          { regime: "Stagflation", duration: 53, maxDays: 90, color: "#EF5350", icon: "warning", label: "Slow Growth + Inflation", period: "Aug 12 – Oct 4" },
+          { regime: "Risk-Off", duration: 45, maxDays: 90, color: "#42A5F5", icon: "shield", label: "Flight to Safety", period: "Oct 5 – Nov 19" },
+        ].map((r, i) => {
+          const pct = r.duration / r.maxDays;
+          const circumference = 2 * Math.PI * 16;
+          const dashOffset = circumference * (1 - pct);
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none", opacity: r.active ? 1 : 0.7 }}>
+              <div style={{ position: "relative", width: 40, height: 40, flexShrink: 0 }}>
+                <svg viewBox="0 0 40 40" style={{ width: 40, height: 40, transform: "rotate(-90deg)" }}>
+                  <circle cx="20" cy="20" r="16" fill="none" stroke="#F0E6D0" strokeWidth="3" />
+                  <circle cx="20" cy="20" r="16" fill="none" stroke={r.color} strokeWidth="3"
+                    strokeDasharray={circumference} strokeDashoffset={dashOffset}
+                    strokeLinecap="round" style={r.active ? { animation: "pulse 2s infinite" } : {}} />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, color: r.color, lineHeight: 1 }}>{r.duration}</span>
+                  <span style={{ fontSize: 6, fontWeight: 700, color: "#33333480", marginTop: 1 }}>days</span>
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
+                  <Icon name={r.icon} size={11} color={r.color} />
+                  <span style={{ fontSize: 11, fontWeight: 800, color: r.color, fontFamily: "'Instrument Serif', serif" }}>{r.regime}</span>
+                  {r.active && <span style={{ fontSize: 6, background: r.color, color: "#fff", padding: "1px 5px", borderRadius: 3, fontWeight: 800, letterSpacing: 0.5 }}>ACTIVE</span>}
+                </div>
+                <div style={{ fontSize: 8, color: "#33333480" }}>{r.label}</div>
+                <div style={{ fontSize: 7, color: "#A09080", marginTop: 1 }}>{r.period}</div>
+              </div>
+              {i < 3 && <div style={{ position: "absolute", right: 16, marginTop: 38, color: "#D0C8B8", fontSize: 10 }}></div>}
             </div>
-            <div style={{ width: 40, height: 4, background: "#F0E6D0", borderRadius: 2, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: r.active ? "100%" : "0%", background: r.color, borderRadius: 2, animation: r.active ? "alertProgress 2s linear infinite" : "none" }} />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── What This Means For You ── */}
-      <div style={{ background: regime.bg, border: `1.5px solid ${regime.color}33`, borderRadius: 12, padding: 10, marginBottom: 8, animation: "fadeUp .4s ease .2s both" }}>
+      <div style={{ background: regime.bg, border: `1.5px solid ${regime.color}33`, borderRadius: 12, padding: 10, marginBottom: 8, animation: "fadeUp .4s ease .3s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: regime.color, marginBottom: 6 }}>Portfolio Impact</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
           {[
@@ -4085,17 +4733,40 @@ function MacroDashboardPage({ onGoRiskLab, regime }) {
         </div>
       </div>
 
-      <button onClick={onGoRiskLab} style={{ width: "100%", padding: 11, background: "linear-gradient(135deg,#C48830,#EF5350)", color: "#fff", border: "none", borderRadius: 12, fontSize: 10, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Open Risk Lab →</button>
+      {/* ── Macro Alerts ── */}
+      {alerts.length > 0 && <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .35s both" }}>
+        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Macro Alerts</div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+          {[{ k: "all", l: "All", n: alerts.length, c: "#5C4A1E", bg: "#fff" }, { k: "critical", l: "Critical", n: alerts.filter(a => a.severity === "critical").length, c: "#EF5350", bg: "#FFEBEE" }, { k: "warning", l: "Warning", n: alerts.filter(a => a.severity === "warning").length, c: "#FFA726", bg: "#FFF3E0" }, { k: "info", l: "Info", n: alerts.filter(a => a.severity === "info").length, c: "#42A5F5", bg: "#E3F2FD" }].map(f => (
+            <button key={f.k} onClick={() => setAlertFilter(f.k)} style={{ flex: "1 1 60px", padding: "8px 10px", borderRadius: 12, border: "1.5px solid " + (alertFilter === f.k ? f.c : "transparent"), background: f.bg, cursor: "pointer", textAlign: "left" }}>
+              <div style={{ fontSize: 9, fontWeight: 800, color: f.c }}>{f.l}</div>
+              <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: f.c }}>{f.n}</div>
+            </button>
+          ))}
+        </div>
+        {filteredAlerts.map((a, i) => (
+          <div key={a.id} style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", marginBottom: 8, borderLeft: "4px solid " + sCol[a.severity], animation: "fadeUp .4s ease " + (i * .05) + "s both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+              <Icon name={a.icon} size={11} />
+              <div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 10, fontFamily: "'Instrument Serif', serif" }}>{a.title}</div></div>
+              <span style={{ fontSize: 7, fontWeight: 800, background: sBg[a.severity], color: sCol[a.severity], padding: "2px 8px", borderRadius: 8 }}>{a.severity.toUpperCase()}</span>
+              <span style={{ fontSize: 9, color: "#33333480" }}>{a.time} ago</span>
+            </div>
+            <div style={{ fontSize: 9, color: "#8A7040", lineHeight: 1.5 }}>{a.summary}</div>
+          </div>
+        ))}
+      </div>}
+
+      <button onClick={onGoRiskLab} style={{ width: "100%", padding: 11, background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 12, fontSize: 10, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Open Risk Lab →</button>
     </div>
   );
 }
 
 function RiskLabPage({ onOpenMacro, hedges, regime }) {
   const [stressId, setStressId] = useState(null);
-  const [hedgeFilter, setHedgeFilter] = useState("all");
   const [dismissedHedges, setDismissedHedges] = useState([]);
   const activeStress = stressScenarios.find(s => s.id === stressId);
-  const filteredHedges = (hedgeFilter === "all" ? hedges : hedges.filter(h => h.priority === hedgeFilter)).filter(h => !dismissedHedges.includes(h.id));
+  const filteredHedges = hedges.filter(h => !dismissedHedges.includes(h.id));
 
   return (
     <div>
@@ -4119,25 +4790,15 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
         </div>
       </div>
 
-      {/* ── 2. Hedge Recommendations (with expiration) ── */}
+      {/* ── 2. Hedge Recommendations ── */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Hedge Recommendations</div>
-          <div style={{ display: "flex", gap: 2, background: "#FFFDF5", borderRadius: 8, padding: 2 }}>
-            {["all","high","medium","low"].map(f => (
-              <button key={f} onClick={() => setHedgeFilter(f)} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: hedgeFilter === f ? "#fff" : "transparent", color: hedgeFilter === f ? "#C48830" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", textTransform: "capitalize", boxShadow: hedgeFilter === f ? "0 1px 3px rgba(0,0,0,.06)" : "none" }}>{f}</button>
-            ))}
-          </div>
-        </div>
+        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Hedge Recommendations</div>
         {filteredHedges.length === 0 && <div style={{ textAlign: "center", padding: "20px 0", color: "#33333480", fontSize: 9 }}>All hedges executed or expired ✓</div>}
         {filteredHedges.map((h, i) => {
-          const pCol = { high: "#EF5350", medium: "#FFA726", low: "#42A5F5" };
-          const pBg = { high: "#FFEBEE", medium: "#FFF3E0", low: "#E3F2FD" };
           const aCol = { BUY: "#C48830", SELL: "#EF5350", ADD: "#C48830", REDUCE: "#EF5350", ROTATE: "#42A5F5" };
           const expPct = h.totalDuration > 0 ? ((h.totalDuration - (h.expiresIn * (h.expiresUnit === "hrs" ? 1 : 24))) / h.totalDuration) * 100 : 0;
           const circumference = 2 * Math.PI * 14;
           const strokeDashoffset = circumference * (1 - expPct / 100);
-          const isUrgent = (h.expiresUnit === "hrs" && h.expiresIn <= 6) || (h.expiresUnit === "days" && h.expiresIn <= 1);
           return (
             <div key={h.id} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none", animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -4145,12 +4806,11 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
                 <div style={{ flexShrink: 0, position: "relative", width: 36, height: 36 }}>
                   <svg width="36" height="36" viewBox="0 0 36 36" style={{ transform: "rotate(-90deg)" }}>
                     <circle cx="18" cy="18" r="14" fill="none" stroke="#F0E6D0" strokeWidth="3" />
-                    <circle cx="18" cy="18" r="14" fill="none" stroke={isUrgent ? "#EF5350" : pCol[h.priority]} strokeWidth="3"
-                      strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
-                      style={{ transition: "stroke-dashoffset .5s", animation: isUrgent ? "blink 2s ease infinite" : "none" }} />
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="#A09080" strokeWidth="3"
+                      strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
                   </svg>
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 900, color: isUrgent ? "#EF5350" : "#5C4A1E", lineHeight: 1 }}>{h.expiresIn}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 900, color: "#5C4A1E", lineHeight: 1 }}>{h.expiresIn}</div>
                     <div style={{ fontSize: 6, fontWeight: 700, color: "#33333480", lineHeight: 1 }}>{h.expiresUnit}</div>
                   </div>
                 </div>
@@ -4159,7 +4819,6 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
                   <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 3, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 8, fontWeight: 900, padding: "1px 6px", borderRadius: 4, background: aCol[h.action] || "#A09080", color: "#fff" }}>{h.action}</span>
                     <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>{h.instrument}</span>
-                    <span style={{ fontSize: 7, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: pBg[h.priority], color: pCol[h.priority] }}>{h.priority.toUpperCase()}</span>
                   </div>
                   <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.3, marginBottom: 4 }}>{h.desc}</div>
                   <div style={{ display: "flex", gap: 4, fontSize: 8, color: "#33333480", flexWrap: "wrap" }}>
@@ -4169,7 +4828,7 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
                 </div>
                 {/* Action buttons */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
-                  <button style={{ background: "linear-gradient(135deg,#C48830,#EF5350)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 8, fontWeight: 800, cursor: "pointer" }}>Execute</button>
+                  <button style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 8, fontWeight: 800, cursor: "pointer" }}>Execute</button>
                   <button onClick={() => setDismissedHedges(prev => [...prev, h.id])} style={{ background: "#F0E6D0", color: "#33333480", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 7, fontWeight: 800, cursor: "pointer" }}>Dismiss</button>
                 </div>
               </div>
@@ -4236,13 +4895,13 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
             { label: "VaR 95%", value: fmtS(portfolioRisk.var95), good: false },
             { label: "Calmar", value: portfolioRisk.calmar.toFixed(2), good: portfolioRisk.calmar > 1 },
           ].map((m, i) => (
-            <div key={i} style={{ background: m.good ? "#EDF5ED" : "#FFEBEE", borderRadius: 8, padding: "6px 8px" }}>
+            <div key={i} style={{ background: "#fff", borderRadius: 8, padding: "6px 8px", border: "1px solid #F0E6D0" }}>
               <div style={{ fontSize: 8, fontWeight: 700, color: "#33333480" }}>{m.label}</div>
               <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.value}</div>
             </div>
           ))}
         </div>
-        <div style={{ marginTop: 8, padding: "6px 8px", background: portfolioRisk.sectorConcentration > 40 ? "#FFEBEE" : "#FFF8EE", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ marginTop: 8, padding: "6px 8px", background: "#fff", borderRadius: 8, border: "1px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div><div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div><div style={{ fontSize: 8, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div></div>
           <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
         </div>
@@ -4336,6 +4995,7 @@ export default function App() {
   const [chartHover, setChartHover] = useState(null);
   const [portfolioView, setPortfolioView] = useState(false);
   const [viewStockTicker, setViewStockTicker] = useState(null); // For standalone stock pages
+  const [viewIndicatorId, setViewIndicatorId] = useState(null); // For indicator detail pages
   const scrollRef = React.useRef(null);
 
   // AI Agent System
@@ -4403,7 +5063,7 @@ export default function App() {
   ];
   const navItemsRight = [
     { id: "explorer", label: "Market", icon: "cart" },
-    { id: "account", label: "Account", icon: "person" },
+    { id: "news", label: "News", icon: "newspaper" },
   ];
 
   return (
@@ -4424,7 +5084,7 @@ export default function App() {
             transition: "opacity .25s ease, transform .25s ease",
           }}>
             {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => { setPage("dashboard"); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => { setPage("dashboard"); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); setViewIndicatorId(null); }}>
               <svg width="34" height="34" viewBox="0 0 64 64" style={{ animation: "basketBounce 2.5s ease-in-out infinite" }}>
                 <defs>
                   <linearGradient id="bsk" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D4A76A"/><stop offset="100%" stopColor="#A67C52"/></linearGradient>
@@ -4455,21 +5115,16 @@ export default function App() {
                 </span>}
               </div>
             </div>
-            {/* Alerts + News + Calendar */}
+            {/* Calendar + Account */}
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <button onClick={() => { setPage("alerts"); setSelectedBasket(null); }}
-                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "alerts" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "alerts" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
-                <Icon name="bell" size={12} />
-                {critCount > 0 && <span style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#EF5350", color: "#fff", fontSize: 7, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{critCount}</span>}
-              </button>
-              <button onClick={() => { setPage("news"); setSelectedBasket(null); }}
-                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "news" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "news" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
-                <Icon name="newspaper" size={12} />
-              </button>
               <button onClick={() => { setPage("calendar"); setSelectedBasket(null); }}
                 style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "calendar" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "calendar" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
                 <Icon name="calendar" size={12} />
                 {todayEvents > 0 && <span style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#FFA726", color: "#fff", fontSize: 7, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{todayEvents}</span>}
+              </button>
+              <button onClick={() => { setPage("account"); setSelectedBasket(null); }}
+                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "account" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "account" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
+                <Icon name="person" size={12} />
               </button>
             </div>
           </div>
@@ -4740,7 +5395,7 @@ export default function App() {
 
           {/* ── Alerts (auto-rotating) ── */}
           <div style={{ marginBottom: 8 }}>
-            <AlertsWidget alerts={macroAlerts} onViewAll={() => setPage("alerts")} />
+            <AlertsWidget alerts={macroAlerts} onViewAll={() => setPage("macro")} />
           </div>
 
           {/* ── Trade Signals ── */}
@@ -5236,11 +5891,11 @@ export default function App() {
         {/* ══ CALENDAR ══ */}
         {page === "calendar" && !selectedBasket && <CalendarPage onNavigate={setPage} />}
 
-        {/* ══ ALERTS ══ */}
-        {page === "alerts" && !selectedBasket && <AlertsPage alerts={macroAlerts} />}
+        {/* ══ MACRO DASHBOARD (includes alerts) ══ */}
+        {page === "macro" && !selectedBasket && <MacroDashboardPage onGoRiskLab={() => { setPage("risklab"); setRiskLabTab("risklab"); }} onNavigate={setPage} regime={displayRegime} alerts={macroAlerts} onSelectIndicator={(id) => { setViewIndicatorId(id); setPage("indicator"); }} />}
 
-        {/* ══ MACRO DASHBOARD ══ */}
-        {page === "macro" && !selectedBasket && <MacroDashboardPage onGoRiskLab={() => { setPage("risklab"); setRiskLabTab("risklab"); }} regime={displayRegime} />}
+        {/* ══ INDICATOR DETAIL ══ */}
+        {page === "indicator" && viewIndicatorId && !selectedBasket && <IndicatorDetailPage indicatorId={viewIndicatorId} onBack={() => { setViewIndicatorId(null); setPage("macro"); }} onSelectIndicator={(id) => { setViewIndicatorId(id); }} />}
 
         {/* ══ RISK LAB ══ */}
         {page === "risklab" && !selectedBasket && <div>
@@ -5281,7 +5936,7 @@ export default function App() {
           {navItemsLeft.map(p => {
             const isActive = page === p.id && !selectedBasket;
             return (
-              <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); }}
+              <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); setViewIndicatorId(null); }}
                 style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 8px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s", flex: 1 }}>
                 <Icon name={p.icon} size={19} color={isActive ? "#C48830" : "#A09080"} />
                 <span style={{ fontSize: 8, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>
@@ -5294,7 +5949,7 @@ export default function App() {
           {navItemsRight.map(p => {
             const isActive = page === p.id && !selectedBasket;
             return (
-              <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); }}
+              <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); setViewIndicatorId(null); }}
                 style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 8px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s", flex: 1 }}>
                 <Icon name={p.icon} size={19} color={isActive ? "#C48830" : "#A09080"} />
                 <span style={{ fontSize: 8, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>

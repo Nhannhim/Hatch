@@ -205,14 +205,22 @@ export const recentTrades = [
 ];
 
 export const macroIndicators = [
-  { id:"gdp", name:"GDP Growth", value:2.4, prev:2.1, unit:"%", trend:"up", signal:"bullish", weight:0.15 },
-  { id:"cpi", name:"CPI (YoY)", value:3.4, prev:3.1, unit:"%", trend:"up", signal:"bearish", weight:0.2 },
-  { id:"fedrate", name:"Fed Funds Rate", value:5.25, prev:5.25, unit:"%", trend:"flat", signal:"neutral", weight:0.2 },
-  { id:"unemployment", name:"Unemployment", value:3.8, prev:3.7, unit:"%", trend:"up", signal:"bearish", weight:0.1 },
-  { id:"pmi", name:"ISM PMI", value:52.1, prev:50.8, unit:"", trend:"up", signal:"bullish", weight:0.1 },
-  { id:"yield10y", name:"10Y Yield", value:4.52, prev:4.38, unit:"%", trend:"up", signal:"bearish", weight:0.1 },
-  { id:"vix", name:"VIX", value:18.4, prev:16.2, unit:"", trend:"up", signal:"bearish", weight:0.1 },
-  { id:"dxy", name:"Dollar Index", value:104.2, prev:103.8, unit:"", trend:"up", signal:"neutral", weight:0.05 },
+  { id:"gdp", name:"GDP Growth", value:2.4, prev:2.1, unit:"%", trend:"up", signal:"bullish", weight:0.15,
+    history:[1.6,1.9,2.0,1.8,2.1,2.0,1.9,2.2,2.3,2.0,2.1,2.2,2.5,2.3,2.1,2.0,2.2,2.3,2.1,2.4] },
+  { id:"cpi", name:"CPI (YoY)", value:3.4, prev:3.1, unit:"%", trend:"up", signal:"bearish", weight:0.2,
+    history:[6.5,6.4,6.0,5.0,4.9,4.0,3.7,3.2,3.1,3.2,3.4,3.1,2.9,3.0,3.1,3.2,3.0,3.1,3.2,3.4] },
+  { id:"fedrate", name:"Fed Funds Rate", value:5.25, prev:5.25, unit:"%", trend:"flat", signal:"neutral", weight:0.2,
+    history:[4.25,4.50,4.75,5.00,5.00,5.25,5.25,5.50,5.50,5.50,5.50,5.50,5.50,5.50,5.25,5.25,5.25,5.25,5.25,5.25] },
+  { id:"unemployment", name:"Unemployment", value:3.8, prev:3.7, unit:"%", trend:"up", signal:"bearish", weight:0.1,
+    history:[3.4,3.4,3.5,3.4,3.6,3.6,3.5,3.8,3.8,3.7,3.9,3.7,3.6,3.7,3.8,3.7,3.6,3.7,3.7,3.8] },
+  { id:"pmi", name:"ISM PMI", value:52.1, prev:50.8, unit:"", trend:"up", signal:"bullish", weight:0.1,
+    history:[47.4,46.3,46.9,47.1,46.4,47.6,48.7,49.0,47.8,49.0,50.3,49.2,50.0,50.3,49.1,50.6,50.8,51.4,51.2,52.1] },
+  { id:"yield10y", name:"10Y Yield", value:4.52, prev:4.38, unit:"%", trend:"up", signal:"bearish", weight:0.1,
+    history:[3.40,3.52,3.58,3.45,3.70,3.80,3.95,4.05,4.28,4.57,4.88,4.73,4.62,4.25,4.10,3.95,4.15,4.25,4.38,4.52] },
+  { id:"vix", name:"VIX", value:18.4, prev:16.2, unit:"", trend:"up", signal:"bearish", weight:0.1,
+    history:[21.7,19.4,18.5,17.2,13.9,13.6,14.2,13.5,14.9,17.5,21.3,18.1,14.6,12.8,13.1,14.2,15.6,14.1,16.2,18.4] },
+  { id:"dxy", name:"Dollar Index", value:104.2, prev:103.8, unit:"", trend:"up", signal:"neutral", weight:0.05,
+    history:[102.0,101.8,102.1,101.5,100.6,100.1,101.3,102.5,103.5,105.7,106.8,106.1,104.8,103.2,102.5,101.9,103.1,103.4,103.8,104.2] },
 ];
 
 export const regimes = {
