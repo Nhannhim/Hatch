@@ -1,0 +1,13 @@
+{
+  "appId": "com.hatch.trading",
+  "appName": "Hatch",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "automatic",
+    "backgroundColor": "#FFFEF9",
+    "preferredContentMode": "mobile"
+  },
+  "server": {
+    "allowNavigation": ["*.yahoo.com", "*.anthropic.com", "*.googleapis.com", "*.firebaseapp.com"]
+  }
+}
