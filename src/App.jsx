@@ -4763,9 +4763,7 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
 }
 
 function RiskLabPage({ onOpenMacro, hedges, regime }) {
-  const [stressId, setStressId] = useState(null);
   const [dismissedHedges, setDismissedHedges] = useState([]);
-  const activeStress = stressScenarios.find(s => s.id === stressId);
   const filteredHedges = hedges.filter(h => !dismissedHedges.includes(h.id));
 
   return (
@@ -4837,53 +4835,7 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
         })}
       </div>
 
-      {/* ── 3. Stress Test ── */}
-      <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Stress Test Scenarios</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(80px,1fr))", gap: 6, marginBottom: 8 }}>
-          {stressScenarios.map(s => {
-            const active = stressId === s.id;
-            const col = s.portfolioPL >= 0 ? "#5B8C5A" : "#EF5350";
-            return (
-              <button key={s.id} onClick={() => setStressId(active ? null : s.id)} style={{ background: active ? (s.portfolioPL >= 0 ? "#EDF5ED" : "#FFEBEE") : "#fff", border: `1.5px solid ${active ? col : "#F0E6D0"}`, borderRadius: 12, padding: "6px 8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
-                <div style={{ marginBottom: 2 }}><Icon name={s.icon} size={12} /></div>
-                <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{s.name}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: col, marginTop: 2 }}>{s.portfolioPL >= 0 ? "+" : ""}{s.portfolioPL}%</div>
-              </button>
-            );
-          })}
-        </div>
-        {activeStress && (
-          <div style={{ animation: "fadeUp .3s ease both" }}>
-            <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Impact: <span style={{ color: activeStress.portfolioPL >= 0 ? "#5B8C5A" : "#EF5350" }}>{activeStress.name}</span></div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 4 }}>
-              {myBaskets.map(b => {
-                const impact = activeStress.impacts[b.id];
-                if (impact === undefined) return null;
-                const dollarImpact = Math.round(b.value * impact / 100);
-                return (
-                  <div key={b.id} style={{ background: impact >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 10, padding: "6px 10px", border: `1px solid ${impact >= 0 ? "#5B8C5A" : "#EF5350"}22`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                      <Icon name={b.icon} size={10} />
-                      <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>{b.name}</span>
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: impact >= 0 ? "#5B8C5A" : "#EF5350" }}>{impact >= 0 ? "+" : ""}{impact}%</span>
-                      <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImpact)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{ marginTop: 6, padding: "8px 10px", background: activeStress.portfolioPL >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>Total Portfolio</span>
-              <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: activeStress.portfolioPL >= 0 ? "#5B8C5A" : "#EF5350" }}>{activeStress.portfolioPL >= 0 ? "+" : ""}{activeStress.portfolioPL}% ({fmtS(Math.round(41240 * activeStress.portfolioPL / 100))})</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── 4. Portfolio Risk Metrics ── */}
+      {/* ── 3. Portfolio Risk Metrics ── */}
       <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .2s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
@@ -4907,7 +4859,7 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
         </div>
       </div>
 
-      {/* ── 5. Basket Correlations (END) ── */}
+      {/* ── 4. Basket Correlations ── */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .3s both" }}>
         <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Basket Correlations</div>
         <div className="correlation-scroll mobile-scroll-x" style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 9 }}>
@@ -4946,6 +4898,477 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ═══════════════ STRESS TEST PAGE ═══════════════
+function StressTestPage() {
+  const [stressId, setStressId] = useState(null);
+  const activeStress = stressScenarios.find(s => s.id === stressId);
+
+  return (
+    <div>
+      <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
+        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Stress Test Scenarios</h1>
+        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Simulate market shocks and see the impact on your baskets</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(80px,1fr))", gap: 6, marginBottom: 8, animation: "fadeUp .4s ease .05s both" }}>
+        {stressScenarios.map(s => {
+          const active = stressId === s.id;
+          const col = s.portfolioPL >= 0 ? "#5B8C5A" : "#EF5350";
+          return (
+            <button key={s.id} onClick={() => setStressId(active ? null : s.id)} style={{ background: active ? (s.portfolioPL >= 0 ? "#EDF5ED" : "#FFEBEE") : "#fff", border: `1.5px solid ${active ? col : "#F0E6D0"}`, borderRadius: 12, padding: "6px 8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
+              <div style={{ marginBottom: 2 }}><Icon name={s.icon} size={12} /></div>
+              <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{s.name}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: col, marginTop: 2 }}>{s.portfolioPL >= 0 ? "+" : ""}{s.portfolioPL}%</div>
+            </button>
+          );
+        })}
+      </div>
+
+      {activeStress && (
+        <div style={{ animation: "fadeUp .3s ease both" }}>
+          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Impact: <span style={{ color: activeStress.portfolioPL >= 0 ? "#5B8C5A" : "#EF5350" }}>{activeStress.name}</span></div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 4 }}>
+            {myBaskets.map(b => {
+              const impact = activeStress.impacts[b.id];
+              if (impact === undefined) return null;
+              const dollarImpact = Math.round(b.value * impact / 100);
+              return (
+                <div key={b.id} style={{ background: impact >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 10, padding: "6px 10px", border: `1px solid ${impact >= 0 ? "#5B8C5A" : "#EF5350"}22`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                    <Icon name={b.icon} size={10} />
+                    <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>{b.name}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: impact >= 0 ? "#5B8C5A" : "#EF5350" }}>{impact >= 0 ? "+" : ""}{impact}%</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImpact)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 6, padding: "8px 10px", background: activeStress.portfolioPL >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>Total Portfolio</span>
+            <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: activeStress.portfolioPL >= 0 ? "#5B8C5A" : "#EF5350" }}>{activeStress.portfolioPL >= 0 ? "+" : ""}{activeStress.portfolioPL}% ({fmtS(Math.round(41240 * activeStress.portfolioPL / 100))})</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════ HISTORICAL PATTERNS PAGE ═══════════════
+function HistoricalPatternsPage() {
+  const [selectedPeriod, setSelectedPeriod] = useState("2008");
+  const [view, setView] = useState("comparison");
+
+  const historicalPeriods = [
+    { id: "2008", label: "2008 GFC", icon: "bank", similarity: 34, color: "#EF5350", desc: "Credit freeze, bank failures, housing collapse", spxDrawdown: -56.8, duration: "17 months", recovery: "4.3 years", trigger: "Lehman Brothers collapse", indicators: { unemployment: 10.0, gdpGrowth: -4.3, cpi: -0.4, fedRate: 0.25, vix: 80.9 } },
+    { id: "2000", label: "2000 Dot-Com", icon: "laptop", similarity: 52, color: "#FFA726", desc: "Tech bubble burst, valuation reset, Nasdaq -78%", spxDrawdown: -49.1, duration: "30 months", recovery: "7.1 years", trigger: "Tech valuation euphoria collapse", indicators: { unemployment: 6.3, gdpGrowth: 0.8, cpi: 3.4, fedRate: 1.0, vix: 43.7 } },
+    { id: "2020", label: "2020 COVID", icon: "syringe", similarity: 28, color: "#42A5F5", desc: "Pandemic shock, V-shaped recovery, massive stimulus", spxDrawdown: -33.9, duration: "1 month", recovery: "5 months", trigger: "Global pandemic lockdowns", indicators: { unemployment: 14.7, gdpGrowth: -31.2, cpi: 0.1, fedRate: 0.0, vix: 82.7 } },
+    { id: "2022", label: "2022 Rate Shock", icon: "chart-up", similarity: 71, color: "#5B8C5A", desc: "Fed tightening cycle, inflation battle, growth scare", spxDrawdown: -25.4, duration: "10 months", recovery: "14 months", trigger: "Aggressive Fed rate hikes", indicators: { unemployment: 3.7, gdpGrowth: 2.1, cpi: 9.1, fedRate: 4.5, vix: 36.5 } },
+    { id: "1970s", label: "1970s Stagflation", icon: "oil-barrel", similarity: 45, color: "#C48830", desc: "Oil shocks, wage-price spiral, double-dip recession", spxDrawdown: -48.2, duration: "21 months", recovery: "3.3 years", trigger: "OPEC oil embargo + monetary policy failure", indicators: { unemployment: 9.0, gdpGrowth: -1.4, cpi: 11.0, fedRate: 13.0, vix: null } },
+  ];
+
+  const currentIndicators = { unemployment: 4.1, gdpGrowth: 2.6, cpi: 3.4, fedRate: 5.25, vix: 18.2 };
+
+  const patternMatches = [
+    { pattern: "Yield Curve Inversion", current: "Inverted 14mo", historical: "Avg 16mo before recession", confidence: 72, icon: "chart-line", color: "#EF5350" },
+    { pattern: "Fed Pause Duration", current: "5 months", historical: "Avg 8mo before first cut", confidence: 61, icon: "bank", color: "#FFA726" },
+    { pattern: "Earnings Growth Decel", current: "+4.2% YoY", historical: "Slows to <2% before recession", confidence: 38, icon: "chart-bar", color: "#5B8C5A" },
+    { pattern: "Credit Spreads", current: "HY +340bp", historical: "Widens to +500bp in stress", confidence: 44, icon: "warning", color: "#FFA726" },
+    { pattern: "M2 Money Supply", current: "-2.1% YoY", historical: "First contraction since 1930s", confidence: 67, icon: "money", color: "#EF5350" },
+    { pattern: "Consumer Sentiment", current: "67.4", historical: "Sub-60 precedes recessions", confidence: 42, icon: "person", color: "#5B8C5A" },
+  ];
+
+  const period = historicalPeriods.find(p => p.id === selectedPeriod);
+
+  return (
+    <div>
+      <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
+        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Historical Patterns</h1>
+        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Compare current market conditions to historical periods & detect rhyming patterns</p>
+      </div>
+
+      <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
+        {[{ id: "comparison", l: "Compare" }, { id: "patterns", l: "Patterns" }, { id: "indicators", l: "Indicators" }].map(t => (
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#C48830" : "#F0E6D0"}`, background: view === t.id ? "#C48830" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
+        ))}
+      </div>
+
+      {view === "comparison" && <>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(90px,1fr))", gap: 6, marginBottom: 8, animation: "fadeUp .4s ease .05s both" }}>
+          {historicalPeriods.map(p => (
+            <button key={p.id} onClick={() => setSelectedPeriod(p.id)} style={{ background: selectedPeriod === p.id ? p.color + "15" : "#fff", border: `1.5px solid ${selectedPeriod === p.id ? p.color : "#F0E6D0"}`, borderRadius: 12, padding: "8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
+              <Icon name={p.icon} size={12} color={selectedPeriod === p.id ? p.color : "#A09080"} />
+              <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginTop: 4 }}>{p.label}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: p.color, marginTop: 2 }}>{p.similarity}%</div>
+              <div style={{ fontSize: 7, color: "#33333480" }}>similarity</div>
+            </button>
+          ))}
+        </div>
+
+        {period && (
+          <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: period.color + "15", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icon name={period.icon} size={16} color={period.color} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{period.label}</div>
+                <div style={{ fontSize: 8, color: "#33333480" }}>{period.desc}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: "#33333480" }}>Match</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: period.color }}>{period.similarity}%</div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 8 }}>
+              {[
+                { label: "S&P Drawdown", value: period.spxDrawdown + "%", color: "#EF5350" },
+                { label: "Duration", value: period.duration, color: "#FFA726" },
+                { label: "Recovery", value: period.recovery, color: "#5B8C5A" },
+              ].map((s, i) => (
+                <div key={i} style={{ background: "#F9F6F0", borderRadius: 8, padding: "6px 8px", textAlign: "center" }}>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{s.label}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: s.color, marginTop: 2 }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ padding: "6px 10px", background: period.color + "10", borderRadius: 8, border: `1px solid ${period.color}22`, marginBottom: 8 }}>
+              <div style={{ fontSize: 8, fontWeight: 800, color: period.color, textTransform: "uppercase" }}>Trigger</div>
+              <div style={{ fontSize: 9, color: "#5C4A1E", marginTop: 2 }}>{period.trigger}</div>
+            </div>
+
+            <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Then vs Now</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
+              <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480" }}>METRIC</div>
+              <div style={{ fontSize: 7, fontWeight: 800, color: period.color, textAlign: "center" }}>{period.label.toUpperCase()}</div>
+              <div style={{ fontSize: 7, fontWeight: 800, color: "#C48830", textAlign: "center" }}>NOW</div>
+              {[
+                { label: "Unemployment", key: "unemployment", unit: "%" },
+                { label: "GDP Growth", key: "gdpGrowth", unit: "%" },
+                { label: "CPI", key: "cpi", unit: "%" },
+                { label: "Fed Rate", key: "fedRate", unit: "%" },
+                { label: "VIX", key: "vix", unit: "" },
+              ].map((m, i) => (
+                <React.Fragment key={i}>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: "#5C4A1E", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{m.label}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: period.color, textAlign: "center", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{period.indicators[m.key] !== null ? period.indicators[m.key] + m.unit : "N/A"}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#C48830", textAlign: "center", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{currentIndicators[m.key]}{m.unit}</div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        )}
+      </>}
+
+      {view === "patterns" && (
+        <div style={{ animation: "fadeUp .3s ease both" }}>
+          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Pattern Recognition</div>
+          {patternMatches.map((p, i) => (
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <Icon name={p.icon} size={11} color={p.color} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{p.pattern}</div>
+                </div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, color: p.color }}>{p.confidence}%</div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                <div style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 8px" }}>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Current</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{p.current}</div>
+                </div>
+                <div style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 8px" }}>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Historical</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{p.historical}</div>
+                </div>
+              </div>
+              <div style={{ marginTop: 6, height: 4, background: "#F0E6D0", borderRadius: 2 }}>
+                <div style={{ height: "100%", width: p.confidence + "%", background: p.color, borderRadius: 2, transition: "width .5s ease" }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view === "indicators" && (
+        <div style={{ animation: "fadeUp .3s ease both" }}>
+          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Macro Indicators Timeline</div>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid #F0E6D0" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 8 }}>
+              {[
+                { label: "Unemployment", value: "4.1%", trend: "flat", icon: "person" },
+                { label: "GDP Growth", value: "+2.6%", trend: "up", icon: "chart-up" },
+                { label: "CPI (YoY)", value: "3.4%", trend: "down", icon: "fire" },
+                { label: "Fed Funds", value: "5.25%", trend: "flat", icon: "bank" },
+                { label: "VIX", value: "18.2", trend: "down", icon: "wave" },
+                { label: "10Y Yield", value: "4.31%", trend: "up", icon: "chart-line" },
+              ].map((ind, i) => (
+                <div key={i} style={{ background: "#F9F6F0", borderRadius: 8, padding: "6px 8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+                    <Icon name={ind.icon} size={9} color="#A09080" />
+                    <span style={{ fontSize: 8, fontWeight: 700, color: "#33333480" }}>{ind.label}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 800, color: "#5C4A1E" }}>{ind.value}</span>
+                    <span style={{ fontSize: 8, color: ind.trend === "up" ? "#5B8C5A" : ind.trend === "down" ? "#EF5350" : "#FFA726", fontWeight: 700 }}>
+                      {ind.trend === "up" ? "▲" : ind.trend === "down" ? "▼" : "—"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding: "8px 10px", background: "#FFEBEE", borderRadius: 10, border: "1px solid #EF535022" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 800, color: "#EF5350", textTransform: "uppercase" }}>Recession Probability (12mo)</div>
+                  <div style={{ fontSize: 8, color: "#8A7040", marginTop: 2 }}>Based on yield curve, PMI, and leading indicators</div>
+                </div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 16, fontWeight: 900, color: "#EF5350" }}>32%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════ CONTRARIAN SIGNALS PAGE ═══════════════
+function ContrarianSignalsPage() {
+  const [view, setView] = useState("flows");
+
+  const tradeFlows = [
+    { ticker: "NVDA", name: "NVIDIA", volume: "142M", avgVol: "58M", ratio: 2.45, sentiment: "Extreme Greed", contrarianSignal: "Caution", color: "#EF5350", icon: "bolt" },
+    { ticker: "TSLA", name: "Tesla", volume: "98M", avgVol: "72M", ratio: 1.36, sentiment: "Greedy", contrarianSignal: "Neutral", color: "#FFA726", icon: "car" },
+    { ticker: "AAPL", name: "Apple", volume: "45M", avgVol: "52M", ratio: 0.87, sentiment: "Neutral", contrarianSignal: "Hold", color: "#42A5F5", icon: "apple-fruit" },
+    { ticker: "META", name: "Meta", volume: "38M", avgVol: "22M", ratio: 1.73, sentiment: "Greedy", contrarianSignal: "Trim", color: "#EF5350", icon: "goggles" },
+    { ticker: "AMZN", name: "Amazon", volume: "52M", avgVol: "48M", ratio: 1.08, sentiment: "Neutral", contrarianSignal: "Hold", color: "#5B8C5A", icon: "cart" },
+  ];
+
+  const underloved = [
+    { ticker: "PFE", name: "Pfizer", sector: "Healthcare", ytd: -18.4, pe: 9.2, div: 6.1, neglectScore: 92, reason: "Post-COVID narrative collapse. Pipeline underappreciated. Deep value territory.", icon: "pill" },
+    { ticker: "MMM", name: "3M", sector: "Industrials", ytd: -12.8, pe: 10.8, div: 5.8, neglectScore: 87, reason: "Litigation overhang priced in. Restructuring underway. Spinoff catalyst ahead.", icon: "wrench" },
+    { ticker: "VZ", name: "Verizon", sector: "Telecom", ytd: -8.2, pe: 8.4, div: 7.2, neglectScore: 84, reason: "Telecom out of favor. Fiber buildout nearing completion. FCF machine.", icon: "signal" },
+    { ticker: "INTC", name: "Intel", sector: "Technology", ytd: -31.2, pe: 14.6, div: 1.4, neglectScore: 88, reason: "Foundry skepticism extreme. CHIPS Act catalysts. 18A node could surprise.", icon: "laptop" },
+    { ticker: "BMY", name: "Bristol-Myers", sector: "Healthcare", ytd: -22.6, pe: 7.8, div: 5.4, neglectScore: 90, reason: "Patent cliff fears overdone. New drug pipeline not priced in. Deep value.", icon: "syringe" },
+  ];
+
+  const overtraded = [
+    { ticker: "NVDA", name: "NVIDIA", crowding: 96, shortInterest: 1.2, callPutRatio: 4.8, rsi: 78, risk: "Extreme crowding. Any miss triggers cascade.", color: "#EF5350" },
+    { ticker: "ARM", name: "Arm Holdings", crowding: 88, shortInterest: 8.4, callPutRatio: 3.2, rsi: 72, risk: "Momentum trade. Valuation detached from fundamentals.", color: "#EF5350" },
+    { ticker: "PLTR", name: "Palantir", crowding: 82, shortInterest: 3.8, callPutRatio: 5.1, rsi: 74, risk: "Retail darling. Government contract cycle risk.", color: "#FFA726" },
+    { ticker: "SMCI", name: "Super Micro", crowding: 91, shortInterest: 12.4, callPutRatio: 2.8, rsi: 68, risk: "Accounting concerns. Short squeeze potential but fundamentally risky.", color: "#EF5350" },
+  ];
+
+  const commoditySignals = [
+    { name: "Gold", icon: "gold-medal", price: "$2,340", positioning: "Overcrowded Long", cot: "+284K net long", contrarianView: "Near-term pullback likely. Extreme spec longs historically lead to 5-8% corrections. Buy dips.", signal: "Wait", color: "#FFA726" },
+    { name: "Oil (WTI)", icon: "oil-barrel", price: "$78.20", positioning: "Balanced", cot: "+42K net long", contrarianView: "Positioning neutral. Supply cuts vs demand uncertainty. Range-bound. No edge.", signal: "Neutral", color: "#42A5F5" },
+    { name: "Copper", icon: "pickaxe", price: "$4.12", positioning: "Underloved", cot: "-18K net short", contrarianView: "Specs hate it. But EV + grid buildout = structural demand. Contrarian long.", signal: "Buy", color: "#5B8C5A" },
+    { name: "Natural Gas", icon: "fire", price: "$2.84", positioning: "Extreme Short", cot: "-142K net short", contrarianView: "Most hated commodity. Winter wildcards + LNG export growth = squeeze candidate.", signal: "Strong Buy", color: "#5B8C5A" },
+    { name: "Silver", icon: "coin", price: "$28.40", positioning: "Mildly Crowded", cot: "+62K net long", contrarianView: "Gold/silver ratio at 82x, historically mean-reverts to 65x. Industrial demand tailwind.", signal: "Buy Dip", color: "#5B8C5A" },
+  ];
+
+  const futuresSignals = [
+    { name: "E-mini S&P 500", ticker: "ES", icon: "chart-bar", price: "$5,248", openInterest: "2.4M", netSpec: "+142K", signal: "Crowded Long", color: "#EF5350", note: "Specs heavily long. Vulnerable to any hawkish catalyst or growth scare." },
+    { name: "10Y Treasury", ticker: "ZN", icon: "bank", price: "110.25", openInterest: "4.1M", netSpec: "-284K", signal: "Contrarian Buy", color: "#5B8C5A", note: "Largest net short in history. Mean reversion trade if inflation cools." },
+    { name: "VIX Futures", ticker: "VX", icon: "wave", price: "18.40", openInterest: "380K", netSpec: "-98K", signal: "Cheap Protection", color: "#5B8C5A", note: "Vol sellers complacent. Tail hedges historically cheap at these levels." },
+    { name: "Euro FX", ticker: "6E", icon: "globe", price: "1.0785", openInterest: "680K", netSpec: "+28K", signal: "Neutral", color: "#42A5F5", note: "Mild long positioning. No strong contrarian edge either way." },
+  ];
+
+  return (
+    <div>
+      <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
+        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Contrarian Signals</h1>
+        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Go against the crowd — find what's overloved, underloved & mispriced</p>
+      </div>
+
+      <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
+        {[{ id: "flows", l: "Flows" }, { id: "underloved", l: "Underloved" }, { id: "crowded", l: "Crowded" }, { id: "commodities", l: "Commodities" }].map(t => (
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#C48830" : "#F0E6D0"}`, background: view === t.id ? "#C48830" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
+        ))}
+      </div>
+
+      {view === "flows" && (
+        <div style={{ animation: "fadeUp .3s ease both" }}>
+          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Trade Flow Analysis</div>
+          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 8 }}>Volume vs average — when the crowd piles in, contrarians step back.</div>
+          {tradeFlows.map((t, i) => (
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <Icon name={t.icon} size={12} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800 }}>{t.ticker}</span>
+                    <span style={{ fontSize: 8, color: "#33333480" }}>{t.name}</span>
+                  </div>
+                </div>
+                <span style={{ fontSize: 7, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: t.color + "15", color: t.color }}>{t.contrarianSignal}</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4 }}>
+                {[
+                  { label: "Volume", value: t.volume },
+                  { label: "Avg Vol", value: t.avgVol },
+                  { label: "Ratio", value: t.ratio.toFixed(2) + "x" },
+                  { label: "Sentiment", value: t.sentiment },
+                ].map((s, j) => (
+                  <div key={j} style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>{s.label}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 6, height: 4, background: "#F0E6D0", borderRadius: 2, position: "relative" }}>
+                <div style={{ height: "100%", width: Math.min(t.ratio / 3 * 100, 100) + "%", background: t.color, borderRadius: 2 }} />
+                <div style={{ position: "absolute", left: "33.3%", top: -1, width: 2, height: 6, background: "#5C4A1E", borderRadius: 1 }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 7, color: "#33333480", marginTop: 2 }}>
+                <span>Normal</span><span style={{ fontWeight: 700, color: "#5C4A1E" }}>1x avg</span><span>3x+ (crowded)</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view === "underloved" && (
+        <div style={{ animation: "fadeUp .3s ease both" }}>
+          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Underloved & Overlooked</div>
+          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 8 }}>Stocks the market has abandoned. High neglect = potential contrarian opportunity.</div>
+          {underloved.map((s, i) => (
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <Icon name={s.icon} size={12} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800 }}>{s.ticker}</span>
+                    <span style={{ fontSize: 8, color: "#33333480" }}>{s.name}</span>
+                    <span style={{ fontSize: 7, fontWeight: 700, color: "#A09080" }}>{s.sector}</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>Neglect</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, color: "#C48830" }}>{s.neglectScore}</div>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 6 }}>
+                <div style={{ background: "#FFEBEE", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: "#EF5350" }}>YTD</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#EF5350" }}>{s.ytd}%</div>
+                </div>
+                <div style={{ background: "#EDF5ED", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: "#5B8C5A" }}>P/E</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5B8C5A" }}>{s.pe}x</div>
+                </div>
+                <div style={{ background: "#FFF8EE", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: "#C48830" }}>Div %</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#C48830" }}>{s.div}%</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.4 }}>{s.reason}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view === "crowded" && (
+        <div style={{ animation: "fadeUp .3s ease both" }}>
+          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Overly Crowded Trades</div>
+          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 8 }}>When everyone is on one side of the trade, the exit gets narrow.</div>
+          {overtraded.map((s, i) => (
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800 }}>{s.ticker}</span>
+                    <span style={{ fontSize: 8, color: "#33333480" }}>{s.name}</span>
+                  </div>
+                </div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 900, color: s.color }}>{s.crowding}%</div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 6 }}>
+                {[
+                  { label: "Short Interest", value: s.shortInterest + "%" },
+                  { label: "Call/Put", value: s.callPutRatio + "x" },
+                  { label: "RSI", value: s.rsi },
+                ].map((m, j) => (
+                  <div key={j} style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
+                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>{m.label}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{m.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ height: 4, background: "#F0E6D0", borderRadius: 2, marginBottom: 4 }}>
+                <div style={{ height: "100%", width: s.crowding + "%", background: s.color, borderRadius: 2 }} />
+              </div>
+              <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.4 }}>{s.risk}</div>
+            </div>
+          ))}
+
+          <div style={{ marginTop: 8, animation: "fadeUp .3s ease .25s both" }}>
+            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Futures Positioning</div>
+            {futuresSignals.map((f, i) => (
+              <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <Icon name={f.icon} size={12} color={f.color} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{f.name}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 700, color: "#33333480" }}>{f.ticker} · {f.price}</div>
+                  </div>
+                  <span style={{ fontSize: 7, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: f.color + "15", color: f.color }}>{f.signal}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 4 }}>
+                  <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
+                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>OPEN INTEREST</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{f.openInterest}</div>
+                  </div>
+                  <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
+                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>NET SPEC</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{f.netSpec}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.4 }}>{f.note}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {view === "commodities" && (
+        <div style={{ animation: "fadeUp .3s ease both" }}>
+          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Commodity Contrarian Signals</div>
+          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 8 }}>COT positioning data reveals when speculators are offside.</div>
+          {commoditySignals.map((c, i) => (
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <Icon name={c.icon} size={12} color={c.color} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{c.name}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{c.price}</div>
+                </div>
+                <span style={{ fontSize: 8, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: c.color + "15", color: c.color }}>{c.signal}</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 6 }}>
+                <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>POSITIONING</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{c.positioning}</div>
+                </div>
+                <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
+                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>COT NET</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, fontFamily: "JetBrains Mono", color: "#5C4A1E", marginTop: 1 }}>{c.cot}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.4 }}>{c.contrarianView}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -5900,15 +6323,17 @@ export default function App() {
         {/* ══ RISK LAB ══ */}
         {page === "risklab" && !selectedBasket && <div>
           <div style={{ display: "flex", gap: 2, background: "#fff", borderRadius: 10, padding: 2, marginBottom: 10, flexWrap: "wrap" }}>
-            {[{ id: "risklab", label: "Risk", icon: "flask" }, { id: "tides", label: "Tides", icon: "wave" }, { id: "weather", label: "Weather", icon: "cloud-sun" }, { id: "currencies", label: "FX", icon: "dollar" }, { id: "myeggs", label: "Eggs", icon: "egg" }, { id: "horoscope", label: "Horoscope", icon: "sparkle" }].map(t => (
+            {[{ id: "risklab", label: "Risk", icon: "flask" }, { id: "stresstest", label: "Stress", icon: "explosion" }, { id: "historical", label: "History", icon: "scroll" }, { id: "contrarian", label: "Contrarian", icon: "compass" }, { id: "tides", label: "Tides", icon: "wave" }, { id: "weather", label: "Weather", icon: "cloud-sun" }, { id: "myeggs", label: "Eggs", icon: "egg" }, { id: "horoscope", label: "Horoscope", icon: "sparkle" }].map(t => (
               <button key={t.id} onClick={() => setRiskLabTab(t.id)}
                 style={{ flex: "1 1 auto", padding: "6px 6px", borderRadius: 7, border: "none", background: riskLabTab === t.id ? "#C48830" : "transparent", color: riskLabTab === t.id ? "#fff" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", transition: "all .2s", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}><Icon name={t.icon} size={9} color={riskLabTab === t.id ? "#fff" : "#A09080"} />{t.label}</button>
             ))}
           </div>
           {riskLabTab === "risklab" && <RiskLabPage onOpenMacro={() => setPage("macro")} hedges={displayHedges} regime={displayRegime} />}
+          {riskLabTab === "stresstest" && <StressTestPage />}
+          {riskLabTab === "historical" && <HistoricalPatternsPage />}
+          {riskLabTab === "contrarian" && <ContrarianSignalsPage />}
           {riskLabTab === "tides" && <MacroTidesPage />}
           {riskLabTab === "weather" && <WeatherMarketPage />}
-          {riskLabTab === "currencies" && <CurrenciesScenarioPage />}
           {riskLabTab === "myeggs" && <MyBasketsPage onSelectBasket={setSelectedBasket} />}
           {riskLabTab === "horoscope" && <HoroscopePage />}
         </div>}
