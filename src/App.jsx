@@ -3205,19 +3205,9 @@ function NewsPage() {
   const [activeSection, setActiveSection] = useState("all");
   const sections = [
     { id: "all", label: "All", icon: "newspaper" },
-    { id: "guides", label: "Guides", icon: "books" },
     { id: "x", label: "X", icon: "𝕏" },
     { id: "analyst", label: "Analyst", icon: "target" },
     { id: "sector", label: "Sectors", icon: "globe" },
-  ];
-
-  const guides = [
-    { id: 1, title: "Hedging 101: Protect Your Hatch in Volatile Markets", tag: "Beginner", icon: "shield", color: "#5B8C5A", summary: "Learn how to use options overlays, inverse ETFs, and position sizing to shield your portfolio from sudden drawdowns.", time: "5 min read", featured: true },
-    { id: 2, title: "Building a Macro-Resilient Portfolio with Hatch", tag: "Strategy", icon: "basket", color: "#C48830", summary: "How to combine inflation hedges, geopolitical shields, and growth Hatches to weather any macro regime.", time: "8 min read", featured: true },
-    { id: 3, title: "Tail Risk Hedging: When Black Swans Strike", tag: "Advanced", icon: "swan", color: "#7E57C2", summary: "Deep dive into VIX calls, put spreads, and dynamic hedging strategies for extreme market events.", time: "12 min read" },
-    { id: 4, title: "Rate Cycle Playbook: Positioning for Fed Pivots", tag: "Strategy", icon: "chart-down", color: "#42A5F5", summary: "Historical patterns show which asset classes outperform before, during, and after rate cut cycles.", time: "7 min read" },
-    { id: 5, title: "Gold vs Crypto: The Ultimate Inflation Hedge Debate", tag: "Analysis", icon: "balance", color: "#FFA726", summary: "Comparing safe havens and their performance across recent inflationary periods.", time: "6 min read" },
-    { id: 6, title: "Sector Rotation: Following the Smart Money", tag: "Strategy", icon: "rotate", color: "#E57373", summary: "How institutional fund flows signal the next winning sectors. Includes Hatch sector tracking alerts.", time: "10 min read" },
   ];
 
   const xPosts = [
@@ -3275,7 +3265,6 @@ function NewsPage() {
   const actionCol = { UPGRADE: "#5B8C5A", DOWNGRADE: "#EF5350", HOLD: "#FFA726", ALERT: "#7E57C2" };
   const actionBg = { UPGRADE: "#EDF5ED", DOWNGRADE: "#FFEBEE", HOLD: "#FFF3E0", ALERT: "#F3E8FD" };
 
-  const showGuides = activeSection === "all" || activeSection === "guides";
   const showX = activeSection === "all" || activeSection === "x";
   const showAnalyst = activeSection === "all" || activeSection === "analyst";
   const showSector = activeSection === "all" || activeSection === "sector";
@@ -3291,43 +3280,6 @@ function NewsPage() {
           </button>
         ))}
       </div>
-
-      {/* ── Hatch Guides & Hedging ── */}
-      {showGuides && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease both" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hatch Guides & Hedging</div>
-          <span style={{ fontSize: 8, color: "#33333480" }}>{guides.length} articles</span>
-        </div>
-        {/* Featured cards */}
-        <div className="no-scrollbar" style={{ display: "flex", gap: 6, marginBottom: 8, overflowX: "auto" }}>
-          {guides.filter(g => g.featured).map(g => (
-            <div key={g.id} style={{ minWidth: 200, flex: "0 0 auto", background: `linear-gradient(135deg, ${g.color}10, ${g.color}05)`, border: `1.5px solid ${g.color}22`, borderRadius: 14, padding: 12, cursor: "pointer", transition: "transform .2s" }}
-              onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"} onMouseLeave={e => e.currentTarget.style.transform = ""}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <Icon name={g.icon} size={20} />
-                <span style={{ fontSize: 7, fontWeight: 800, color: g.color, background: g.color + "14", padding: "2px 6px", borderRadius: 4, textTransform: "uppercase" }}>{g.tag}</span>
-              </div>
-              <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3, marginBottom: 4 }}>{g.title}</div>
-              <div style={{ fontSize: 8, color: "#8A7040", lineHeight: 1.4 }}>{g.summary.slice(0, 80)}...</div>
-              <div style={{ fontSize: 7, color: "#33333480", marginTop: 6, fontWeight: 600 }}>{g.time}</div>
-            </div>
-          ))}
-        </div>
-        {/* Article list */}
-        {guides.filter(g => !g.featured).map((g, i) => (
-          <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: "1px solid #33333420", cursor: "pointer" }}>
-            <Icon name={g.icon} size={18} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3 }}>{g.title}</div>
-              <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
-                <span style={{ fontSize: 7, fontWeight: 700, color: g.color, background: g.color + "14", padding: "1px 5px", borderRadius: 3 }}>{g.tag}</span>
-                <span style={{ fontSize: 7, color: "#33333480" }}>{g.time}</span>
-              </div>
-            </div>
-            <span style={{ fontSize: 10, color: "#D0C8B8" }}>›</span>
-          </div>
-        ))}
-      </div>}
 
       {/* ── News from X ── */}
       {showX && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .05s both" }}>
@@ -3678,6 +3630,309 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
 }
 
 // ═══════════════ CHECKOUT ═══════════════
+
+// ═══════════════ HEDGE GUIDES PAGE ═══════════════
+function HedgeGuidesPage() {
+  const [seesawPair, setSeesawPair] = useState({ a: "sp500", b: "vix" });
+  const [openGuide, setOpenGuide] = useState(null);
+
+  const guides = [
+    { id: 1, title: "Hedging 101: Protect Your Portfolio in Volatile Markets", tag: "Beginner", icon: "shield", color: "#5B8C5A", summary: "Learn how to use options overlays, inverse ETFs, and position sizing to shield your portfolio from sudden drawdowns.", time: "5 min read", featured: true,
+      sections: [
+        { heading: "What Is Hedging?", body: "Hedging is the practice of taking an offsetting position to reduce the risk of adverse price movements in your portfolio. Think of it as insurance — you pay a small premium to protect against large losses. The goal isn't to eliminate risk entirely, but to manage it intelligently so drawdowns don't derail your long-term returns." },
+        { heading: "Protective Put Options", body: "The most straightforward hedge is buying put options on positions you own. A put gives you the right to sell at a set strike price, capping your downside. For example, if you hold $50,000 in SPY at $540, buying a 3-month $510 put (~5.5% out-of-the-money) might cost ~$800-1,200. That's 1.6-2.4% of position value to cap your loss at roughly 5.5% plus the premium paid. Roll quarterly for ongoing protection." },
+        { heading: "Put Spread Collars", body: "To reduce the cost of puts, sell an upside call to fund the downside protection. A typical collar: own SPY at $540, buy a $510 put, sell a $570 call. The call premium offsets 50-80% of the put cost, but caps your upside at ~5.5%. This is ideal when you want protection but expect range-bound markets. Institutional portfolios commonly run 5-10% collar overlays." },
+        { heading: "Inverse ETFs for Tactical Hedging", body: "Inverse ETFs like SH (-1x S&P 500), SDS (-2x), or SQQQ (-3x Nasdaq) deliver the opposite daily return of their index. Allocating 10-20% of your portfolio to a -1x inverse ETF can offset 10-20% of a market decline. Important: these reset daily, so in volatile sideways markets, compounding drag erodes returns. Use them for short-term tactical hedges measured in days to weeks, not months." },
+        { heading: "Position Sizing as a Hedge", body: "The simplest hedge is often the best: reduce position size. If your conviction drops from high to moderate, cutting a 10% position to 5% halves your risk without any premium cost. The Kelly Criterion suggests optimal bet sizing based on your edge and odds. Most professional traders rarely exceed 2-5% of capital in a single name. When volatility spikes, systematic reduction to half-Kelly sizing dramatically reduces drawdown risk." },
+        { heading: "The 2% Rule & Stop Losses", body: "Never risk more than 2% of your total portfolio on a single trade. If you have a $100,000 portfolio, your maximum acceptable loss per position is $2,000. Set stop losses accordingly: on a $10,000 position, that means a 20% stop. Trailing stops of 15-25% capture most upside while limiting drawdowns. Combine with position sizing for a robust risk framework." },
+      ]
+    },
+    { id: 2, title: "Building a Macro-Resilient Portfolio", tag: "Strategy", icon: "basket", color: "#C48830", summary: "How to combine inflation hedges, geopolitical shields, and growth baskets to weather any macro regime.", time: "8 min read", featured: true,
+      sections: [
+        { heading: "The All-Weather Framework", body: "Ray Dalio's All-Weather portfolio concept allocates assets based on economic environments rather than predictions. The four quadrants: rising growth (equities, commodities, corporate credit), falling growth (nominal bonds, TIPS), rising inflation (commodities, TIPS, EM), falling inflation (equities, nominal bonds). A truly resilient portfolio holds assets that perform in each quadrant, with allocations weighted by risk contribution rather than dollar amount." },
+        { heading: "Gold: The 4-15% Allocation Sweet Spot", body: "Research across multiple decades shows gold allocations between 4% and 15% consistently improve risk-adjusted returns across portfolio types. Gold has a near-zero correlation with equities (0.02) and bonds (0.04), meaning it moves independently from both. During the 1970s inflation, gold surged from $35 to over $600. In the 2008 crisis, gold rose 5% while equities fell 37%. A 7-10% gold allocation provides meaningful portfolio insurance without excessive opportunity cost." },
+        { heading: "TIPS & Real Assets for Inflation", body: "Treasury Inflation-Protected Securities (TIPS) adjust their principal with CPI, providing direct inflation protection. Broad commodities have risen more than one-for-one with inflation in every inflationary episode on record. A combined allocation of 10-15% TIPS and 5-10% broad commodities (via DJP, GSG, or PDBC) creates a robust inflation shield. Real estate (REITs at 5-10%) adds another inflation-sensitive layer with income." },
+        { heading: "Geopolitical Risk Hedging", body: "Defense stocks (LMT, RTX, GD), energy producers (XOM, CVX), and gold miners (GDX) historically outperform during geopolitical crises. A dedicated 5-8% \"geopolitical basket\" can offset losses in growth assets during conflict escalation. The DXY (US Dollar Index) also tends to strengthen during global uncertainty as capital flows to safe havens. Pairing long-dollar positions with gold provides a double hedge against geopolitical tail risks." },
+        { heading: "Regime-Based Rebalancing", body: "Rather than static allocations, shift weights based on the macro regime. In rate-hiking cycles: overweight short-duration bonds, value stocks, and commodities. In easing cycles: overweight growth equities, long-duration bonds, and emerging markets. During stagflation: overweight gold, energy, TIPS, and reduce equity exposure to 30-40%. Use leading indicators like the yield curve slope, PMI readings, and credit spreads to identify regime transitions 2-3 months early." },
+      ]
+    },
+    { id: 3, title: "Tail Risk Hedging: When Black Swans Strike", tag: "Advanced", icon: "swan", color: "#7E57C2", summary: "Deep dive into VIX calls, put spreads, and dynamic hedging strategies for extreme market events.", time: "12 min read",
+      sections: [
+        { heading: "Understanding Tail Risk", body: "Tail risk refers to the probability of rare, extreme events at the tails of the return distribution. Markets experience 3+ standard deviation moves far more often than normal distribution models predict. Since 1928, the S&P 500 has had 20+ single-day drops exceeding 7%. The 2020 COVID crash saw a 34% decline in 23 trading days. These events destroy wealth concentrated in unhedged portfolios and create the largest divergence between hedged and unhedged outcomes." },
+        { heading: "The Universa Model: 0.5-2% Allocation", body: "Nassim Taleb and Mark Spitznagel's Universa fund popularized the \"barbell\" approach: allocate 96-99% to safe assets or the market, and just 0.5-2% to deep out-of-the-money put options. These convex payoffs are designed to lose small amounts consistently but produce massive asymmetric gains during crashes. During March 2020, Universa's Black Swan Protection Protocol returned 3,612% while the S&P 500 fell 34%. The key insight: you don't need the hedge to work often — it just needs to work massively when it does." },
+        { heading: "VIX Call Options Strategy", body: "The VIX (CBOE Volatility Index) typically spikes 3-5x during major market selloffs due to its strong negative correlation with equities. Buying VIX calls 30-60 days to expiration, struck 50-100% above the current VIX level, provides leveraged crash protection. Example: with VIX at 14, buy $25 strike calls for ~$0.40-0.80. If a crisis pushes VIX to 45+, those calls are worth $20+, a 25-50x return. Allocate 0.3-0.5% of portfolio quarterly to maintain this rolling hedge." },
+        { heading: "Put Spread Structures", body: "To reduce the cost of outright puts, use put spreads: buy a put ~20% below the current market level and sell a put ~40% below. On a $540 SPY, buy the $430 put and sell the $325 put. The sold put funds ~40-60% of the bought put's cost, and you're fully protected for a 20-40% crash — the zone where most tail events occur. Cost: approximately 0.3-0.6% of portfolio value per quarter. This systematic approach keeps protection affordable across all market environments." },
+        { heading: "Dynamic Hedging with Signals", body: "Rather than maintaining constant protection (which bleeds premium), increase hedge allocation when warning signs appear: VIX term structure inversion (backwardation), credit spreads widening above 400bps, yield curve inversion persisting 12+ months, or PMI readings below 47. When 2+ signals trigger simultaneously, increase tail hedge allocation from the baseline 0.5% to 2-3%. Historical backtesting shows this signal-based approach captures 80% of crash protection at 40% of the cost of constant hedging." },
+        { heading: "Portfolio Insurance in Practice", body: "A practical tail risk program: maintain 0.5% in rolling 3-month 20% OTM SPX put spreads as baseline. Add 0.5% in VIX calls when VIX is below 15 (cheap insurance). Scale to 2% total when macro warning signals cluster. Total annual cost: 1-3% in calm years, but protects 15-25% of portfolio value during tail events. The math is clear — sacrificing 1-3% per year to avoid a potential 30-50% drawdown is one of the most asymmetric trades available." },
+      ]
+    },
+    { id: 4, title: "Rate Cycle Playbook: Positioning for Fed Pivots", tag: "Strategy", icon: "chart-down", color: "#42A5F5", summary: "Historical patterns show which asset classes outperform before, during, and after rate cut cycles.", time: "7 min read",
+      sections: [
+        { heading: "The Rate Cycle Framework", body: "Fed rate cycles are the single most powerful driver of cross-asset returns. Since 1954, there have been 12 distinct easing cycles. Equities moved higher during easing cycles two-thirds of the time (67%), adding an average of 30.3% over the full cycle. However, the context matters enormously: cuts during recessions produce very different outcomes than cuts during soft landings. Understanding where you are in the cycle is more important than the direction of the next move." },
+        { heading: "Before the First Cut: Volatility Spike", body: "Stock volatility runs above average in the 3 months before the first rate cut, reaching 22.5% in the month prior versus an average of ~15%. This is because the Fed typically cuts only after economic data has deteriorated — in 10 out of 12 cycles, the Fed initiated cuts only after equity markets had already peaked. The playbook: reduce gross exposure 3-6 months before an expected pivot. Increase cash to 15-20%. Build your shopping list of high-quality assets to buy once the cutting begins." },
+        { heading: "During the Cutting Cycle", body: "Without a recession: both stocks and bonds rally together. The 60/40 portfolio shines. Technology and consumer discretionary lead as lower rates boost growth stock valuations. With a recession: bonds rally but equities initially fall before recovering. Quality and value stocks outperform high-beta growth. In both scenarios, US Treasuries at the front end of the curve perform well. Emerging market hard-currency debt has shown outsized performance during Fed easing, as dollar weakness and lower US rates drive capital flows to higher-yielding markets." },
+        { heading: "Asset Class Winners & Losers", body: "Historical winners during easing: long-duration bonds (TLT averages +15-20%), gold (+12% average), growth equities (QQQ), REITs, and EM bonds. Losers: the US dollar (DXY typically falls 5-10%), short-duration cash instruments (falling yields), and bank stocks (if yield curve flattens). Cyclically sensitive tech and consumer discretionary tend to benefit most. Financials can gain if the yield curve steepens — improving net interest margins — but lose if it flattens. High-beta names are the most variable, appearing among both the best and worst performers." },
+        { heading: "The Current Setup", body: "Credit spreads, PMI data, and yield curve dynamics all inform whether the next easing cycle will be benign or recessionary. Position accordingly: if spreads are tight and PMI is above 50, lean into equities and real assets through the cut cycle. If spreads are widening and PMI is rolling over, favor bonds and defensive sectors. The key is to be positioned before the first cut — historical data shows 60-70% of the move in rate-sensitive assets occurs in the 3 months before and after the first cut." },
+      ]
+    },
+    { id: 5, title: "Gold vs Crypto: The Inflation Hedge Debate", tag: "Analysis", icon: "balance", color: "#FFA726", summary: "Comparing safe havens and their performance across inflationary periods and market crises.", time: "6 min read",
+      sections: [
+        { heading: "The Case for Gold", body: "Gold has been a store of value for over 5,000 years. During the 1970s when US inflation averaged 6.8%, gold surged from $35/oz in 1971 to over $600/oz by 1980 — a 1,600% gain. In the 2008 financial crisis, gold rose 5.5% while the S&P 500 fell 37%. Gold has a near-zero correlation with equities (0.02) and bonds (0.04), making it a true portfolio diversifier. Central banks globally added 1,037 tonnes in 2023 alone — the second-highest annual total on record — signaling institutional confidence in gold's role." },
+        { heading: "The Case for Bitcoin", body: "Bitcoin's fixed supply cap of 21 million coins creates absolute mathematical scarcity — unlike gold, which grows 1-1.5% annually from mining. After the 2024 halving, Bitcoin's inflation rate dropped below gold's for the first time. Bitcoin delivered 150%+ returns in 2023 and has outperformed every major asset class over any 4+ year holding period since inception. It offers 24/7 global liquidity, near-instant settlement, and zero storage costs. Proponents call it \"digital gold\" with superior portability and divisibility." },
+        { heading: "Inflation Hedging: The Evidence", body: "The data is nuanced. Gold has proven inflation-hedging properties across multiple decades and regimes. During high-inflation periods, gold consistently preserves purchasing power. Bitcoin's inflation-hedging properties are more mixed — it appreciates against short-term inflation expectations, but the relationship weakens when expectations exceed 2%. Academic research shows Bitcoin's inflation sensitivity is only significant for short-term expectations, making it a speculative rather than reliable inflation hedge at this stage of its maturity." },
+        { heading: "Crisis Performance: The Critical Difference", body: "This is where gold and Bitcoin diverge most sharply. During equity market corrections, gold acts as a safe haven — capital flows into gold as stocks sell off. Bitcoin remains a risk-on asset that tends to correlate with equities during stress. In March 2020, Bitcoin fell 50% alongside stocks before recovering. In every major risk-off event since Bitcoin's creation, it has initially moved with equities, not against them. For pure portfolio insurance during crises, gold is the proven instrument; Bitcoin is a high-conviction asymmetric bet, not a hedge." },
+        { heading: "The Optimal Allocation", body: "Rather than choosing one over the other, evidence suggests a combined approach: 5-10% gold for reliable crisis hedging and inflation protection, plus 1-5% Bitcoin for asymmetric upside and long-term scarcity exposure. Gold provides the defensive floor; Bitcoin provides convex upside. Keep gold as a strategic, always-on allocation. Treat Bitcoin as a tactical position sized by your risk tolerance — and never confuse its speculative return profile with gold's proven hedging function." },
+      ]
+    },
+    { id: 6, title: "Sector Rotation: Following the Smart Money", tag: "Strategy", icon: "rotate", color: "#E57373", summary: "How institutional fund flows signal the next winning sectors and where capital is moving now.", time: "10 min read",
+      sections: [
+        { heading: "What Is Sector Rotation?", body: "Sector rotation is the strategy of shifting portfolio weight between market sectors based on where we are in the economic cycle. Large institutional investors — pension funds, sovereign wealth funds, and endowments — systematically rotate capital as macro conditions change. By tracking these fund flows, individual investors can identify which sectors are gaining institutional sponsorship and position ahead of the crowd. The economic cycle has four phases: early recovery, expansion, late cycle, and recession — each favoring different sectors." },
+        { heading: "The Economic Cycle Playbook", body: "Early Recovery (PMI rising from below 50): Technology, Consumer Discretionary, and Industrials lead. Expansion (PMI 50-57, strong growth): Energy, Materials, and Financials outperform. Late Cycle (PMI rolling over from peak): Healthcare, Consumer Staples, and Utilities gain defensive flows. Recession (PMI below 47, contraction): Treasuries, Gold, and Utilities are safe havens. The transition between phases — not the phase itself — is where the largest alpha is generated. Rotate 2-3 months before consensus recognizes the shift." },
+        { heading: "Reading Institutional Fund Flows", body: "Track these signals to see where smart money is moving: 13F filings (quarterly institutional holdings with 45-day lag), ETF fund flows (real-time sector demand), options market positioning (put/call ratios by sector), and relative strength rankings (sectors breaking out vs. breaking down). When 3+ large institutions increase exposure to the same sector within a quarter, it signals institutional accumulation. The most actionable signal: sudden ETF inflow acceleration in a previously out-of-favor sector." },
+        { heading: "Current Smart Money Moves", body: "Capital is rotating from concentrated growth tech into Healthcare and Communication Services. Healthcare offers defensive stability plus growth from pharmaceutical innovation — GLP-1 drugs alone represent a $100B+ revenue opportunity. Communication Services provides reasonable valuations with digital advertising resilience. Energy maintains structural demand from geopolitical supply constraints. Defense sector spending pledges are hitting record levels globally. The common thread: sectors with earnings resilience and pricing power in a late-cycle environment." },
+        { heading: "Implementing Sector Rotation", body: "Use sector ETFs for clean exposure: XLK (Tech), XLV (Healthcare), XLC (Comms), XLE (Energy), XLF (Financials), XLI (Industrials). Maintain a core 60% allocation to broad market exposure (SPY/VTI), then allocate 30% across your top 3 favored sectors and 10% to hedges. Rebalance monthly using relative strength and fund flow data. Avoid holding more than 5 sector overweights simultaneously — concentration kills the diversification benefit. Set sector rotation stops at -8% relative underperformance versus the benchmark." },
+      ]
+    },
+  ];
+
+  const activeGuide = guides.find(g => g.id === openGuide);
+
+  // Seesaw logic
+  const seesawA = macroProducts.find(p => p.id === seesawPair.a);
+  const seesawB = macroProducts.find(p => p.id === seesawPair.b);
+  const seesawCorr = macroCorrelations.find(c => (c.a === seesawPair.a && c.b === seesawPair.b) || (c.a === seesawPair.b && c.b === seesawPair.a));
+  const corrVal = seesawCorr ? seesawCorr.corr : 0;
+  const returnA = seesawA ? seesawA.ytd : 0;
+  const returnB = seesawB ? seesawB.ytd : 0;
+  const tiltDeg = Math.max(-22, Math.min(22, (returnA - returnB) * 0.5));
+
+  // Top hedges (strongest inverse)
+  const topHedges = [...macroCorrelations].filter(c => c.corr < -0.3).sort((a, b) => a.corr - b.corr).slice(0, 8);
+
+  // ── Guide Detail View ──
+  if (activeGuide) return (
+    <div style={{ animation: "fadeUp .3s ease both" }}>
+      <button onClick={() => setOpenGuide(null)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "#C48830", fontSize: 10, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginBottom: 8, padding: 0 }}>
+        <span style={{ fontSize: 14 }}>&larr;</span> Back to Hedge
+      </button>
+      <div style={{ background: `linear-gradient(135deg, ${activeGuide.color}12, ${activeGuide.color}04)`, border: `1.5px solid ${activeGuide.color}30`, borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 12, background: activeGuide.color + "20", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Icon name={activeGuide.icon} size={18} color={activeGuide.color} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <span style={{ fontSize: 7, fontWeight: 800, color: activeGuide.color, background: activeGuide.color + "18", padding: "2px 8px", borderRadius: 4, textTransform: "uppercase" }}>{activeGuide.tag}</span>
+            <div style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3, marginTop: 3 }}>{activeGuide.title}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 9, color: "#8A7040", lineHeight: 1.5 }}>{activeGuide.summary}</div>
+        <div style={{ display: "flex", gap: 8, marginTop: 8, fontSize: 8, color: "#33333480", fontWeight: 700 }}>
+          <span>{activeGuide.time}</span>
+          <span>·</span>
+          <span>{activeGuide.sections.length} sections</span>
+        </div>
+      </div>
+      {activeGuide.sections.map((s, i) => (
+        <div key={i} style={{ background: "#fff", borderRadius: 14, padding: "12px 14px", marginBottom: 6, animation: `fadeUp .4s ease ${i * 0.05}s both` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <div style={{ width: 18, height: 18, borderRadius: 6, background: activeGuide.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 900, color: activeGuide.color, fontFamily: "JetBrains Mono" }}>{i + 1}</div>
+            <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{s.heading}</div>
+          </div>
+          <div style={{ fontSize: 9, color: "#4A4030", lineHeight: 1.7, fontFamily: "Quicksand", fontWeight: 500 }}>{s.body}</div>
+        </div>
+      ))}
+      <button onClick={() => setOpenGuide(null)} style={{ width: "100%", padding: "10px", borderRadius: 12, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 10, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginTop: 4 }}>
+        &larr; Back to Hedge
+      </button>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* ═══ HATCH GUIDES & HEDGING (now on top) ═══ */}
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease both" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hatch Guides & Hedging</div>
+          <span style={{ fontSize: 8, color: "#33333480" }}>{guides.length} articles</span>
+        </div>
+        {/* Featured cards */}
+        <div className="no-scrollbar" style={{ display: "flex", gap: 6, marginBottom: 8, overflowX: "auto" }}>
+          {guides.filter(g => g.featured).map(g => (
+            <div key={g.id} onClick={() => setOpenGuide(g.id)} style={{ minWidth: 200, flex: "0 0 auto", background: `linear-gradient(135deg, ${g.color}10, ${g.color}05)`, border: `1.5px solid ${g.color}22`, borderRadius: 14, padding: 12, cursor: "pointer", transition: "all .2s" }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = g.color + "55"; }} onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.borderColor = g.color + "22"; }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <Icon name={g.icon} size={20} />
+                <span style={{ fontSize: 7, fontWeight: 800, color: g.color, background: g.color + "14", padding: "2px 6px", borderRadius: 4, textTransform: "uppercase" }}>{g.tag}</span>
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3, marginBottom: 4 }}>{g.title}</div>
+              <div style={{ fontSize: 8, color: "#8A7040", lineHeight: 1.4 }}>{g.summary.slice(0, 80)}...</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                <span style={{ fontSize: 7, color: "#33333480", fontWeight: 600 }}>{g.time}</span>
+                <span style={{ fontSize: 8, fontWeight: 800, color: g.color }}>Read &rarr;</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Article list */}
+        {guides.filter(g => !g.featured).map(g => (
+          <div key={g.id} onClick={() => setOpenGuide(g.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: "1px solid #33333420", cursor: "pointer", transition: "all .15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
+            <Icon name={g.icon} size={18} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3 }}>{g.title}</div>
+              <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                <span style={{ fontSize: 7, fontWeight: 700, color: g.color, background: g.color + "14", padding: "1px 5px", borderRadius: 3 }}>{g.tag}</span>
+                <span style={{ fontSize: 7, color: "#33333480" }}>{g.time}</span>
+                <span style={{ fontSize: 7, color: "#33333480" }}>·</span>
+                <span style={{ fontSize: 7, color: "#33333480" }}>{g.sections.length} sections</span>
+              </div>
+            </div>
+            <span style={{ fontSize: 8, fontWeight: 800, color: g.color }}>Read &rarr;</span>
+          </div>
+        ))}
+      </div>
+
+      {/* ═══ HEDGING SEESAW ═══ */}
+      <div style={{ background: "#fff", borderRadius: 14, padding: "10px 22px 18px", marginBottom: 8, animation: "fadeUp .4s ease .06s both" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hedging Seesaw</div>
+            <div style={{ fontSize: 11, color: "#33333480", marginTop: 2 }}>When one side weighs down, the other lifts up — pick any pair to visualize</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 8, background: corrVal < -0.5 ? "#FFF8EE" : corrVal < 0 ? "#FFF3E0" : "#FFEBEE", color: corrVal < -0.5 ? "#C48830" : corrVal < 0 ? "#FFA726" : "#EF5350" }}>
+              ρ = {corrVal.toFixed(2)} · {corrVal < -0.6 ? "Strong Hedge" : corrVal < -0.3 ? "Moderate Hedge" : corrVal < 0 ? "Weak Hedge" : corrVal < 0.3 ? "Weak +" : "Correlated"}
+            </span>
+          </div>
+        </div>
+
+        {/* Pair selectors */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8, alignItems: "center", justifyContent: "center" }}>
+          <div style={{ flex: "1 1 200px", maxWidth: 260 }}>
+            <div style={{ fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>LEFT SIDE</div>
+            <select value={seesawPair.a} onChange={e => setSeesawPair(p => ({ ...p, a: e.target.value }))}
+              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #42A5F544", fontSize: 10, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#E3F2FD", color: "#333334", cursor: "pointer" }}>
+              {macroProducts.map(p => <option key={p.id} value={p.id}>{p.ticker} — {p.name}</option>)}
+            </select>
+          </div>
+          <div style={{ fontSize: 12, color: "#33333480", fontWeight: 900 }}>⟺</div>
+          <div style={{ flex: "1 1 200px", maxWidth: 260 }}>
+            <div style={{ fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>RIGHT SIDE</div>
+            <select value={seesawPair.b} onChange={e => setSeesawPair(p => ({ ...p, b: e.target.value }))}
+              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #EF535044", fontSize: 10, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#FFEBEE", color: "#333334", cursor: "pointer" }}>
+              {macroProducts.map(p => <option key={p.id} value={p.id}>{p.ticker} — {p.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {/* Quick pair presets */}
+        <div style={{ display: "flex", gap: 4, justifyContent: "center", flexWrap: "wrap", marginBottom: 8 }}>
+          {[
+            { a:"sp500", b:"vix", label:"S&P vs VIX" },
+            { a:"dxy", b:"gold", label:"Dollar vs Gold" },
+            { a:"nasdaq", b:"ust30y", label:"Tech vs Bonds" },
+            { a:"sp500", b:"ust10y", label:"Stocks vs 10Y" },
+            { a:"dxy", b:"eurusd", label:"DXY vs EUR" },
+            { a:"crude", b:"natgas", label:"Oil vs NatGas" },
+            { a:"gold", b:"btc", label:"Gold vs BTC" },
+            { a:"tlt", b:"sp500", label:"TLT vs SPX" },
+          ].map((preset, i) => (
+            <button key={i} onClick={() => setSeesawPair({ a: preset.a, b: preset.b })}
+              style={{ padding: "4px 10px", borderRadius: 8, border: "1.5px solid " + (seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#F0E6D0"), background: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#FFF8EE" : "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", color: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#8A7040" }}>{preset.label}</button>
+          ))}
+        </div>
+
+        {/* THE SEESAW VISUALIZATION */}
+        {seesawA && seesawB && (
+          <svg viewBox="0 0 700 310" style={{ width: "100%", height: 240, display: "block" }}>
+            <defs>
+              <linearGradient id="seesawBarHedge" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={seesawA.color} /><stop offset="100%" stopColor={seesawB.color} />
+              </linearGradient>
+              <filter id="dropShHedge"><feDropShadow dx="0" dy="2" stdDeviation="4" floodOpacity="0.12" /></filter>
+            </defs>
+
+            {/* Center pivot triangle */}
+            <polygon points="350,230 336,260 364,260" fill="#C48830" opacity="0.8" />
+            <rect x="300" y="260" width="100" height="8" rx="4" fill="#F0E6D0" />
+
+            {/* Seesaw beam */}
+            <g transform={`rotate(${tiltDeg}, 350, 220)`}>
+              <rect x="60" y="216" width="580" height="8" rx="4" fill="url(#seesawBarHedge)" filter="url(#dropShHedge)" />
+
+              {/* Left Platform (Product A) */}
+              <g>
+                <rect x="40" y="185" width="160" height="32" rx="12" fill="#fff" stroke={seesawA.color} strokeWidth="2" filter="url(#dropShHedge)" />
+                <text x="120" y="197" textAnchor="middle" fill={seesawA.color} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawA.ticker}</text>
+                <text x="120" y="210" textAnchor="middle" fill="#A09080" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawA.name.length > 20 ? seesawA.name.slice(0,18) + ".." : seesawA.name}</text>
+
+                {/* Weight block */}
+                <rect x="80" y={140 - Math.abs(returnA) * 1.2} width="80" height={Math.max(20, Math.abs(returnA) * 1.8)} rx="8" fill={returnA >= 0 ? "#5B8C5A" : "#EF5350"} opacity="0.85" />
+                <text x="120" y={148 - Math.abs(returnA) * 1.2 + Math.max(20, Math.abs(returnA) * 1.8) / 2} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="14" fontWeight="900" fontFamily="JetBrains Mono">{returnA >= 0 ? "+" : ""}{returnA}%</text>
+                <text x="120" y={134 - Math.abs(returnA) * 1.2} textAnchor="middle" fill={seesawA.color} fontSize="8" fontWeight="800">YTD RETURN</text>
+
+                {/* Price */}
+                <text x="120" y="240" textAnchor="middle" fill="#6B5A2E" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawA.price >= 1000 ? (seesawA.price).toLocaleString() : seesawA.price}</text>
+                <text x="120" y="254" textAnchor="middle" fill={seesawA.change >= 0 ? "#5B8C5A" : "#EF5350"} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawA.change >= 0 ? "▲ +" : "▼ "}{seesawA.change}% today</text>
+              </g>
+
+              {/* Right Platform (Product B) */}
+              <g>
+                <rect x="500" y="185" width="160" height="32" rx="12" fill="#fff" stroke={seesawB.color} strokeWidth="2" filter="url(#dropShHedge)" />
+                <text x="580" y="197" textAnchor="middle" fill={seesawB.color} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawB.ticker}</text>
+                <text x="580" y="210" textAnchor="middle" fill="#A09080" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawB.name.length > 20 ? seesawB.name.slice(0,18) + ".." : seesawB.name}</text>
+
+                {/* Weight block */}
+                <rect x="540" y={140 - Math.abs(returnB) * 1.2} width="80" height={Math.max(20, Math.abs(returnB) * 1.8)} rx="8" fill={returnB >= 0 ? "#5B8C5A" : "#EF5350"} opacity="0.85" />
+                <text x="580" y={148 - Math.abs(returnB) * 1.2 + Math.max(20, Math.abs(returnB) * 1.8) / 2} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize="14" fontWeight="900" fontFamily="JetBrains Mono">{returnB >= 0 ? "+" : ""}{returnB}%</text>
+                <text x="580" y={134 - Math.abs(returnB) * 1.2} textAnchor="middle" fill={seesawB.color} fontSize="8" fontWeight="800">YTD RETURN</text>
+
+                {/* Price */}
+                <text x="580" y="240" textAnchor="middle" fill="#6B5A2E" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawB.price >= 1000 ? (seesawB.price).toLocaleString() : seesawB.price}</text>
+                <text x="580" y="254" textAnchor="middle" fill={seesawB.change >= 0 ? "#5B8C5A" : "#EF5350"} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawB.change >= 0 ? "▲ +" : "▼ "}{seesawB.change}% today</text>
+              </g>
+
+              {/* Correlation indicator at center */}
+              <circle cx="350" cy="208" r="18" fill="#fff" stroke={corrVal < 0 ? "#EF5350" : "#C48830"} strokeWidth="2.5" />
+              <text x="350" y="206" textAnchor="middle" fill={corrVal < 0 ? "#EF5350" : "#C48830"} fontSize="9" fontWeight="900" fontFamily="JetBrains Mono">{corrVal >= 0 ? "+" : ""}{corrVal.toFixed(2)}</text>
+              <text x="350" y="216" textAnchor="middle" fill="#A09080" fontSize="6" fontWeight="700">CORR</text>
+            </g>
+
+            {/* Description below */}
+            {seesawCorr && <text x="350" y="290" textAnchor="middle" fill="#8A7040" fontSize="10" fontWeight="600" fontFamily="Quicksand">{seesawCorr.desc}</text>}
+          </svg>
+        )}
+      </div>
+
+      {/* ═══ BEST HEDGING PAIRS ═══ */}
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .12s both" }}>
+        <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Best Hedging Pairs</div>
+        {topHedges.map((c, i) => {
+          const pA = macroProducts.find(p => p.id === c.a);
+          const pB = macroProducts.find(p => p.id === c.b);
+          if (!pA || !pB) return null;
+          return (
+            <div key={i} onClick={() => setSeesawPair({ a: c.a, b: c.b })}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderRadius: 10, marginBottom: 4, cursor: "pointer", background: "#FFEBEE08", border: "1px solid #F0E6D0", transition: "all .15s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#FFEBEE22"; e.currentTarget.style.borderColor = "#EF535033"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#FFEBEE08"; e.currentTarget.style.borderColor = "#F0E6D0"; }}>
+              <Icon name={pA.icon} size={12} />
+              <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 11, minWidth: 30 }}>{pA.ticker}</span>
+              <span style={{ color: "#EF5350", fontSize: 12, fontWeight: 700 }}>⟺</span>
+              <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 11, minWidth: 30 }}>{pB.ticker}</span>
+              <Icon name={pB.icon} size={12} />
+              <div style={{ flex: 1 }} />
+              <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 12, color: "#EF5350" }}>ρ {c.corr.toFixed(2)}</span>
+              <div style={{ width: 36, height: 5, background: "#FFF5E6", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: Math.abs(c.corr) * 100 + "%", background: "#EF5350", borderRadius: 3 }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ═══════════════ PORTFOLIO HOROSCOPE ═══════════════
 function HoroscopePage() {
@@ -4904,58 +5159,452 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
 
 // ═══════════════ STRESS TEST PAGE ═══════════════
 function StressTestPage() {
+  const [view, setView] = useState("scenarios");
   const [stressId, setStressId] = useState(null);
-  const activeStress = stressScenarios.find(s => s.id === stressId);
+  const [monteCarloRun, setMonteCarloRun] = useState(false);
+  const [customShocks, setCustomShocks] = useState({ spx: 0, rates: 0, vix: 0, oil: 0, dxy: 0, gold: 0 });
+  const [sensitivity, setSensitivity] = useState("rates");
+
+  const totalValue = myBaskets.reduce((s, b) => s + b.value, 0);
+
+  // ── Historical Replay Scenarios (Bloomberg PORT-style) ──
+  const historicalReplays = [
+    { id: "gfc08", name: "2008 Global Financial Crisis", period: "Sep 2008 – Mar 2009", icon: "bank", color: "#EF5350",
+      shocks: { spx: -56.8, nasdaq: -55.5, bonds: 5.2, gold: 25.5, vix: 80.9, oil: -71.4, dxy: 12.8, reits: -68.3, em: -54.2, hy: -26.4 },
+      desc: "Lehman collapse triggered global credit freeze. Interbank lending froze. Mark-to-market losses cascaded through leveraged balance sheets. VIX hit 89.5.", duration: "6 months" },
+    { id: "covid20", name: "2020 COVID-19 Crash", period: "Feb – Mar 2020", icon: "syringe", color: "#42A5F5",
+      shocks: { spx: -33.9, nasdaq: -30.1, bonds: 8.9, gold: 3.4, vix: 82.7, oil: -65.2, dxy: 8.2, reits: -41.2, em: -31.8, hy: -12.6 },
+      desc: "Fastest 30%+ selloff in history. Broad liquidation across all assets. Fed cut to zero and launched unlimited QE within 2 weeks.", duration: "23 trading days" },
+    { id: "dotcom", name: "2000 Dot-Com Bust", period: "Mar 2000 – Oct 2002", icon: "laptop", color: "#FFA726",
+      shocks: { spx: -49.1, nasdaq: -78.4, bonds: 38.6, gold: 12.4, vix: 43.7, oil: -48.8, dxy: 18.2, reits: 22.4, em: -42.6, hy: -8.2 },
+      desc: "Tech valuation bubble burst. Nasdaq lost 78%. Rotation to bonds and value. Earnings didn't support prices — PE ratios compressed violently.", duration: "30 months" },
+    { id: "rate22", name: "2022 Rate Shock", period: "Jan – Oct 2022", icon: "chart-up", color: "#C48830",
+      shocks: { spx: -25.4, nasdaq: -33.1, bonds: -17.8, gold: -3.2, vix: 36.5, oil: 42.6, dxy: 16.8, reits: -28.7, em: -22.4, hy: -14.8 },
+      desc: "Most aggressive Fed tightening since Volcker. Both stocks AND bonds fell — 60/40 had worst year since 1937. No safe haven except cash and energy.", duration: "10 months" },
+    { id: "stagflation70s", name: "1970s Stagflation", period: "1973 – 1975", icon: "oil-barrel", color: "#7E57C2",
+      shocks: { spx: -48.2, nasdaq: -59.9, bonds: -12.4, gold: 186.0, vix: null, oil: 289.0, dxy: -22.6, reits: -42.1, em: -38.4, hy: -16.2 },
+      desc: "OPEC embargo quadrupled oil prices. Wage-price spiral drove CPI above 11%. Fed raised rates to 13%. Only gold and commodities survived.", duration: "21 months" },
+    { id: "fed26", name: "2026 Fed Severely Adverse", period: "Hypothetical", icon: "warning", color: "#E57373",
+      shocks: { spx: -54.0, nasdaq: -58.2, bonds: 14.6, gold: 32.0, vix: 72.0, oil: -44.0, dxy: -8.4, reits: -52.0, em: -48.2, hy: -22.8 },
+      desc: "Based on the Federal Reserve's 2026 stress test scenario: equity prices fall ~54%, VIX spikes to 72, corporate spreads widen to 570bp, unemployment rises to 10%.", duration: "3 quarters" },
+  ];
+
+  // ── VaR & CVaR Analytics ──
+  const varMetrics = {
+    var95_1d: -1.82, var99_1d: -3.14, var95_10d: -5.76, var99_10d: -9.93,
+    cvar95: -2.68, cvar99: -4.52, maxDD: -16.2, avgDD: -6.8,
+    portfolioVol: 17.4, beta: 0.94, sharpe: 1.08, sortino: 1.34,
+    skew: -0.42, kurtosis: 4.18,
+  };
+
+  // ── Monte Carlo Simulation Results ──
+  const mcResults = {
+    simulations: 10000, horizon: "1 Year", confidence: 95,
+    percentiles: [
+      { p: "1st", val: -38.4, color: "#EF5350" }, { p: "5th", val: -24.2, color: "#EF5350" },
+      { p: "10th", val: -16.8, color: "#FFA726" }, { p: "25th", val: -6.2, color: "#FFA726" },
+      { p: "50th (Median)", val: 8.4, color: "#5B8C5A" }, { p: "75th", val: 18.6, color: "#5B8C5A" },
+      { p: "90th", val: 28.4, color: "#42A5F5" }, { p: "95th", val: 34.8, color: "#42A5F5" },
+      { p: "99th", val: 48.2, color: "#7E57C2" },
+    ],
+    expectedReturn: 9.2, expectedVol: 18.6, probLoss: 34.2, probGain20: 42.8,
+  };
+
+  // ── Sensitivity Grid (Factor Analysis) ──
+  const sensFactors = {
+    rates: { label: "Interest Rates", icon: "bank", unit: "bp", steps: [-100, -50, -25, 0, 25, 50, 100, 200],
+      impacts: [8.4, 4.6, 2.4, 0, -2.1, -4.8, -9.2, -16.4] },
+    vix: { label: "Volatility (VIX)", icon: "wave", unit: "pts", steps: [-10, -5, 0, 5, 10, 20, 30, 50],
+      impacts: [4.2, 2.1, 0, -1.8, -4.2, -9.6, -14.8, -22.4] },
+    oil: { label: "Crude Oil", icon: "oil-barrel", unit: "%", steps: [-50, -30, -15, 0, 15, 30, 50, 100],
+      impacts: [-4.8, -2.6, -1.2, 0, 2.4, 4.2, 6.8, 12.6] },
+    dxy: { label: "US Dollar (DXY)", icon: "money", unit: "%", steps: [-15, -10, -5, 0, 5, 10, 15, 20],
+      impacts: [3.6, 2.2, 1.2, 0, -0.8, -2.4, -4.2, -6.8] },
+    gold: { label: "Gold", icon: "sparkle", unit: "%", steps: [-30, -20, -10, 0, 10, 20, 30, 50],
+      impacts: [-2.4, -1.6, -0.8, 0, 1.4, 2.6, 3.8, 5.4] },
+    credit: { label: "Credit Spreads (HY)", icon: "warning", unit: "bp", steps: [-100, -50, 0, 50, 100, 200, 300, 500],
+      impacts: [3.8, 2.2, 0, -1.8, -4.2, -8.6, -12.4, -18.2] },
+  };
+  const sensData = sensFactors[sensitivity];
+
+  // ── Custom Scenario Builder ──
+  const customPortfolioImpact = (() => {
+    const w = { spx: 0.40, rates: -0.08, vix: -0.12, oil: 0.15, dxy: -0.06, gold: 0.10 };
+    return Object.entries(customShocks).reduce((sum, [k, v]) => sum + (v * (w[k] || 0)), 0);
+  })();
+
+  const activeReplay = historicalReplays.find(r => r.id === stressId);
+
+  const views = [
+    { id: "scenarios", label: "Historical Replay", icon: "scroll" },
+    { id: "montecarlo", label: "Monte Carlo", icon: "chart-bar" },
+    { id: "sensitivity", label: "Sensitivity", icon: "wave" },
+    { id: "var", label: "VaR / CVaR", icon: "warning" },
+    { id: "custom", label: "Custom", icon: "flask" },
+  ];
 
   return (
     <div>
-      <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Stress Test Scenarios</h1>
-        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Simulate market shocks and see the impact on your baskets</p>
+      <div style={{ marginBottom: 8, animation: "fadeUp .3s ease both" }}>
+        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Portfolio Stress Testing</h1>
+        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Institutional-grade scenario analysis, Monte Carlo simulation & risk analytics</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(80px,1fr))", gap: 6, marginBottom: 8, animation: "fadeUp .4s ease .05s both" }}>
-        {stressScenarios.map(s => {
-          const active = stressId === s.id;
-          const col = s.portfolioPL >= 0 ? "#5B8C5A" : "#EF5350";
-          return (
-            <button key={s.id} onClick={() => setStressId(active ? null : s.id)} style={{ background: active ? (s.portfolioPL >= 0 ? "#EDF5ED" : "#FFEBEE") : "#fff", border: `1.5px solid ${active ? col : "#F0E6D0"}`, borderRadius: 12, padding: "6px 8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
-              <div style={{ marginBottom: 2 }}><Icon name={s.icon} size={12} /></div>
-              <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{s.name}</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: col, marginTop: 2 }}>{s.portfolioPL >= 0 ? "+" : ""}{s.portfolioPL}%</div>
+      {/* ── Tool Selector ── */}
+      <div className="no-scrollbar" style={{ display: "flex", gap: 3, marginBottom: 8, overflowX: "auto" }}>
+        {views.map(v => (
+          <button key={v.id} onClick={() => setView(v.id)}
+            style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 8px", borderRadius: 8, border: `1.5px solid ${view === v.id ? "#C48830" : "#F0E6D0"}`, background: view === v.id ? "#C48830" : "#fff", color: view === v.id ? "#fff" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap", transition: "all .2s" }}>
+            <Icon name={v.icon} size={8} color={view === v.id ? "#fff" : "#A09080"} />{v.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ════════ HISTORICAL REPLAY (Bloomberg PORT-style) ════════ */}
+      {view === "scenarios" && <div style={{ animation: "fadeUp .3s ease both" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(90px,1fr))", gap: 6, marginBottom: 8 }}>
+          {historicalReplays.map(r => (
+            <button key={r.id} onClick={() => setStressId(stressId === r.id ? null : r.id)}
+              style={{ background: stressId === r.id ? r.color + "15" : "#fff", border: `1.5px solid ${stressId === r.id ? r.color : "#F0E6D0"}`, borderRadius: 12, padding: "8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
+              <Icon name={r.icon} size={12} color={stressId === r.id ? r.color : "#A09080"} />
+              <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginTop: 4, lineHeight: 1.2 }}>{r.name.split(" ").slice(0,2).join(" ")}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#EF5350", marginTop: 3 }}>{r.shocks.spx > 0 ? "+" : ""}{r.shocks.spx}%</div>
+              <div style={{ fontSize: 7, color: "#33333480" }}>S&P 500</div>
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
 
-      {activeStress && (
-        <div style={{ animation: "fadeUp .3s ease both" }}>
-          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Impact: <span style={{ color: activeStress.portfolioPL >= 0 ? "#5B8C5A" : "#EF5350" }}>{activeStress.name}</span></div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 4 }}>
+        {activeReplay && <div style={{ animation: "fadeUp .3s ease both" }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: `1.5px solid ${activeReplay.color}30`, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 10, background: activeReplay.color + "18", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icon name={activeReplay.icon} size={14} color={activeReplay.color} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{activeReplay.name}</div>
+                <div style={{ fontSize: 8, color: "#33333480" }}>{activeReplay.period} · {activeReplay.duration}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 9, color: "#4A4030", lineHeight: 1.6, marginBottom: 10, fontFamily: "Quicksand" }}>{activeReplay.desc}</div>
+
+            {/* Asset Class Impact Grid */}
+            <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Asset Class Impacts</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(85px,1fr))", gap: 4, marginBottom: 10 }}>
+              {[
+                { key: "spx", label: "S&P 500", icon: "chart-bar" }, { key: "nasdaq", label: "Nasdaq", icon: "laptop" },
+                { key: "bonds", label: "US Treasuries", icon: "bank" }, { key: "gold", label: "Gold", icon: "sparkle" },
+                { key: "oil", label: "Crude Oil", icon: "oil-barrel" }, { key: "dxy", label: "US Dollar", icon: "money" },
+                { key: "reits", label: "REITs", icon: "home" }, { key: "em", label: "EM Equities", icon: "globe" },
+                { key: "hy", label: "High Yield", icon: "warning" }, { key: "vix", label: "VIX", icon: "wave" },
+              ].map(a => {
+                const v = activeReplay.shocks[a.key];
+                if (v === null || v === undefined) return null;
+                const isVix = a.key === "vix";
+                const col = isVix ? (v > 30 ? "#EF5350" : "#FFA726") : (v >= 0 ? "#5B8C5A" : "#EF5350");
+                return (
+                  <div key={a.key} style={{ background: col + "0A", border: `1px solid ${col}22`, borderRadius: 10, padding: "6px 8px", textAlign: "center" }}>
+                    <Icon name={a.icon} size={10} color={col} />
+                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", marginTop: 2 }}>{a.label}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: col, marginTop: 2 }}>
+                      {isVix ? v.toFixed(1) : (v >= 0 ? "+" : "") + v.toFixed(1) + "%"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Portfolio Impact */}
+            <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Your Portfolio Under This Scenario</div>
             {myBaskets.map(b => {
-              const impact = activeStress.impacts[b.id];
-              if (impact === undefined) return null;
-              const dollarImpact = Math.round(b.value * impact / 100);
+              const impact = stressScenarios.find(s => s.id === (stressId === "gfc08" ? "recession" : stressId === "covid20" ? "recession" : stressId === "rate22" ? "rate_hike" : stressId === "dotcom" ? "tech_crash" : stressId === "fed26" ? "recession" : "recession"))?.impacts[b.id] || -5.0;
+              const scaledImpact = impact * (Math.abs(activeReplay.shocks.spx) / 30);
+              const dollarImpact = Math.round(b.value * scaledImpact / 100);
               return (
-                <div key={b.id} style={{ background: impact >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 10, padding: "6px 10px", border: `1px solid ${impact >= 0 ? "#5B8C5A" : "#EF5350"}22`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={b.id} style={{ background: scaledImpact >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 10, padding: "6px 10px", border: `1px solid ${scaledImpact >= 0 ? "#5B8C5A" : "#EF5350"}22`, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                     <Icon name={b.icon} size={10} />
                     <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>{b.name}</span>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: impact >= 0 ? "#5B8C5A" : "#EF5350" }}>{impact >= 0 ? "+" : ""}{impact}%</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: scaledImpact >= 0 ? "#5B8C5A" : "#EF5350" }}>{scaledImpact >= 0 ? "+" : ""}{scaledImpact.toFixed(1)}%</span>
                     <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImpact)}</span>
                   </div>
                 </div>
               );
             })}
+            <div style={{ marginTop: 4, padding: "8px 10px", background: "#FFEBEE", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>Total Portfolio Impact</span>
+              <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: "#EF5350" }}>
+                {((activeReplay.shocks.spx * 0.4 + (activeReplay.shocks.bonds || 0) * 0.15 + (activeReplay.shocks.gold || 0) * 0.1 + (activeReplay.shocks.oil || 0) * 0.08) ).toFixed(1)}% ({fmtS(Math.round(totalValue * (activeReplay.shocks.spx * 0.4 + (activeReplay.shocks.bonds || 0) * 0.15 + (activeReplay.shocks.gold || 0) * 0.1) / 100))})
+              </span>
+            </div>
           </div>
-          <div style={{ marginTop: 6, padding: "8px 10px", background: activeStress.portfolioPL >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>Total Portfolio</span>
-            <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: activeStress.portfolioPL >= 0 ? "#5B8C5A" : "#EF5350" }}>{activeStress.portfolioPL >= 0 ? "+" : ""}{activeStress.portfolioPL}% ({fmtS(Math.round(41240 * activeStress.portfolioPL / 100))})</span>
+        </div>}
+      </div>}
+
+      {/* ════════ MONTE CARLO SIMULATION ════════ */}
+      {view === "montecarlo" && <div style={{ animation: "fadeUp .3s ease both" }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #F0E6D0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Monte Carlo Simulation</div>
+              <div style={{ fontSize: 8, color: "#33333480", marginTop: 2 }}>{mcResults.simulations.toLocaleString()} paths · {mcResults.horizon} horizon · {mcResults.confidence}% CI</div>
+            </div>
+            <button onClick={() => setMonteCarloRun(!monteCarloRun)}
+              style={{ padding: "6px 14px", borderRadius: 10, border: "none", background: monteCarloRun ? "#5B8C5A" : "#C48830", color: "#fff", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>
+              {monteCarloRun ? "Re-run" : "Run Simulation"}
+            </button>
+          </div>
+
+          {/* Distribution Visualization */}
+          <div style={{ marginBottom: 10 }}>
+            <svg viewBox="0 0 600 140" style={{ width: "100%", height: 100, display: "block" }}>
+              <defs>
+                <linearGradient id="mcGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#EF5350" /><stop offset="20%" stopColor="#FFA726" />
+                  <stop offset="45%" stopColor="#5B8C5A" /><stop offset="70%" stopColor="#42A5F5" />
+                  <stop offset="100%" stopColor="#7E57C2" />
+                </linearGradient>
+              </defs>
+              <rect x="30" y="120" width="540" height="1" fill="#F0E6D0" />
+              {/* Bell curve approximation */}
+              <path d="M30,120 Q60,118 90,112 Q130,100 170,82 Q210,55 250,30 Q280,15 310,10 Q340,15 370,30 Q410,55 450,82 Q490,100 520,112 Q550,118 570,120" fill="url(#mcGrad)" fillOpacity="0.12" stroke="url(#mcGrad)" strokeWidth="2" />
+              {/* 5th percentile line */}
+              <line x1="120" y1="5" x2="120" y2="120" stroke="#EF5350" strokeWidth="1.5" strokeDasharray="4,3" />
+              <text x="120" y="135" textAnchor="middle" fill="#EF5350" fontSize="7" fontWeight="700">5th: {mcResults.percentiles[1].val}%</text>
+              {/* Median line */}
+              <line x1="310" y1="5" x2="310" y2="120" stroke="#5B8C5A" strokeWidth="1.5" strokeDasharray="4,3" />
+              <text x="310" y="135" textAnchor="middle" fill="#5B8C5A" fontSize="7" fontWeight="700">Median: +{mcResults.percentiles[4].val}%</text>
+              {/* 95th percentile line */}
+              <line x1="490" y1="5" x2="490" y2="120" stroke="#42A5F5" strokeWidth="1.5" strokeDasharray="4,3" />
+              <text x="490" y="135" textAnchor="middle" fill="#42A5F5" fontSize="7" fontWeight="700">95th: +{mcResults.percentiles[7].val}%</text>
+            </svg>
+          </div>
+
+          {/* Percentile Table */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(80px,1fr))", gap: 4, marginBottom: 10 }}>
+            {mcResults.percentiles.map((p, i) => {
+              const dollarVal = Math.round(totalValue * p.val / 100);
+              return (
+                <div key={i} style={{ background: p.val >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 8, padding: "5px 6px", textAlign: "center", border: `1px solid ${p.color}18` }}>
+                  <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480" }}>{p.p}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: p.color }}>{p.val >= 0 ? "+" : ""}{p.val}%</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 7, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarVal)}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Summary Stats */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4 }}>
+            {[
+              { label: "Expected Return", val: "+" + mcResults.expectedReturn + "%", color: "#5B8C5A" },
+              { label: "Expected Vol", val: mcResults.expectedVol + "%", color: "#FFA726" },
+              { label: "P(Loss)", val: mcResults.probLoss + "%", color: "#EF5350" },
+              { label: "P(Gain >20%)", val: mcResults.probGain20 + "%", color: "#42A5F5" },
+            ].map((s, i) => (
+              <div key={i} style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 6px", textAlign: "center" }}>
+                <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{s.label}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: s.color, marginTop: 2 }}>{s.val}</div>
+              </div>
+            ))}
           </div>
         </div>
-      )}
+      </div>}
+
+      {/* ════════ SENSITIVITY ANALYSIS (Factor Shock Grid) ════════ */}
+      {view === "sensitivity" && <div style={{ animation: "fadeUp .3s ease both" }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid #F0E6D0" }}>
+          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Factor Sensitivity Analysis</div>
+          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 10 }}>How your portfolio responds to individual factor shocks</div>
+
+          {/* Factor Selector */}
+          <div className="no-scrollbar" style={{ display: "flex", gap: 4, marginBottom: 10, overflowX: "auto" }}>
+            {Object.entries(sensFactors).map(([key, f]) => (
+              <button key={key} onClick={() => setSensitivity(key)}
+                style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 8, border: `1.5px solid ${sensitivity === key ? "#C48830" : "#F0E6D0"}`, background: sensitivity === key ? "#FFF8EE" : "#fff", color: sensitivity === key ? "#C48830" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap" }}>
+                <Icon name={f.icon} size={9} color={sensitivity === key ? "#C48830" : "#A09080"} /> {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Sensitivity Bar Chart */}
+          <div style={{ marginBottom: 8 }}>
+            <svg viewBox="0 0 600 180" style={{ width: "100%", height: 140, display: "block" }}>
+              <rect x="30" y="90" width="540" height="1" fill="#C4883044" />
+              <text x="15" y="93" fill="#33333480" fontSize="7" fontWeight="700" textAnchor="end">0%</text>
+              {sensData.steps.map((step, i) => {
+                const imp = sensData.impacts[i];
+                const x = 40 + i * (540 / sensData.steps.length);
+                const barW = (540 / sensData.steps.length) * 0.7;
+                const barH = Math.abs(imp) * 4;
+                const y = imp >= 0 ? 90 - barH : 90;
+                const col = imp >= 0 ? "#5B8C5A" : "#EF5350";
+                return (
+                  <g key={i}>
+                    <rect x={x} y={y} width={barW} height={barH} rx="3" fill={col} fillOpacity="0.7" />
+                    <text x={x + barW / 2} y={imp >= 0 ? y - 4 : y + barH + 10} textAnchor="middle" fill={col} fontSize="8" fontWeight="800" fontFamily="JetBrains Mono">{imp >= 0 ? "+" : ""}{imp}%</text>
+                    <text x={x + barW / 2} y={165} textAnchor="middle" fill="#33333480" fontSize="7" fontWeight="700">{step >= 0 ? "+" : ""}{step}{sensData.unit}</text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+
+          {/* Impact Table */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(70px,1fr))", gap: 4 }}>
+            {sensData.steps.map((step, i) => {
+              const imp = sensData.impacts[i];
+              const dollarImp = Math.round(totalValue * imp / 100);
+              const col = imp >= 0 ? "#5B8C5A" : "#EF5350";
+              return (
+                <div key={i} style={{ background: col + "0A", borderRadius: 8, padding: "5px 6px", textAlign: "center", border: `1px solid ${col}15` }}>
+                  <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480" }}>{step >= 0 ? "+" : ""}{step}{sensData.unit}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: col }}>{imp >= 0 ? "+" : ""}{imp}%</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 7, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImp)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>}
+
+      {/* ════════ VaR / CVaR ANALYTICS ════════ */}
+      {view === "var" && <div style={{ animation: "fadeUp .3s ease both" }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #F0E6D0" }}>
+          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Value at Risk & Expected Shortfall</div>
+          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 10 }}>Parametric VaR using variance-covariance method · CVaR (ES) for tail risk</div>
+
+          {/* Primary VaR Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+            {[
+              { label: "VaR 95% (1-Day)", val: varMetrics.var95_1d, dollar: Math.round(totalValue * varMetrics.var95_1d / 100), desc: "5% chance of losing more than this in one day", color: "#FFA726" },
+              { label: "VaR 99% (1-Day)", val: varMetrics.var99_1d, dollar: Math.round(totalValue * varMetrics.var99_1d / 100), desc: "1% chance of losing more than this in one day", color: "#EF5350" },
+              { label: "VaR 95% (10-Day)", val: varMetrics.var95_10d, dollar: Math.round(totalValue * varMetrics.var95_10d / 100), desc: "5% chance of losing more in 2 trading weeks", color: "#FFA726" },
+              { label: "VaR 99% (10-Day)", val: varMetrics.var99_10d, dollar: Math.round(totalValue * varMetrics.var99_10d / 100), desc: "1% chance of losing more in 2 trading weeks", color: "#EF5350" },
+            ].map((v, i) => (
+              <div key={i} style={{ background: v.color + "08", border: `1.5px solid ${v.color}22`, borderRadius: 12, padding: "8px 10px" }}>
+                <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{v.label}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: v.color, marginTop: 3 }}>{v.val}%</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 600, color: "#8A7040", marginTop: 1 }}>{fmtS(v.dollar)}</div>
+                <div style={{ fontSize: 7, color: "#33333480", marginTop: 3, lineHeight: 1.3 }}>{v.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* CVaR / Expected Shortfall */}
+          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Conditional VaR (Expected Shortfall)</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+            {[
+              { label: "CVaR 95%", val: varMetrics.cvar95, desc: "Average loss in the worst 5% of scenarios", color: "#FFA726" },
+              { label: "CVaR 99%", val: varMetrics.cvar99, desc: "Average loss in the worst 1% of scenarios", color: "#EF5350" },
+            ].map((v, i) => (
+              <div key={i} style={{ background: "#F9F6F0", borderRadius: 10, padding: "8px 10px", border: `1px solid ${v.color}18` }}>
+                <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{v.label}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 900, color: v.color, marginTop: 2 }}>{v.val}%</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 600, color: "#8A7040" }}>{fmtS(Math.round(totalValue * v.val / 100))}</div>
+                <div style={{ fontSize: 7, color: "#33333480", marginTop: 2 }}>{v.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Risk Characteristics */}
+          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Risk Characteristics</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(80px,1fr))", gap: 4 }}>
+            {[
+              { label: "Annualized Vol", val: varMetrics.portfolioVol + "%", color: "#FFA726" },
+              { label: "Beta to SPX", val: varMetrics.beta.toFixed(2), color: "#42A5F5" },
+              { label: "Sharpe Ratio", val: varMetrics.sharpe.toFixed(2), color: "#5B8C5A" },
+              { label: "Sortino Ratio", val: varMetrics.sortino.toFixed(2), color: "#5B8C5A" },
+              { label: "Max Drawdown", val: varMetrics.maxDD + "%", color: "#EF5350" },
+              { label: "Avg Drawdown", val: varMetrics.avgDD + "%", color: "#FFA726" },
+              { label: "Skewness", val: varMetrics.skew.toFixed(2), color: varMetrics.skew < 0 ? "#EF5350" : "#5B8C5A" },
+              { label: "Kurtosis", val: varMetrics.kurtosis.toFixed(2), color: varMetrics.kurtosis > 3 ? "#FFA726" : "#5B8C5A" },
+            ].map((m, i) => (
+              <div key={i} style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 6px", textAlign: "center" }}>
+                <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: m.color, marginTop: 2 }}>{m.val}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Fat Tails Warning */}
+          {varMetrics.kurtosis > 3 && <div style={{ marginTop: 8, padding: "8px 10px", background: "#FFF3E0", borderRadius: 10, border: "1px solid #FFA72622", display: "flex", alignItems: "center", gap: 8 }}>
+            <Icon name="warning" size={14} color="#FFA726" />
+            <div>
+              <div style={{ fontSize: 8, fontWeight: 800, color: "#FFA726" }}>Fat Tails Detected (Kurtosis: {varMetrics.kurtosis.toFixed(2)})</div>
+              <div style={{ fontSize: 8, color: "#8A7040", marginTop: 2 }}>Your portfolio has excess kurtosis &gt; 3, meaning extreme events are more likely than a normal distribution predicts. Parametric VaR may understate true tail risk — consider using Monte Carlo or Historical VaR for more accurate estimates.</div>
+            </div>
+          </div>}
+        </div>
+      </div>}
+
+      {/* ════════ CUSTOM SCENARIO BUILDER ════════ */}
+      {view === "custom" && <div style={{ animation: "fadeUp .3s ease both" }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid #F0E6D0" }}>
+          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Custom Scenario Builder</div>
+          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 10 }}>Define your own macro shocks and see the estimated portfolio impact</div>
+
+          {/* Shock Sliders */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+            {[
+              { key: "spx", label: "S&P 500", icon: "chart-bar", min: -60, max: 40, unit: "%" },
+              { key: "rates", label: "Interest Rates", icon: "bank", min: -200, max: 300, unit: "bp" },
+              { key: "vix", label: "VIX Change", icon: "wave", min: -15, max: 60, unit: "pts" },
+              { key: "oil", label: "Crude Oil", icon: "oil-barrel", min: -70, max: 100, unit: "%" },
+              { key: "dxy", label: "US Dollar", icon: "money", min: -20, max: 25, unit: "%" },
+              { key: "gold", label: "Gold", icon: "sparkle", min: -30, max: 50, unit: "%" },
+            ].map(s => {
+              const val = customShocks[s.key];
+              const col = val === 0 ? "#A09080" : val > 0 ? "#5B8C5A" : "#EF5350";
+              return (
+                <div key={s.key}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                      <Icon name={s.icon} size={9} color={col} />
+                      <span style={{ fontSize: 8, fontWeight: 800, color: "#5C4A1E" }}>{s.label}</span>
+                    </div>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: col }}>
+                      {val >= 0 ? "+" : ""}{val}{s.unit}
+                    </span>
+                  </div>
+                  <input type="range" min={s.min} max={s.max} value={val}
+                    onChange={e => setCustomShocks(prev => ({ ...prev, [s.key]: Number(e.target.value) }))}
+                    style={{ width: "100%", height: 4, appearance: "none", background: `linear-gradient(to right, #EF5350, #F0E6D0, #5B8C5A)`, borderRadius: 2, outline: "none", cursor: "pointer" }} />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Custom Impact Result */}
+          <div style={{ padding: "10px 12px", background: customPortfolioImpact >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 12, border: `1.5px solid ${customPortfolioImpact >= 0 ? "#5B8C5A" : "#EF5350"}22`, marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Estimated Portfolio Impact</div>
+                <div style={{ fontSize: 7, color: "#8A7040", marginTop: 2 }}>Based on factor loadings and historical betas</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 16, fontWeight: 900, color: customPortfolioImpact >= 0 ? "#5B8C5A" : "#EF5350" }}>{customPortfolioImpact >= 0 ? "+" : ""}{customPortfolioImpact.toFixed(1)}%</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 600, color: "#8A7040" }}>{fmtS(Math.round(totalValue * customPortfolioImpact / 100))}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Reset & Preset Buttons */}
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            <button onClick={() => setCustomShocks({ spx: 0, rates: 0, vix: 0, oil: 0, dxy: 0, gold: 0 })}
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #F0E6D0", background: "#fff", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#A09080" }}>Reset All</button>
+            <button onClick={() => setCustomShocks({ spx: -30, rates: -100, vix: 40, oil: -40, dxy: 5, gold: 15 })}
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #EF535044", background: "#FFEBEE", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#EF5350" }}>Recession</button>
+            <button onClick={() => setCustomShocks({ spx: -15, rates: 200, vix: 25, oil: 50, dxy: 10, gold: 20 })}
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #FFA72644", background: "#FFF3E0", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#FFA726" }}>Stagflation</button>
+            <button onClick={() => setCustomShocks({ spx: 20, rates: -50, vix: -10, oil: 15, dxy: -8, gold: 5 })}
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #5B8C5A44", background: "#EDF5ED", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#5B8C5A" }}>Goldilocks</button>
+            <button onClick={() => setCustomShocks({ spx: -8, rates: 100, vix: 15, oil: -20, dxy: 12, gold: -5 })}
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #42A5F544", background: "#E3F2FD", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#42A5F5" }}>Rate Hike</button>
+          </div>
+        </div>
+      </div>}
     </div>
   );
 }
@@ -6323,18 +6972,18 @@ export default function App() {
         {/* ══ RISK LAB ══ */}
         {page === "risklab" && !selectedBasket && <div>
           <div style={{ display: "flex", gap: 2, background: "#fff", borderRadius: 10, padding: 2, marginBottom: 10, flexWrap: "wrap" }}>
-            {[{ id: "risklab", label: "Risk", icon: "flask" }, { id: "stresstest", label: "Stress", icon: "explosion" }, { id: "historical", label: "History", icon: "scroll" }, { id: "contrarian", label: "Contrarian", icon: "compass" }, { id: "tides", label: "Tides", icon: "wave" }, { id: "weather", label: "Weather", icon: "cloud-sun" }, { id: "myeggs", label: "Eggs", icon: "egg" }, { id: "horoscope", label: "Horoscope", icon: "sparkle" }].map(t => (
+            {[{ id: "risklab", label: "Risk", icon: "flask" }, { id: "hedge", label: "Hedge", icon: "shield" }, { id: "stresstest", label: "Stress", icon: "explosion" }, { id: "historical", label: "History", icon: "scroll" }, { id: "contrarian", label: "Contrarian", icon: "compass" }, { id: "tides", label: "Tides", icon: "wave" }, { id: "weather", label: "Weather", icon: "cloud-sun" }, { id: "horoscope", label: "Horoscope", icon: "sparkle" }].map(t => (
               <button key={t.id} onClick={() => setRiskLabTab(t.id)}
                 style={{ flex: "1 1 auto", padding: "6px 6px", borderRadius: 7, border: "none", background: riskLabTab === t.id ? "#C48830" : "transparent", color: riskLabTab === t.id ? "#fff" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", transition: "all .2s", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}><Icon name={t.icon} size={9} color={riskLabTab === t.id ? "#fff" : "#A09080"} />{t.label}</button>
             ))}
           </div>
           {riskLabTab === "risklab" && <RiskLabPage onOpenMacro={() => setPage("macro")} hedges={displayHedges} regime={displayRegime} />}
+          {riskLabTab === "hedge" && <HedgeGuidesPage />}
           {riskLabTab === "stresstest" && <StressTestPage />}
           {riskLabTab === "historical" && <HistoricalPatternsPage />}
           {riskLabTab === "contrarian" && <ContrarianSignalsPage />}
           {riskLabTab === "tides" && <MacroTidesPage />}
           {riskLabTab === "weather" && <WeatherMarketPage />}
-          {riskLabTab === "myeggs" && <MyBasketsPage onSelectBasket={setSelectedBasket} />}
           {riskLabTab === "horoscope" && <HoroscopePage />}
         </div>}
 
