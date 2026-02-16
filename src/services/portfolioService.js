@@ -12,7 +12,14 @@ import {
   calendarEvents
 } from '../data/mockData';
 
+// Module-level live news injection (set from useNewsStream hook)
+let _liveNews = null;
+
 export class PortfolioService {
+  static setLiveNews(news) {
+    _liveNews = news;
+  }
+
   /**
    * Get complete portfolio snapshot for agent analysis
    * @returns {Object} - Portfolio snapshot with all relevant data
@@ -111,7 +118,7 @@ export class PortfolioService {
         regime: currentRegime,
         indicators: macroIndicators,
         alerts: macroAlerts,
-        recentNews: terminalFeed.slice(0, 5), // Top 5 news items
+        recentNews: (_liveNews && _liveNews.length > 0 ? _liveNews : terminalFeed).slice(0, 5),
         upcomingEvents: this.getUpcomingEvents(3) // Next 3 days
       },
 

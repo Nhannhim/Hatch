@@ -8,6 +8,6 @@
     "preferredContentMode": "mobile"
   },
   "server": {
-    "allowNavigation": ["*.yahoo.com", "*.anthropic.com", "*.googleapis.com", "*.firebaseapp.com"]
+    "allowNavigation": ["*.yahoo.com", "*.anthropic.com", "*.googleapis.com", "*.firebaseapp.com", "*.finnhub.io"]
   }
 }

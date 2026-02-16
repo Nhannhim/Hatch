@@ -6,6 +6,9 @@ import { Icon, EIcon, EMOJI_TO_ICON } from './components/Icons';
 import { useStockPrices } from './hooks/useStockPrices';
 import { useStockChart } from './hooks/useStockChart';
 import { useStockDetail } from './hooks/useStockDetail';
+import { useNewsStream } from './hooks/useNewsStream';
+import { useCompanyNews } from './hooks/useCompanyNews';
+import { PortfolioService } from './services/portfolioService';
 import {
   calendarEvents,
   portfolioHistory,
@@ -40,9 +43,9 @@ import {
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:wght@400;600&family=Quicksand:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;transition:all 200ms ease}
-html{height:100%;height:100dvh;background:#FFFEF9}
-body{font-family:'Quicksand',sans-serif;background:#FFFEF9;color:#333334;margin:0 auto;padding:0;width:100%;max-width:393px;height:100%;height:100dvh;overflow:hidden}
-#root{height:100%;width:100%;overflow:hidden}
+html{height:100%;background:#FFFEF9}
+body{font-family:'Quicksand',sans-serif;background:#FFFEF9;color:#333334;margin:0;padding:0;width:100%;height:100%;overflow:hidden}
+#root{position:fixed;top:0;left:0;right:0;bottom:0;overflow:hidden}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#333334;border-radius:3px;opacity:0.3}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes popIn{0%{opacity:0;transform:scale(0.9)}70%{transform:scale(1.03)}100%{opacity:1;transform:scale(1)}}
@@ -321,7 +324,7 @@ function MiniChart({ data, color, chartId, onHover }) {
         {pts.map((p, i) => <text key={"t" + i} x={p.x} y={H - 1} textAnchor="middle" fill="#A09080" fontSize="9" fontFamily="Quicksand" fontWeight="600">{p.l}</text>)}
         {tip && <g><line x1={tip.x} y1={PY} x2={tip.x} y2={H - PY} stroke={color} strokeWidth="1" strokeDasharray="4,4" opacity=".4" /><circle cx={tip.x} cy={tip.y} r="6" fill={color} stroke="#fff" strokeWidth="3" /></g>}
       </svg>
-      {tip && <div style={{ position: "absolute", top: 6, right: 6, background: "#fff", borderRadius: 12, padding: "6px 12px", fontFamily: "JetBrains Mono", fontSize: 12 }}><span style={{ color: "#33333480" }}>{tip.l}</span><span style={{ marginLeft: 8, color, fontWeight: 700 }}>{fmt(tip.v)}</span></div>}
+      {tip && <div style={{ position: "absolute", top: 6, right: 6, background: "#fff", borderRadius: 12, padding: "6px 12px", fontFamily: "JetBrains Mono", fontSize: 18 }}><span style={{ color: "#33333480" }}>{tip.l}</span><span style={{ marginLeft: 8, color, fontWeight: 700 }}>{fmt(tip.v)}</span></div>}
     </div>
   );
 }
@@ -332,11 +335,11 @@ function StatCard({ label, value, sub, icon, color = "terracotta", delay = 0 }) 
     <div style={{ background: c.l, border: "1.5px solid transparent", borderRadius: 12, padding: "8px 10px", animation: "fadeUp .5s ease " + delay + "s both", flex: "1 1 80px", minWidth: 80, transition: "all .3s" }}
       onMouseEnter={e => { e.currentTarget.style.borderColor = c.a; }} onMouseLeave={e => { e.currentTarget.style.borderColor = "transparent"; }}>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 8, color: "#33333480", textTransform: "uppercase", letterSpacing: .8, marginBottom: 2, fontWeight: 700 }}>{label}</div>
+        <div style={{ fontSize: 12, color: "#33333480", textTransform: "uppercase", letterSpacing: .8, marginBottom: 2, fontWeight: 700 }}>{label}</div>
         <Icon name={icon} size={11} color={c.a} />
       </div>
-      <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: c.a }}>{value}</div>
-      {sub && <div style={{ fontSize: 9, color: "#8A7040", marginTop: 1, fontWeight: 500 }}>{sub}</div>}
+      <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: c.a }}>{value}</div>
+      {sub && <div style={{ fontSize: 14, color: "#8A7040", marginTop: 1, fontWeight: 500 }}>{sub}</div>}
     </div>
   );
 }
@@ -389,8 +392,8 @@ function CalendarPage({ onNavigate }) {
   return (
     <div>
       <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Earnings & Events Calendar</h1>
-        <p style={{ color: "#33333480", fontSize: 11, marginTop: 4 }}>S&P 500 earnings, macro events & company catalysts — plan your strategy ahead</p>
+        <h1 style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Earnings & Events Calendar</h1>
+        <p style={{ color: "#33333480", fontSize: 17, marginTop: 4 }}>S&P 500 earnings, macro events & company catalysts — plan your strategy ahead</p>
       </div>
 
       {/* Stats bar */}
@@ -405,19 +408,19 @@ function CalendarPage({ onNavigate }) {
       <div className="controls-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 6, animation: "fadeUp .4s ease .1s both" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <button onClick={() => setViewMonth(Math.max(0, viewMonth - 1))} disabled={viewMonth === 0}
-            style={{ width: 36, height: 36, borderRadius: 12, border: "1px solid #33333440", background: "#fff", cursor: viewMonth === 0 ? "default" : "pointer", fontSize: 12, opacity: viewMonth === 0 ? 0.4 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", minWidth: 0, textAlign: "center", flex: "1" }}>{cur.label}</div>
+            style={{ width: 36, height: 36, borderRadius: 12, border: "1px solid #33333440", background: "#fff", cursor: viewMonth === 0 ? "default" : "pointer", fontSize: 18, opacity: viewMonth === 0 ? 0.4 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", minWidth: 0, textAlign: "center", flex: "1" }}>{cur.label}</div>
           <button onClick={() => setViewMonth(Math.min(months.length - 1, viewMonth + 1))} disabled={viewMonth === months.length - 1}
-            style={{ width: 36, height: 36, borderRadius: 12, border: "1px solid #33333440", background: "#fff", cursor: viewMonth === months.length - 1 ? "default" : "pointer", fontSize: 12, opacity: viewMonth === months.length - 1 ? 0.4 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>→</button>
+            style={{ width: 36, height: 36, borderRadius: 12, border: "1px solid #33333440", background: "#fff", cursor: viewMonth === months.length - 1 ? "default" : "pointer", fontSize: 18, opacity: viewMonth === months.length - 1 ? 0.4 : 1, display: "flex", alignItems: "center", justifyContent: "center" }}>→</button>
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           {[{ k: "all", l: "All" }, { k: "earnings", l: "Earnings" }, { k: "event", l: "Events" }].map(f => (
-            <button key={f.k} onClick={() => setTypeFilter(f.k)} style={{ padding: "7px 14px", borderRadius: 12, border: "1.5px solid " + (typeFilter === f.k ? "#C48830" : "#F0E6D0"), background: typeFilter === f.k ? "#FFF8EE" : "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: typeFilter === f.k ? "#C48830" : "#A09080" }}>{f.l}</button>
+            <button key={f.k} onClick={() => setTypeFilter(f.k)} style={{ padding: "7px 14px", borderRadius: 12, border: "1.5px solid " + (typeFilter === f.k ? "#C48830" : "#F0E6D0"), background: typeFilter === f.k ? "#FFF8EE" : "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: typeFilter === f.k ? "#C48830" : "#A09080" }}>{f.l}</button>
           ))}
         </div>
         <div style={{ display: "flex", gap: 3, background: "#fff", borderRadius: 10, padding: 3 }}>
           {["calendar", "list"].map(m => (
-            <button key={m} onClick={() => setViewMode(m)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: viewMode === m ? "#fff" : "transparent", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: viewMode === m ? "#5C4A1E" : "#A09080" }}>{m === "calendar" ? "Grid" : "List"}</button>
+            <button key={m} onClick={() => setViewMode(m)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: viewMode === m ? "#fff" : "transparent", fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: viewMode === m ? "#5C4A1E" : "#A09080" }}>{m === "calendar" ? "Grid" : "List"}</button>
           ))}
         </div>
       </div>
@@ -430,7 +433,7 @@ function CalendarPage({ onNavigate }) {
               {/* Day headers */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
-                  <div key={d} style={{ padding: "10px 0", textAlign: "center", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>{d}</div>
+                  <div key={d} style={{ padding: "10px 0", textAlign: "center", fontSize: 17, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>{d}</div>
                 ))}
               </div>
               {/* Day cells */}
@@ -451,18 +454,18 @@ function CalendarPage({ onNavigate }) {
                       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#fff"; }}
                       onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isToday ? "#fff" : isWeekend ? "#FFFDF5" : "#fff"; }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <span style={{ fontSize: 10, fontWeight: isToday ? 900 : 600, fontFamily: "'Instrument Serif', serif", color: isToday ? "#C48830" : "#5C4A1E", background: isToday ? "#C48830" : "transparent", width: isToday ? 24 : "auto", height: isToday ? 24 : "auto", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", ...(isToday ? { background: "#C48830", color: "#fff", width: 24, height: 24 } : {}) }}>{day}</span>
+                        <span style={{ fontSize: 15, fontWeight: isToday ? 900 : 600, fontFamily: "'Instrument Serif', serif", color: isToday ? "#C48830" : "#5C4A1E", background: isToday ? "#C48830" : "transparent", width: isToday ? 24 : "auto", height: isToday ? 24 : "auto", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", ...(isToday ? { background: "#C48830", color: "#fff", width: 24, height: 24 } : {}) }}>{day}</span>
                         {evts.length > 0 && (
-                          <span style={{ fontSize: 9, fontWeight: 800, background: evts.some(e => e.impact === "high") ? "#FFEBEE" : "#FFF3E0", color: evts.some(e => e.impact === "high") ? "#EF5350" : "#FFA726", padding: "1px 6px", borderRadius: 8 }}>{evts.length}</span>
+                          <span style={{ fontSize: 14, fontWeight: 800, background: evts.some(e => e.impact === "high") ? "#FFEBEE" : "#FFF3E0", color: evts.some(e => e.impact === "high") ? "#EF5350" : "#FFA726", padding: "1px 6px", borderRadius: 8 }}>{evts.length}</span>
                         )}
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                         {evts.slice(0, 3).map((ev, j) => (
-                          <div key={j} style={{ fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 6, background: ev.type === "earnings" ? "#E3F2FD" : "#FFF3E0", color: ev.type === "earnings" ? "#42A5F5" : "#FFA726", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                          <div key={j} style={{ fontSize: 14, fontWeight: 700, padding: "2px 5px", borderRadius: 6, background: ev.type === "earnings" ? "#E3F2FD" : "#FFF3E0", color: ev.type === "earnings" ? "#42A5F5" : "#FFA726", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                             {ev.type === "earnings" ? "" : (ev.icon || "pin") + " "}{ev.ticker === "MACRO" ? ev.name.slice(0, 12) : ev.ticker}
                           </div>
                         ))}
-                        {evts.length > 3 && <div style={{ fontSize: 9, color: "#33333480", fontWeight: 700, paddingLeft: 5 }}>+{evts.length - 3} more</div>}
+                        {evts.length > 3 && <div style={{ fontSize: 14, color: "#33333480", fontWeight: 700, paddingLeft: 5 }}>+{evts.length - 3} more</div>}
                       </div>
                     </div>
                   );
@@ -484,18 +487,18 @@ function CalendarPage({ onNavigate }) {
                     onMouseEnter={e => { e.currentTarget.style.borderColor = ev.type === "earnings" ? "#42A5F5" : "#FFA726"; e.currentTarget.style.transform = "translateX(4px)"; }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? "#C48830" : "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
                     <div style={{ width: 48, textAlign: "center", flexShrink: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{dayName}</div>
-                      <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: isToday ? "#C48830" : "#5C4A1E" }}>{dayNum}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{dayName}</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: isToday ? "#C48830" : "#5C4A1E" }}>{dayNum}</div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 8, background: ev.type === "earnings" ? "#E3F2FD" : "#FFF3E0", color: ev.type === "earnings" ? "#42A5F5" : "#FFA726", textTransform: "uppercase" }}>{ev.type === "earnings" ? "Earnings" : "Event"}</span>
-                        <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 12, color: ev.type === "earnings" ? "#42A5F5" : "#FFA726" }}>{ev.ticker}</span>
-                        {ev.time && <span style={{ fontSize: 9, color: "#33333480", fontWeight: 700 }}>{ev.time}</span>}
-                        <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 6, background: impactBg[ev.impact], color: impactColor[ev.impact], marginLeft: "auto" }}>{ev.impact}</span>
+                        <span style={{ fontSize: 14, fontWeight: 800, padding: "2px 8px", borderRadius: 8, background: ev.type === "earnings" ? "#E3F2FD" : "#FFF3E0", color: ev.type === "earnings" ? "#42A5F5" : "#FFA726", textTransform: "uppercase" }}>{ev.type === "earnings" ? "Earnings" : "Event"}</span>
+                        <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 18, color: ev.type === "earnings" ? "#42A5F5" : "#FFA726" }}>{ev.ticker}</span>
+                        {ev.time && <span style={{ fontSize: 14, color: "#33333480", fontWeight: 700 }}>{ev.time}</span>}
+                        <span style={{ fontSize: 14, fontWeight: 800, padding: "1px 6px", borderRadius: 6, background: impactBg[ev.impact], color: impactColor[ev.impact], marginLeft: "auto" }}>{ev.impact}</span>
                       </div>
-                      <div style={{ fontWeight: 800, fontSize: 11, fontFamily: "'Instrument Serif', serif" }}>{ev.name}</div>
-                      <div style={{ fontSize: 11, color: "#33333480" }}>
+                      <div style={{ fontWeight: 800, fontSize: 17, fontFamily: "'Instrument Serif', serif" }}>{ev.name}</div>
+                      <div style={{ fontSize: 17, color: "#33333480" }}>
                         {ev.type === "earnings" ? ev.quarter + " · Expected " + ev.expected : ev.desc}
                       </div>
                     </div>
@@ -512,20 +515,20 @@ function CalendarPage({ onNavigate }) {
             <div style={{ background: "#fff", borderRadius: 14, padding: 20, position: "sticky", top: 80 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: "#33333480", fontWeight: 700, textTransform: "uppercase" }}>
+                  <div style={{ fontSize: 17, color: "#33333480", fontWeight: 700, textTransform: "uppercase" }}>
                     {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" })}
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>
                     {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" })}
                   </div>
                 </div>
-                <button onClick={() => setSelectedDate(null)} style={{ width: 32, height: 32, borderRadius: 10, border: "none", background: "#fff", cursor: "pointer", fontSize: 11, color: "#33333480" }}>✕</button>
+                <button onClick={() => setSelectedDate(null)} style={{ width: 32, height: 32, borderRadius: 10, border: "none", background: "#fff", cursor: "pointer", fontSize: 17, color: "#33333480" }}>✕</button>
               </div>
 
               {selectedEvents.length === 0 && (
                 <div style={{ textAlign: "center", padding: "30px 0", color: "#33333480" }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}></div>
-                  <div style={{ fontSize: 11, fontWeight: 600 }}>No events on this day</div>
+                  <div style={{ fontSize: 48, marginBottom: 8 }}></div>
+                  <div style={{ fontSize: 17, fontWeight: 600 }}>No events on this day</div>
                 </div>
               )}
 
@@ -534,28 +537,28 @@ function CalendarPage({ onNavigate }) {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 8, background: "#fff", color: ev.type === "earnings" ? "#42A5F5" : "#FFA726", textTransform: "uppercase" }}>{ev.type}</span>
-                        <span style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 10 }}>{ev.ticker}</span>
+                        <span style={{ fontSize: 14, fontWeight: 800, padding: "2px 8px", borderRadius: 8, background: "#fff", color: ev.type === "earnings" ? "#42A5F5" : "#FFA726", textTransform: "uppercase" }}>{ev.type}</span>
+                        <span style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 15 }}>{ev.ticker}</span>
                       </div>
-                      <div style={{ fontWeight: 900, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{ev.name}</div>
+                      <div style={{ fontWeight: 900, fontSize: 18, fontFamily: "'Instrument Serif', serif" }}>{ev.name}</div>
                     </div>
-                    <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 8, background: impactBg[ev.impact], color: impactColor[ev.impact] }}>{ev.impact}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, padding: "3px 8px", borderRadius: 8, background: impactBg[ev.impact], color: impactColor[ev.impact] }}>{ev.impact}</span>
                   </div>
                   {ev.type === "earnings" && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginTop: 8 }}>
-                      <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}><div style={{ fontSize: 8, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Quarter</div><div style={{ fontWeight: 800, fontSize: 10, fontFamily: "'Instrument Serif', serif" }}>{ev.quarter}</div></div>
-                      <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}><div style={{ fontSize: 8, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Expected</div><div style={{ fontWeight: 800, fontSize: 10, fontFamily: "JetBrains Mono", color: "#42A5F5" }}>{ev.expected}</div></div>
-                      <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}><div style={{ fontSize: 8, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Timing</div><div style={{ fontWeight: 800, fontSize: 10 }}>{ev.time === "BMO" ? "Pre" : "Post"}</div></div>
+                      <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}><div style={{ fontSize: 12, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Quarter</div><div style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif" }}>{ev.quarter}</div></div>
+                      <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}><div style={{ fontSize: 12, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Expected</div><div style={{ fontWeight: 800, fontSize: 15, fontFamily: "JetBrains Mono", color: "#42A5F5" }}>{ev.expected}</div></div>
+                      <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", textAlign: "center" }}><div style={{ fontSize: 12, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Timing</div><div style={{ fontWeight: 800, fontSize: 15 }}>{ev.time === "BMO" ? "Pre" : "Post"}</div></div>
                     </div>
                   )}
                   {ev.type === "event" && (
-                    <div style={{ fontSize: 10, color: "#8A7040", lineHeight: 1.6, marginTop: 4 }}>{ev.desc}</div>
+                    <div style={{ fontSize: 15, color: "#8A7040", lineHeight: 1.6, marginTop: 4 }}>{ev.desc}</div>
                   )}
-                  <div style={{ fontSize: 10, color: "#33333480", marginTop: 8, fontWeight: 600 }}>Sector: {ev.sector}</div>
+                  <div style={{ fontSize: 15, color: "#33333480", marginTop: 8, fontWeight: 600 }}>Sector: {ev.sector}</div>
                   {/* Strategy hint */}
                   <div style={{ background: "#fff", borderRadius: 12, padding: "7px 10px", marginTop: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: "#C48830", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Strategy Hint</div>
-                    <div style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#C48830", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Strategy Hint</div>
+                    <div style={{ fontSize: 18, color: "#8A7040", lineHeight: 1.5 }}>
                       {ev.type === "earnings" && ev.impact === "high" && "High-impact earnings — consider straddles or position sizing before the report. Volatility typically spikes 24h prior."}
                       {ev.type === "earnings" && ev.impact === "medium" && "Monitor for sector-wide signals. This report can move peers in the same Hatch."}
                       {ev.type === "event" && ev.impact === "high" && "Major macro catalyst — review your Hatch exposure. Consider hedging or adding to macro-aligned Hatches."}
@@ -572,7 +575,7 @@ function CalendarPage({ onNavigate }) {
 
       {/* Upcoming Events Timeline */}
       <div style={{ marginTop: 24, background: "#fff", borderRadius: 14, padding: 12, animation: "fadeUp .5s ease .2s both" }}>
-        <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Coming Up Next</div>
+        <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Coming Up Next</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 6 }}>
           {upcoming.map((ev, i) => {
             const dateObj = new Date(ev.date + "T12:00:00");
@@ -583,13 +586,13 @@ function CalendarPage({ onNavigate }) {
                 <div style={{ width: 4, borderRadius: 2, background: ev.type === "earnings" ? "#42A5F5" : "#FFA726", flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: isToday ? "#C48830" : "#A09080" }}>{isToday ? "TODAY" : label}</span>
-                    <span style={{ fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 6, background: impactBg[ev.impact], color: impactColor[ev.impact] }}>{ev.impact}</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: isToday ? "#C48830" : "#A09080" }}>{isToday ? "TODAY" : label}</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, padding: "1px 6px", borderRadius: 6, background: impactBg[ev.impact], color: impactColor[ev.impact] }}>{ev.impact}</span>
                   </div>
-                  <div style={{ fontWeight: 800, fontSize: 10, fontFamily: "'Instrument Serif', serif", marginTop: 2, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif", marginTop: 2, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                     {ev.type === "earnings" ? "" : (ev.icon || "pin") + " "}{ev.name}
                   </div>
-                  <div style={{ fontSize: 10, color: "#33333480", marginTop: 1 }}>
+                  <div style={{ fontSize: 15, color: "#33333480", marginTop: 1 }}>
                     {ev.type === "earnings" ? ev.ticker + " · " + ev.quarter + " · " + ev.expected : ev.ticker}
                   </div>
                 </div>
@@ -611,10 +614,10 @@ function CalendarWidget({ onViewAll }) {
     <div style={{ background: "#fff", borderRadius: 12, padding: "8px 10px", animation: "fadeUp .5s ease .35s both" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ fontSize: 10 }}></span>
-          <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Upcoming</span>
+          <span style={{ fontSize: 15 }}></span>
+          <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Upcoming</span>
         </div>
-        <button onClick={onViewAll} style={{ background: "none", border: "none", color: "#C48830", fontWeight: 800, fontSize: 9, cursor: "pointer" }}>See All →</button>
+        <button onClick={onViewAll} style={{ background: "none", border: "none", color: "#C48830", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>See All →</button>
       </div>
       {upcoming.map((ev, i) => {
         const dateObj = new Date(ev.date + "T12:00:00");
@@ -622,12 +625,12 @@ function CalendarWidget({ onViewAll }) {
         const isToday = ev.date === todayStr;
         return (
           <div key={i} style={{ display: "flex", gap: 6, padding: "5px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none", alignItems: "center" }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: isToday ? "#FFF8EE" : "#FFFDF5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: isToday ? "#C48830" : "#8A7040", flexShrink: 0, border: isToday ? "1.5px solid #C48830" : "1px solid #F0E6D0" }}>{label.split(" ")[1]}</div>
+            <div style={{ width: 30, height: 30, borderRadius: 8, background: isToday ? "#FFF8EE" : "#FFFDF5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: isToday ? "#C48830" : "#8A7040", flexShrink: 0, border: isToday ? "1.5px solid #C48830" : "1px solid #F0E6D0" }}>{label.split(" ")[1]}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 9, fontFamily: "'Instrument Serif', serif", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{ev.type === "earnings" ? ev.ticker + " Earnings" : ev.name}</div>
-              <div style={{ fontSize: 8, color: "#33333480" }}>{isToday ? "Today" : label}{ev.time ? " · " + ev.time : ""}</div>
+              <div style={{ fontWeight: 700, fontSize: 14, fontFamily: "'Instrument Serif', serif", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{ev.type === "earnings" ? ev.ticker + " Earnings" : ev.name}</div>
+              <div style={{ fontSize: 12, color: "#33333480" }}>{isToday ? "Today" : label}{ev.time ? " · " + ev.time : ""}</div>
             </div>
-            <span style={{ fontSize: 7, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: ev.impact === "high" ? "#FFEBEE" : "#FFF3E0", color: ev.impact === "high" ? "#EF5350" : "#FFA726", flexShrink: 0 }}>{ev.impact}</span>
+            <span style={{ fontSize: 11, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: ev.impact === "high" ? "#FFEBEE" : "#FFF3E0", color: ev.impact === "high" ? "#EF5350" : "#FFA726", flexShrink: 0 }}>{ev.impact}</span>
           </div>
         );
       })}
@@ -668,8 +671,8 @@ function AlertsWidget({ alerts, onViewAll }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <Icon name={current.icon} size={12} />
-          <span style={{ fontSize: 8, fontWeight: 900, padding: "1px 6px", borderRadius: 4, background: sCol[current.severity], color: "#fff", textTransform: "uppercase" }}>{current.severity}</span>
-          {crit > 1 && <span style={{ fontSize: 8, color: sCol[current.severity], fontWeight: 700 }}>{crit} alerts</span>}
+          <span style={{ fontSize: 12, fontWeight: 900, padding: "1px 6px", borderRadius: 4, background: sCol[current.severity], color: "#fff", textTransform: "uppercase" }}>{current.severity}</span>
+          {crit > 1 && <span style={{ fontSize: 12, color: sCol[current.severity], fontWeight: 700 }}>{crit} alerts</span>}
         </div>
         {/* Slide dots */}
         <div style={{ display: "flex", gap: 3 }}>
@@ -679,9 +682,9 @@ function AlertsWidget({ alerts, onViewAll }) {
         </div>
       </div>
       {/* Headline */}
-      <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: sCol[current.severity], lineHeight: 1.3, transition: "all .3s" }}>{current.headline}</div>
+      <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: sCol[current.severity], lineHeight: 1.3, transition: "all .3s" }}>{current.headline}</div>
       {/* Tap hint */}
-      <div style={{ fontSize: 7, color: "#33333480", marginTop: 3, fontWeight: 700 }}>Tap for details →</div>
+      <div style={{ fontSize: 11, color: "#33333480", marginTop: 3, fontWeight: 700 }}>Tap for details →</div>
       {/* Progress bar */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: sCol[current.severity] + "22" }}>
         <div style={{ height: "100%", background: sCol[current.severity], animation: "alertProgress 3.5s linear infinite", width: "100%" }} />
@@ -699,16 +702,16 @@ function AlertsPage({ alerts }) {
   return (
     <div>
       <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Alerts</h1>
-        <p style={{ color: "#33333480", fontSize: 11, marginTop: 4 }}>Economic signals & live macro news feed</p>
+        <h1 style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Alerts</h1>
+        <p style={{ color: "#33333480", fontSize: 17, marginTop: 4 }}>Economic signals & live macro news feed</p>
       </div>
 
       {/* ── Alert Summary Cards ── */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10, flexWrap: "wrap" }}>
         {[{ k: "all", l: "All", n: alerts.length, c: "#5C4A1E", bg: "#fff" }, { k: "critical", l: "Critical", n: alerts.filter(a => a.severity === "critical").length, c: "#EF5350", bg: "#FFEBEE" }, { k: "warning", l: "Warning", n: alerts.filter(a => a.severity === "warning").length, c: "#FFA726", bg: "#FFF3E0" }, { k: "info", l: "Info", n: alerts.filter(a => a.severity === "info").length, c: "#42A5F5", bg: "#E3F2FD" }].map(f => (
           <button key={f.k} onClick={() => setFilter(f.k)} style={{ flex: "1 1 120px", padding: "12px 16px", borderRadius: 16, border: "1.5px solid " + (filter === f.k ? f.c : "transparent"), background: f.bg, cursor: "pointer", textAlign: "left" }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: f.c }}>{f.l}</div>
-            <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: f.c }}>{f.n}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: f.c }}>{f.l}</div>
+            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: f.c }}>{f.n}</div>
           </button>
         ))}
       </div>
@@ -718,11 +721,11 @@ function AlertsPage({ alerts }) {
         <div key={a.id} style={{ background: "#fff", borderRadius: 14, padding: "18px 22px", marginBottom: 12, borderLeft: "4px solid " + sCol[a.severity], animation: "fadeUp .4s ease " + (i * .05) + "s both" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <Icon name={a.icon} size={12} />
-            <div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{a.title}</div></div>
-            <span style={{ fontSize: 9, fontWeight: 800, background: sBg[a.severity], color: sCol[a.severity], padding: "3px 10px", borderRadius: 10 }}>{a.severity.toUpperCase()}</span>
-            <span style={{ fontSize: 11, color: "#33333480" }}>{a.time} ago</span>
+            <div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 18, fontFamily: "'Instrument Serif', serif" }}>{a.title}</div></div>
+            <span style={{ fontSize: 14, fontWeight: 800, background: sBg[a.severity], color: sCol[a.severity], padding: "3px 10px", borderRadius: 10 }}>{a.severity.toUpperCase()}</span>
+            <span style={{ fontSize: 17, color: "#33333480" }}>{a.time} ago</span>
           </div>
-          <div style={{ fontSize: 10, color: "#8A7040", lineHeight: 1.6 }}>{a.summary}</div>
+          <div style={{ fontSize: 15, color: "#8A7040", lineHeight: 1.6 }}>{a.summary}</div>
         </div>
       ))}
 
@@ -744,34 +747,34 @@ function CreateBasketModal({ onClose, onCreate }) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(45,32,22,.4)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 16, width: "calc(100% - 24px)", maxWidth: 360, maxHeight: "90vh", overflow: "auto", animation: "popIn .4s ease" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "2px solid #F0E6D0" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 12 }}></span><div><div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Create Your Own Hatch</div><div style={{ fontSize: 11, color: "#33333480" }}>Step {step}/2</div></div></div>
-          <button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 11, color: "#33333480" }}>✕</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 18 }}></span><div><div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Create Your Own Hatch</div><div style={{ fontSize: 17, color: "#33333480" }}>Step {step}/2</div></div></div>
+          <button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 17, color: "#33333480" }}>✕</button>
         </div>
         <div style={{ padding: "18px 24px" }}>
           {step === 1 && (<div>
-            <div style={{ marginBottom: 8 }}><label style={{ fontSize: 10, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. My Growth Picks" style={{ width: "100%", padding: "12px 16px", borderRadius: 14, border: "1px solid #33333440", fontSize: 11, fontWeight: 700, fontFamily: "'Instrument Serif', serif", outline: "none", background: "#FFFDF5" }} onFocus={e => e.target.style.borderColor = "#C48830"} onBlur={e => e.target.style.borderColor = "#F0E6D0"} /></div>
-            <div style={{ marginBottom: 8 }}><label style={{ fontSize: 10, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Icon</label><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{["basket","target","diamond","crystal-ball","eagle","wave","mountain","palette","star","fire","rainbow","clover"].map(e => (<button key={e} onClick={() => setIcon(e)} style={{ width: 40, height: 40, borderRadius: 12, border: "1.5px solid " + (icon === e ? "#C48830" : "#F0E6D0"), background: icon === e ? "#FFF8EE" : "#fff", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={e} size={16} /></button>))}</div></div>
-            <div style={{ marginBottom: 10 }}><label style={{ fontSize: 10, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Strategy</label><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{["Custom","Growth","Income","Defensive","Momentum","Global Macro","Multi-Asset","Long/Short","Speculative"].map(s => (<button key={s} onClick={() => setStrat(s)} style={{ padding: "6px 14px", borderRadius: 12, border: "1.5px solid " + (strat === s ? "#C48830" : "#F0E6D0"), background: strat === s ? "#FFF8EE" : "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: strat === s ? "#C48830" : "#8A7040" }}>{s}</button>))}</div></div>
-            <button onClick={() => { if (name.trim()) setStep(2); }} disabled={!name.trim()} style={{ width: "100%", padding: 14, background: name.trim() ? "linear-gradient(135deg,#C48830,#EF5350)" : "#F0E6D0", color: name.trim() ? "#fff" : "#A09080", border: "none", borderRadius: 16, fontSize: 11, fontWeight: 900, cursor: name.trim() ? "pointer" : "default", fontFamily: "'Instrument Serif', serif" }}>Next: Add Instruments →</button>
+            <div style={{ marginBottom: 8 }}><label style={{ fontSize: 15, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. My Growth Picks" style={{ width: "100%", padding: "12px 16px", borderRadius: 14, border: "1px solid #33333440", fontSize: 17, fontWeight: 700, fontFamily: "'Instrument Serif', serif", outline: "none", background: "#FFFDF5" }} onFocus={e => e.target.style.borderColor = "#C48830"} onBlur={e => e.target.style.borderColor = "#F0E6D0"} /></div>
+            <div style={{ marginBottom: 8 }}><label style={{ fontSize: 15, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Icon</label><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{["basket","target","diamond","crystal-ball","eagle","wave","mountain","palette","star","fire","rainbow","clover"].map(e => (<button key={e} onClick={() => setIcon(e)} style={{ width: 40, height: 40, borderRadius: 12, border: "1.5px solid " + (icon === e ? "#C48830" : "#F0E6D0"), background: icon === e ? "#FFF8EE" : "#fff", fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={e} size={16} /></button>))}</div></div>
+            <div style={{ marginBottom: 10 }}><label style={{ fontSize: 15, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Strategy</label><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{["Custom","Growth","Income","Defensive","Momentum","Global Macro","Multi-Asset","Long/Short","Speculative"].map(s => (<button key={s} onClick={() => setStrat(s)} style={{ padding: "6px 14px", borderRadius: 12, border: "1.5px solid " + (strat === s ? "#C48830" : "#F0E6D0"), background: strat === s ? "#FFF8EE" : "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: strat === s ? "#C48830" : "#8A7040" }}>{s}</button>))}</div></div>
+            <button onClick={() => { if (name.trim()) setStep(2); }} disabled={!name.trim()} style={{ width: "100%", padding: 14, background: name.trim() ? "linear-gradient(135deg,#C48830,#EF5350)" : "#F0E6D0", color: name.trim() ? "#fff" : "#A09080", border: "none", borderRadius: 16, fontSize: 17, fontWeight: 900, cursor: name.trim() ? "pointer" : "default", fontFamily: "'Instrument Serif', serif" }}>Next: Add Instruments →</button>
           </div>)}
           {step === 2 && (<div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "7px 10px", background: "#fff", borderRadius: 14, marginBottom: 7 }}>
-              <Icon name={icon} size={18} color="#C48830" /><div><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{name}</div><div style={{ fontSize: 11, color: "#33333480" }}>{strat} · {selected.length} selected</div></div>
-              <button onClick={() => setStep(1)} style={{ marginLeft: "auto", fontSize: 11, color: "#C48830", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>Edit ←</button>
+              <Icon name={icon} size={18} color="#C48830" /><div><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{name}</div><div style={{ fontSize: 17, color: "#33333480" }}>{strat} · {selected.length} selected</div></div>
+              <button onClick={() => setStep(1)} style={{ marginLeft: "auto", fontSize: 17, color: "#C48830", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>Edit ←</button>
             </div>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stocks, options, futures, crypto..." style={{ width: "100%", padding: "10px 16px 10px 38px", borderRadius: 14, border: "1px solid #33333440", fontSize: 10, fontWeight: 600, fontFamily: "Quicksand", outline: "none", background: "#FFFDF5", marginBottom: 10 }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stocks, options, futures, crypto..." style={{ width: "100%", padding: "10px 16px 10px 38px", borderRadius: 14, border: "1px solid #33333440", fontSize: 15, fontWeight: 600, fontFamily: "Quicksand", outline: "none", background: "#FFFDF5", marginBottom: 10 }} />
             <div style={{ display: "flex", gap: 5, marginBottom: 12, flexWrap: "wrap" }}>
               {[{ k: "all", l: "All" }, { k: "equity", l: "Stocks" }, { k: "option", l: "Options" }, { k: "future", l: "Futures" }, { k: "bond", l: "Bonds" }, { k: "forex", l: "FX" }, { k: "crypto", l: "Crypto" }].map(f => (
-                <button key={f.k} onClick={() => setTypeF(f.k)} style={{ padding: "5px 12px", borderRadius: 10, border: "1.5px solid " + (typeF === f.k ? "#C48830" : "#F0E6D0"), background: typeF === f.k ? "#FFF8EE" : "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", color: typeF === f.k ? "#C48830" : "#A09080" }}>{f.l}</button>
+                <button key={f.k} onClick={() => setTypeF(f.k)} style={{ padding: "5px 12px", borderRadius: 10, border: "1.5px solid " + (typeF === f.k ? "#C48830" : "#F0E6D0"), background: typeF === f.k ? "#FFF8EE" : "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", color: typeF === f.k ? "#C48830" : "#A09080" }}>{f.l}</button>
               ))}
             </div>
             {selected.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10, padding: "8px 12px", background: "#FFF8EE", borderRadius: 12 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "#C48830", alignSelf: "center" }}>Selected:</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "#C48830", alignSelf: "center" }}>Selected:</span>
               {selected.map(s => { const d = directions[s.ticker] || "long"; return (
-                <div key={s.ticker} style={{ display: "flex", alignItems: "center", gap: 2, padding: "2px 4px 2px 8px", borderRadius: 8, background: "#fff", fontSize: 10, fontWeight: 700, fontFamily: "JetBrains Mono" }}>
+                <div key={s.ticker} style={{ display: "flex", alignItems: "center", gap: 2, padding: "2px 4px 2px 8px", borderRadius: 8, background: "#fff", fontSize: 15, fontWeight: 700, fontFamily: "JetBrains Mono" }}>
                   <span style={{ color: d === "short" ? "#EF5350" : "#C48830" }}>{s.ticker}</span>
-                  <button onClick={(e) => { e.stopPropagation(); flipDir(s.ticker); }} style={{ padding: "1px 4px", borderRadius: 4, border: "none", background: d === "short" ? "#FFEBEE" : "#FFF8EE", color: d === "short" ? "#EF5350" : "#C48830", fontSize: 8, fontWeight: 900, cursor: "pointer" }}>{d === "short" ? "S" : "L"}</button>
-                  <button onClick={() => toggle(s)} style={{ background: "none", border: "none", fontSize: 10, cursor: "pointer", color: "#33333480", padding: 0 }}>×</button>
+                  <button onClick={(e) => { e.stopPropagation(); flipDir(s.ticker); }} style={{ padding: "1px 4px", borderRadius: 4, border: "none", background: d === "short" ? "#FFEBEE" : "#FFF8EE", color: d === "short" ? "#EF5350" : "#C48830", fontSize: 12, fontWeight: 900, cursor: "pointer" }}>{d === "short" ? "S" : "L"}</button>
+                  <button onClick={() => toggle(s)} style={{ background: "none", border: "none", fontSize: 15, cursor: "pointer", color: "#33333480", padding: 0 }}>×</button>
                 </div>);
               })}
             </div>}
@@ -781,13 +784,13 @@ function CreateBasketModal({ onClose, onCreate }) {
                   onMouseEnter={e => { if (!sel) e.currentTarget.style.background = "#fff"; }} onMouseLeave={e => { if (!sel) e.currentTarget.style.background = "transparent"; }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", border: "1.5px solid " + (sel ? "#C48830" : "#F0E6D0"), background: sel ? "#C48830" : "transparent" }} />
-                    <div><div style={{ display: "flex", gap: 6, alignItems: "center" }}><span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 12 }}>{inst.ticker}</span><span style={{ fontSize: 8, fontWeight: 800, background: tc + "22", color: tc, padding: "1px 6px", borderRadius: 6, textTransform: "uppercase" }}>{typeLabels[inst.type]}</span></div><div style={{ fontSize: 11, color: "#33333480" }}>{inst.name}</div></div>
+                    <div><div style={{ display: "flex", gap: 6, alignItems: "center" }}><span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 18 }}>{inst.ticker}</span><span style={{ fontSize: 12, fontWeight: 800, background: tc + "22", color: tc, padding: "1px 6px", borderRadius: 6, textTransform: "uppercase" }}>{typeLabels[inst.type]}</span></div><div style={{ fontSize: 17, color: "#33333480" }}>{inst.name}</div></div>
                   </div>
-                  <div style={{ textAlign: "right" }}><div style={{ fontFamily: "JetBrains Mono", fontWeight: 600, fontSize: 12 }}>{inst.price > 1000 ? fmt(inst.price) : fmtD(inst.price)}</div><div style={{ fontSize: 10, fontWeight: 700, color: inst.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{inst.change >= 0 ? "+" : ""}{inst.change}%</div></div>
+                  <div style={{ textAlign: "right" }}><div style={{ fontFamily: "JetBrains Mono", fontWeight: 600, fontSize: 18 }}>{inst.price > 1000 ? fmt(inst.price) : fmtD(inst.price)}</div><div style={{ fontSize: 15, fontWeight: 700, color: inst.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{inst.change >= 0 ? "+" : ""}{inst.change}%</div></div>
                 </div>); })}
             </div>
             <button onClick={() => { if (selected.length > 0) { onCreate({ name, icon, strategy: strat, instruments: selected }); onClose(); } }} disabled={!selected.length}
-              style={{ width: "100%", marginTop: 14, padding: 14, background: selected.length ? "linear-gradient(135deg,#C48830,#5B9B5E)" : "#F0E6D0", color: selected.length ? "#fff" : "#A09080", border: "none", borderRadius: 16, fontSize: 11, fontWeight: 900, cursor: selected.length ? "pointer" : "default", fontFamily: "'Instrument Serif', serif" }}>
+              style={{ width: "100%", marginTop: 14, padding: 14, background: selected.length ? "linear-gradient(135deg,#C48830,#5B9B5E)" : "#F0E6D0", color: selected.length ? "#fff" : "#A09080", border: "none", borderRadius: 16, fontSize: 17, fontWeight: 900, cursor: selected.length ? "pointer" : "default", fontFamily: "'Instrument Serif', serif" }}>
               Create with {selected.length} Instrument{selected.length !== 1 ? "s" : ""}
             </button>
           </div>)}
@@ -819,17 +822,17 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
   return (
     <div style={{ animation: "slideRight .4s ease both" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-        <button onClick={onBack} style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>←</button>
+        <button onClick={onBack} style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>←</button>
         <Icon name={basket.icon} size={36} />
-        <div style={{ flex: 1 }}><div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{basket.name}</div><div style={{ fontSize: 12, color: "#33333480" }}>{basket.strategy} · {stocks.length} instruments</div></div>
-        {rm && <button onClick={() => setShowMetrics(!showMetrics)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 14, border: "1.5px solid " + (showMetrics ? c.a : "#F0E6D0"), background: showMetrics ? c.l : "#fff", cursor: "pointer", fontSize: 11, fontWeight: 800, fontFamily: "Quicksand", color: showMetrics ? c.a : "#8A7040", transition: "all .2s" }}>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{basket.name}</div><div style={{ fontSize: 18, color: "#33333480" }}>{basket.strategy} · {stocks.length} instruments</div></div>
+        {rm && <button onClick={() => setShowMetrics(!showMetrics)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 14, border: "1.5px solid " + (showMetrics ? c.a : "#F0E6D0"), background: showMetrics ? c.l : "#fff", cursor: "pointer", fontSize: 17, fontWeight: 800, fontFamily: "Quicksand", color: showMetrics ? c.a : "#8A7040", transition: "all .2s" }}>
           {showMetrics ? "Holdings" : "Risk Metrics"}
         </button>}
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
         <StatCard label="Value" value={fmt(tv)} icon={basket.icon} color={basket.color} /><StatCard label="Total P&L" value={fmtS(tp)} sub={pct((tp / tc) * 100)} icon={tp >= 0 ? "chart-up" : "chart-down"} color={tp >= 0 ? "sage" : "coral"} /><StatCard label="Today" value={fmtS(dp)} icon="bolt" color={dp >= 0 ? "sage" : "coral"} /><StatCard label="Cost" value={fmt(tc)} icon="money" color="golden" />
       </div>
-      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 10 }}><div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Performance</div><MiniChart data={history} color={c.a} chartId={"d_" + basket.id} /></div>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 10 }}><div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Performance</div><MiniChart data={history} color={c.a} chartId={"d_" + basket.id} /></div>
 
       {/* ── Risk Metrics Panel ── */}
       {showMetrics && rm ? (
@@ -837,7 +840,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 6 }}>
             {/* Key Ratios */}
             <div style={{ background: "#fff", borderRadius: 10, padding: 6 }}>
-              <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Key Ratios</div>
+              <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Key Ratios</div>
               {[
                 { label: "Sharpe", val: rm.sharpe.toFixed(2), good: rm.sharpe > 1 },
                 { label: "Sortino", val: rm.sortino.toFixed(2), good: rm.sortino > 1 },
@@ -847,14 +850,14 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
                 { label: "Calmar", val: (Math.abs(tp / tc * 100) / Math.abs(rm.maxDD)).toFixed(2), good: true },
               ].map((m, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
-                  <div style={{ fontWeight: 700, fontSize: 8, fontFamily: "'Instrument Serif', serif" }}>{m.label}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 700, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</div>
+                  <div style={{ fontWeight: 700, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{m.label}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</div>
                 </div>
               ))}
             </div>
             {/* Risk Profile */}
             <div style={{ background: "#fff", borderRadius: 10, padding: 6 }}>
-              <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Risk Profile</div>
+              <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Risk Profile</div>
               {[
                 { label: "Beta", val: rm.beta.toFixed(2), good: rm.beta < 1.3, bar: rm.beta / 2 },
                 { label: "Vol", val: rm.volatility.toFixed(1) + "%", good: rm.volatility < 20, bar: rm.volatility / 50 },
@@ -863,8 +866,8 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
               ].map((m, i) => (
                 <div key={i} style={{ padding: "3px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                    <span style={{ fontWeight: 700, fontSize: 8, fontFamily: "'Instrument Serif', serif" }}>{m.label}</span>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 700, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</span>
+                    <span style={{ fontWeight: 700, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{m.label}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</span>
                   </div>
                   <div style={{ height: 3, background: "#FFF5E6", borderRadius: 2 }}>
                     <div style={{ height: "100%", width: Math.min(m.bar * 100, 100) + "%", background: m.good ? "#5B8C5A" : "#EF5350", borderRadius: 2, transition: "width .5s" }} />
@@ -873,12 +876,12 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
               ))}
               <div style={{ marginTop: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
                 <div style={{ background: rm.upCapture > 100 ? "#FFF8EE" : "#FFF3E0", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                  <div style={{ fontSize: 6, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Up Cap</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 700, color: rm.upCapture > 100 ? "#C48830" : "#FFA726" }}>{rm.upCapture}%</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Up Cap</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: rm.upCapture > 100 ? "#C48830" : "#FFA726" }}>{rm.upCapture}%</div>
                 </div>
                 <div style={{ background: rm.downCapture < 100 ? "#EDF5ED" : "#FFEBEE", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                  <div style={{ fontSize: 6, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Dn Cap</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 700, color: rm.downCapture < 100 ? "#5B8C5A" : "#EF5350" }}>{rm.downCapture}%</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Dn Cap</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: rm.downCapture < 100 ? "#5B8C5A" : "#EF5350" }}>{rm.downCapture}%</div>
                 </div>
               </div>
             </div>
@@ -896,10 +899,10 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
             return (
               <div style={{ background: "#fff", borderRadius: 18, padding: "14px 18px", marginBottom: 8 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Asset Composition</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Asset Composition</div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFF8EE", color: "#C48830" }}>LONG {longCount}</span>
-                    {shortCount > 0 && <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFEBEE", color: "#EF5350" }}>SHORT {shortCount}</span>}
+                    <span style={{ fontSize: 14, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFF8EE", color: "#C48830" }}>LONG {longCount}</span>
+                    {shortCount > 0 && <span style={{ fontSize: 14, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFEBEE", color: "#EF5350" }}>SHORT {shortCount}</span>}
                   </div>
                 </div>
                 <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", gap: 1, marginBottom: 8 }}>
@@ -911,7 +914,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
                   {Object.entries(assetCounts).map(([type, count]) => (
                     <div key={type} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       <div style={{ width: 8, height: 8, borderRadius: 2, background: typeColors[type] || "#A09080" }} />
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#8A7040" }}>{typeLabels[type] || type} ({count})</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: "#8A7040" }}>{typeLabels[type] || type} ({count})</span>
                     </div>
                   ))}
                 </div>
@@ -920,17 +923,17 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
           })()}
 
           <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-            <button onClick={() => setEditMode(editMode === "rebalance" ? null : "rebalance")} style={{ flex: 1, padding: "8px 10px", borderRadius: 14, border: "1.5px solid " + (editMode === "rebalance" ? c.a : "#F0E6D0"), background: editMode === "rebalance" ? c.l : "#fff", cursor: "pointer", fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Rebalance</button>
-            <button onClick={() => setEditMode(editMode === "add" ? null : "add")} style={{ flex: 1, padding: "8px 10px", borderRadius: 14, border: "1.5px solid " + (editMode === "add" ? c.a : "#F0E6D0"), background: editMode === "add" ? c.l : "#fff", cursor: "pointer", fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Add</button>
+            <button onClick={() => setEditMode(editMode === "rebalance" ? null : "rebalance")} style={{ flex: 1, padding: "8px 10px", borderRadius: 14, border: "1.5px solid " + (editMode === "rebalance" ? c.a : "#F0E6D0"), background: editMode === "rebalance" ? c.l : "#fff", cursor: "pointer", fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Rebalance</button>
+            <button onClick={() => setEditMode(editMode === "add" ? null : "add")} style={{ flex: 1, padding: "8px 10px", borderRadius: 14, border: "1.5px solid " + (editMode === "add" ? c.a : "#F0E6D0"), background: editMode === "add" ? c.l : "#fff", cursor: "pointer", fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Add</button>
           </div>
           {editMode && <div style={{ background: c.l, border: "1.5px solid " + c.a, borderRadius: 14, padding: "8px 14px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", animation: "popIn .3s ease" }}>
-            <span style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: c.a, fontSize: 9 }}>Tap a stock below to {editMode}</span>
-            <div style={{ display: "flex", gap: 4 }}><button onClick={() => setEditMode(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "#fff", fontWeight: 800, cursor: "pointer", fontSize: 10 }}>Cancel</button><button onClick={() => setEditMode(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: c.a, color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: 10 }}>Apply</button></div>
+            <span style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: c.a, fontSize: 14 }}>Tap a stock below to {editMode}</span>
+            <div style={{ display: "flex", gap: 4 }}><button onClick={() => setEditMode(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "#fff", fontWeight: 800, cursor: "pointer", fontSize: 15 }}>Cancel</button><button onClick={() => setEditMode(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: c.a, color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: 15 }}>Apply</button></div>
           </div>}
           <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
             <div style={{ padding: "8px 12px", borderBottom: "1.5px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Holdings</span>
-              <span style={{ fontSize: 8, color: "#33333480", fontWeight: 600 }}>{stocks.length} instruments</span>
+              <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Holdings</span>
+              <span style={{ fontSize: 12, color: "#33333480", fontWeight: 600 }}>{stocks.length} instruments</span>
             </div>
             {stocks.map((st, i) => {
               const pl = (st.current - st.avgCost) * st.shares * ((st.dir || "long") === "short" ? -1 : 1);
@@ -947,11 +950,11 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
                 {/* Left: logo + name + ticker */}
                 <StockLogo ticker={st.ticker} size={32} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.name}</div>
+                  <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.name}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 1 }}>
-                    <span style={{ fontSize: 8, fontFamily: "JetBrains Mono", color: "#33333480", fontWeight: 600 }}>{st.ticker}</span>
-                    <span style={{ fontSize: 8, fontFamily: "JetBrains Mono", color: "#33333480" }}>·</span>
-                    <span style={{ fontSize: 8, fontWeight: 700, color: "#33333480" }}>{st.shares} shares</span>
+                    <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", color: "#33333480", fontWeight: 600 }}>{st.ticker}</span>
+                    <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", color: "#33333480" }}>·</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#33333480" }}>{st.shares} shares</span>
                   </div>
                 </div>
                 {/* Center: sparkline */}
@@ -960,27 +963,27 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
                 </div>
                 {/* Right: price + P&L */}
                 <div style={{ textAlign: "right", minWidth: 70, flexShrink: 0 }}>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 800, color: "#333334" }}>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: "#333334" }}>
                     ${st.current >= 1000 ? st.current.toLocaleString() : st.current.toFixed(2)}
                   </div>
                   <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 3, marginTop: 1 }}>
-                    <span style={{ fontSize: 8, fontFamily: "JetBrains Mono", fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>
+                    <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>
                       {pl >= 0 ? "+" : ""}{pl >= 1000 || pl <= -1000 ? (pl / 1000).toFixed(1) + "k" : Math.round(pl)}
                     </span>
-                    <span style={{ fontSize: 7, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: (plPct >= 0 ? "#5B8C5A" : "#EF5350") + "14", color: plPct >= 0 ? "#5B8C5A" : "#EF5350" }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: (plPct >= 0 ? "#5B8C5A" : "#EF5350") + "14", color: plPct >= 0 ? "#5B8C5A" : "#EF5350" }}>
                       {plPct >= 0 ? "+" : ""}{plPct.toFixed(1)}%
                     </span>
                   </div>
                 </div>
                 {/* Arrow */}
-                <span style={{ fontSize: 10, color: "#D0C8B8", marginLeft: 2 }}>›</span>
+                <span style={{ fontSize: 15, color: "#D0C8B8", marginLeft: 2 }}>›</span>
               </div>
             ); })}
           </div>
 
           {/* ── Portfolio Risk Metrics ── */}
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 8 }}>
               {[
                 { label: "Sharpe", val: portfolioRisk.sharpe.toFixed(2), good: portfolioRisk.sharpe > 1, icon: "ruler" },
@@ -992,8 +995,8 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
               ].map((m, mi) => (
                 <div key={mi} style={{ background: "#fff", borderRadius: 8, padding: "6px 6px", textAlign: "center", border: "1px solid #F0E6D0" }}>
                   <div style={{ marginBottom: 1 }}><Icon name={m.icon} size={11} color={m.good ? "#5B8C5A" : "#EF5350"} /></div>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</div>
                 </div>
               ))}
             </div>
@@ -1057,47 +1060,47 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
 
             <div style={{ padding: "6px 8px", background: "#fff", borderRadius: 8, border: "1px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div>
-                <div style={{ fontSize: 7, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div>
+                <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div>
+                <div style={{ fontSize: 11, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div>
               </div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
             </div>
           </div>
 
           {/* ── Per-Basket Risk Metrics ── */}
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Per-Hatch Metrics</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Per-Hatch Metrics</div>
             <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #F0E6D0" }}>
-              <div className="basket-metrics-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
+              <div className="basket-metrics-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
                 <div>Basket</div><div>Sharpe</div><div>Beta</div><div>Alpha</div>
               </div>
               {myBaskets.map((mb, mi) => { const brm = basketRiskMetrics[mb.id]; if (!brm) return null; return (
-                <div key={mb.id} style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", borderBottom: mi < myBaskets.length - 1 ? "1px solid #F0E6D0" : "none", fontSize: 10, alignItems: "center" }}>
-                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}><Icon name={mb.icon} size={9} /><span style={{ fontWeight: 700, fontFamily: "'Instrument Serif', serif", fontSize: 8 }}>{mb.name}</span></div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 9, color: brm.sharpe > 1 ? "#C48830" : "#FFA726" }}>{brm.sharpe.toFixed(2)}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontWeight: 600, fontSize: 9, color: brm.beta < 1.3 ? "#5B8C5A" : "#EF5350" }}>{brm.beta.toFixed(2)}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 9, color: brm.alpha > 0 ? "#5B8C5A" : "#EF5350" }}>{brm.alpha > 0 ? "+" : ""}{brm.alpha.toFixed(1)}%</div>
+                <div key={mb.id} style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", borderBottom: mi < myBaskets.length - 1 ? "1px solid #F0E6D0" : "none", fontSize: 15, alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}><Icon name={mb.icon} size={9} /><span style={{ fontWeight: 700, fontFamily: "'Instrument Serif', serif", fontSize: 12 }}>{mb.name}</span></div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.sharpe > 1 ? "#C48830" : "#FFA726" }}>{brm.sharpe.toFixed(2)}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontWeight: 600, fontSize: 14, color: brm.beta < 1.3 ? "#5B8C5A" : "#EF5350" }}>{brm.beta.toFixed(2)}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.alpha > 0 ? "#5B8C5A" : "#EF5350" }}>{brm.alpha > 0 ? "+" : ""}{brm.alpha.toFixed(1)}%</div>
                 </div>); })}
             </div>
           </div>
 
           {/* ── Factor Exposures ── */}
           <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginTop: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Factor Exposures</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Factor Exposures</div>
             {factorExposures.map((f, fi) => {
               const overweight = f.exposure > f.benchmark;
               return (
                 <div key={fi} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderTop: fi > 0 ? "1px solid #F0E6D020" : "none" }}>
-                  <span style={{ fontSize: 8, fontWeight: 700, color: "#333334", width: 55 }}>{f.factor}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#333334", width: 55 }}>{f.factor}</span>
                   <div style={{ flex: 1, position: "relative", height: 8, background: "#F5F0E8", borderRadius: 4 }}>
                     <div style={{ position: "absolute", left: (f.benchmark * 100) + "%", top: 0, bottom: 0, width: 1.5, background: "#A0908066", zIndex: 1 }} />
                     <div style={{ height: "100%", width: (f.exposure * 100) + "%", background: overweight ? "#C48830" : "#5B8C5A", borderRadius: 4 }} />
                   </div>
-                  <span style={{ fontSize: 8, fontFamily: "JetBrains Mono", fontWeight: 800, color: overweight ? "#C48830" : "#5B8C5A", minWidth: 24, textAlign: "right" }}>{(f.exposure * 100).toFixed(0)}%</span>
+                  <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 800, color: overweight ? "#C48830" : "#5B8C5A", minWidth: 24, textAlign: "right" }}>{(f.exposure * 100).toFixed(0)}%</span>
                 </div>
               );
             })}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, fontSize: 7, color: "#33333480" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, fontSize: 11, color: "#33333480" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 2, background: "#A0908066", borderRadius: 1 }} /><span>Benchmark</span></div>
               <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "#C48830", borderRadius: 1 }} /><span>Overweight</span></div>
               <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "#5B8C5A", borderRadius: 1 }} /><span>Underweight</span></div>
@@ -1165,6 +1168,9 @@ function StockPage({ ticker, onBack, onNavigate }) {
   // Fetch detailed summary from Yahoo Finance
   const { summary, isLoading: summaryLoading } = useStockDetail(ticker);
 
+  // Fetch company-specific news from Finnhub
+  const { news: companyNews } = useCompanyNews(ticker);
+
   // Fetch chart data
   const periodMap = { "1D": { range: "1d", interval: "5m" }, "1W": { range: "5d", interval: "15m" }, "1M": { range: "1mo", interval: "1d" }, "3M": { range: "3mo", interval: "1d" }, "1Y": { range: "1y", interval: "1d" }, "ALL": { range: "max", interval: "1wk" } };
   const chartParams = periodMap[period] || periodMap["1Y"];
@@ -1229,24 +1235,24 @@ function StockPage({ ticker, onBack, onNavigate }) {
     <div style={{ animation: "slideRight .3s ease both" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <button onClick={onBack} style={{ background: "#fff", borderRadius: 10, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>←</button>
+        <button onClick={onBack} style={{ background: "#fff", borderRadius: 10, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>←</button>
         <StockLogo ticker={ticker} size={40} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{stockName}</div>
-          <div style={{ fontSize: 9, color: "#33333480", fontFamily: "JetBrains Mono" }}>{ticker}{summary?.exchange ? " · " + summary.exchange : ""}</div>
+          <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{stockName}</div>
+          <div style={{ fontSize: 14, color: "#33333480", fontFamily: "JetBrains Mono" }}>{ticker}{summary?.exchange ? " · " + summary.exchange : ""}</div>
         </div>
         {holdings.length > 0 && <div style={{ padding: "3px 8px", borderRadius: 6, background: "#FFF8EE", border: "1px solid #C4883033" }}>
-          <span style={{ fontSize: 7, fontWeight: 800, color: "#C48830" }}>IN PORTFOLIO</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: "#C48830" }}>IN PORTFOLIO</span>
         </div>}
       </div>
 
       {/* Loading state */}
       {loading && (
         <div style={{ background: "#fff", borderRadius: 16, padding: "40px 14px", textAlign: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 20, marginBottom: 6, animation: "spin 1s linear infinite", display: "inline-block" }}>
+          <div style={{ fontSize: 30, marginBottom: 6, animation: "spin 1s linear infinite", display: "inline-block" }}>
             <Icon name="rotate" size={20} color="#C48830" />
           </div>
-          <div style={{ fontSize: 10, color: "#A09080", fontWeight: 700 }}>Loading {ticker} data from Yahoo Finance...</div>
+          <div style={{ fontSize: 15, color: "#A09080", fontWeight: 700 }}>Loading {ticker} data from Yahoo Finance...</div>
         </div>
       )}
 
@@ -1254,44 +1260,44 @@ function StockPage({ ticker, onBack, onNavigate }) {
       {(price > 0 || !loading) && <div style={{ background: "#fff", borderRadius: 16, padding: "14px 14px 10px", marginBottom: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <div style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", letterSpacing: "-1px" }}>
+            <div style={{ fontSize: 42, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", letterSpacing: "-1px" }}>
               ${price >= 1000 ? price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : price.toFixed(2)}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-              <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color }}>{isUp ? "▲" : "▼"} {isUp ? "+" : ""}{changePct.toFixed(2)}%</span>
-              <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color, background: color + "12", padding: "2px 6px", borderRadius: 5 }}>{isUp ? "+" : ""}{change.toFixed(2)}</span>
-              <span style={{ fontSize: 8, color: "#33333480" }}>Today</span>
+              <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color }}>{isUp ? "▲" : "▼"} {isUp ? "+" : ""}{changePct.toFixed(2)}%</span>
+              <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color, background: color + "12", padding: "2px 6px", borderRadius: 5 }}>{isUp ? "+" : ""}{change.toFixed(2)}</span>
+              <span style={{ fontSize: 12, color: "#33333480" }}>Today</span>
             </div>
           </div>
           {summary?.rsi != null && (
             <div style={{ textAlign: "center", padding: "4px 8px", borderRadius: 8, background: summary.rsi > 70 ? "#FFEBEE" : summary.rsi < 30 ? "#EDF5ED" : "#FFF8EE" }}>
-              <div style={{ fontSize: 6, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>RSI</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 800, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "#C48830" }}>{summary.rsi}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>RSI</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "#C48830" }}>{summary.rsi}</div>
             </div>
           )}
         </div>
 
         {/* Chart */}
         <div style={{ margin: "12px 0 6px", position: "relative" }}>
-          {chartLoading && <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,253,245,0.7)", zIndex: 2, borderRadius: 8 }}><span style={{ fontSize: 9, color: "#A09080", fontWeight: 700 }}>Loading chart...</span></div>}
+          {chartLoading && <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,253,245,0.7)", zIndex: 2, borderRadius: 8 }}><span style={{ fontSize: 14, color: "#A09080", fontWeight: 700 }}>Loading chart...</span></div>}
           {history ? (
             <MiniChart data={history} color={color} chartId={"stockpage_" + ticker.replace(/[^a-zA-Z]/g, "") + "_" + period} />
           ) : !chartLoading ? (
-            <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "#A09080", fontSize: 10 }}>No chart data available</div>
+            <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "#A09080", fontSize: 15 }}>No chart data available</div>
           ) : null}
         </div>
 
         {/* Period selector */}
         <div style={{ display: "flex", gap: 1, background: "#FFFDF5", borderRadius: 8, padding: 2, width: "fit-content" }}>
           {["1D", "1W", "1M", "3M", "1Y", "ALL"].map(t => (
-            <button key={t} onClick={() => setPeriod(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>
+            <button key={t} onClick={() => setPeriod(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>
           ))}
         </div>
       </div>}
 
       {/* Key Stats */}
       {summary && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Key Stats</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Key Stats</div>
         {[
           { label: "Prev Close", val: "$" + (summary.previousClose || 0).toFixed(2) },
           { label: "Day Range", val: "$" + (summary.dayLow || 0).toFixed(2) + " — $" + (summary.dayHigh || 0).toFixed(2) },
@@ -1303,62 +1309,62 @@ function StockPage({ ticker, onBack, onNavigate }) {
           { label: "Max Drawdown", val: summary.maxDrawdown ? summary.maxDrawdown.toFixed(1) + "%" : "—" },
         ].map((s, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
-            <span style={{ fontSize: 9, color: "#33333480", fontWeight: 600 }}>{s.label}</span>
-            <span style={{ fontSize: 9, fontFamily: "JetBrains Mono", fontWeight: 700, color: "#333334" }}>{s.val}</span>
+            <span style={{ fontSize: 14, color: "#33333480", fontWeight: 600 }}>{s.label}</span>
+            <span style={{ fontSize: 14, fontFamily: "JetBrains Mono", fontWeight: 700, color: "#333334" }}>{s.val}</span>
           </div>
         ))}
       </div>}
 
       {/* Technical Indicators */}
       {summary && (summary.sma50 || summary.sma200 || summary.rsi) && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Technical Indicators</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Technical Indicators</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
           {summary.sma50 && (
             <div style={{ background: price > summary.sma50 ? "#EDF5ED" : "#FFEBEE", borderRadius: 8, padding: "7px 6px", textAlign: "center" }}>
-              <div style={{ fontSize: 6, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>SMA 50</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: price > summary.sma50 ? "#5B8C5A" : "#EF5350" }}>${summary.sma50.toFixed(0)}</div>
-              <div style={{ fontSize: 6, fontWeight: 700, color: price > summary.sma50 ? "#5B8C5A" : "#EF5350" }}>{price > summary.sma50 ? "Above" : "Below"}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>SMA 50</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: price > summary.sma50 ? "#5B8C5A" : "#EF5350" }}>${summary.sma50.toFixed(0)}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: price > summary.sma50 ? "#5B8C5A" : "#EF5350" }}>{price > summary.sma50 ? "Above" : "Below"}</div>
             </div>
           )}
           {summary.sma200 && (
             <div style={{ background: price > summary.sma200 ? "#EDF5ED" : "#FFEBEE", borderRadius: 8, padding: "7px 6px", textAlign: "center" }}>
-              <div style={{ fontSize: 6, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>SMA 200</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: price > summary.sma200 ? "#5B8C5A" : "#EF5350" }}>${summary.sma200.toFixed(0)}</div>
-              <div style={{ fontSize: 6, fontWeight: 700, color: price > summary.sma200 ? "#5B8C5A" : "#EF5350" }}>{price > summary.sma200 ? "Above" : "Below"}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>SMA 200</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: price > summary.sma200 ? "#5B8C5A" : "#EF5350" }}>${summary.sma200.toFixed(0)}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: price > summary.sma200 ? "#5B8C5A" : "#EF5350" }}>{price > summary.sma200 ? "Above" : "Below"}</div>
             </div>
           )}
           {summary.rsi != null && (
             <div style={{ background: summary.rsi > 70 ? "#FFEBEE" : summary.rsi < 30 ? "#EDF5ED" : "#FFF8EE", borderRadius: 8, padding: "7px 6px", textAlign: "center" }}>
-              <div style={{ fontSize: 6, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>RSI (14)</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "#C48830" }}>{summary.rsi}</div>
-              <div style={{ fontSize: 6, fontWeight: 700, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "#C48830" }}>{summary.rsi > 70 ? "Overbought" : summary.rsi < 30 ? "Oversold" : "Neutral"}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>RSI (14)</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "#C48830" }}>{summary.rsi}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "#C48830" }}>{summary.rsi > 70 ? "Overbought" : summary.rsi < 30 ? "Oversold" : "Neutral"}</div>
             </div>
           )}
         </div>
         {/* 52W Range Bar */}
         {summary.high52w && summary.low52w && price > 0 && <div style={{ marginTop: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-            <span style={{ fontSize: 7, color: "#33333480", fontWeight: 600 }}>52 Week Range</span>
+            <span style={{ fontSize: 11, color: "#33333480", fontWeight: 600 }}>52 Week Range</span>
           </div>
           <div style={{ position: "relative", height: 8, background: "#F5F0E8", borderRadius: 4 }}>
             <div style={{ position: "absolute", left: 0, height: "100%", width: Math.min(((price - summary.low52w) / (summary.high52w - summary.low52w)) * 100, 100) + "%", background: "linear-gradient(90deg, #EF5350, #FFA726, #5B8C5A)", borderRadius: 4 }} />
             <div style={{ position: "absolute", left: Math.min(((price - summary.low52w) / (summary.high52w - summary.low52w)) * 100, 100) + "%", top: -3, width: 14, height: 14, borderRadius: "50%", background: "#fff", border: "2px solid #C48830", transform: "translateX(-50%)" }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-            <span style={{ fontSize: 7, fontFamily: "JetBrains Mono", color: "#EF5350", fontWeight: 700 }}>${summary.low52w.toFixed(0)}</span>
-            <span style={{ fontSize: 7, fontFamily: "JetBrains Mono", color: "#5B8C5A", fontWeight: 700 }}>${summary.high52w.toFixed(0)}</span>
+            <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", color: "#EF5350", fontWeight: 700 }}>${summary.low52w.toFixed(0)}</span>
+            <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", color: "#5B8C5A", fontWeight: 700 }}>${summary.high52w.toFixed(0)}</span>
           </div>
         </div>}
       </div>}
 
       {/* Performance Returns */}
       {summary?.returns && Object.keys(summary.returns).length > 0 && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Performance</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Performance</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
           {Object.entries(summary.returns).map(([key, val]) => (
             <div key={key} style={{ background: val >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 8, padding: "7px 6px", textAlign: "center" }}>
-              <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{key}</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: val >= 0 ? "#5B8C5A" : "#EF5350" }}>{val >= 0 ? "+" : ""}{val.toFixed(1)}%</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{key}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: val >= 0 ? "#5B8C5A" : "#EF5350" }}>{val >= 0 ? "+" : ""}{val.toFixed(1)}%</div>
             </div>
           ))}
         </div>
@@ -1366,7 +1372,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
 
       {/* Portfolio Holdings */}
       {holdings.length > 0 && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Your Holdings</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Your Holdings</div>
         {holdings.map((h, i) => {
           const pl = (h.current - h.avgCost) * h.shares * ((h.dir || "long") === "short" ? -1 : 1);
           const plPct = ((h.current - h.avgCost) / h.avgCost * 100) * ((h.dir || "long") === "short" ? -1 : 1);
@@ -1376,10 +1382,10 @@ function StockPage({ ticker, onBack, onNavigate }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <Icon name={h.basketIcon} size={12} color={c.a} />
-                  <span style={{ fontSize: 9, fontWeight: 800, color: c.a }}>{h.basketName}</span>
-                  <span style={{ fontSize: 7, fontWeight: 700, padding: "1px 4px", borderRadius: 3, background: h.dir === "short" ? "#FFEBEE" : "#FFF8EE", color: h.dir === "short" ? "#EF5350" : "#C48830" }}>{(h.dir || "long").toUpperCase()}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: c.a }}>{h.basketName}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 4px", borderRadius: 3, background: h.dir === "short" ? "#FFEBEE" : "#FFF8EE", color: h.dir === "short" ? "#EF5350" : "#C48830" }}>{(h.dir || "long").toUpperCase()}</span>
                 </div>
-                <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>{pl >= 0 ? "+" : ""}{plPct.toFixed(1)}%</span>
+                <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>{pl >= 0 ? "+" : ""}{plPct.toFixed(1)}%</span>
               </div>
               <div className="holdings-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4 }}>
                 {[
@@ -1389,8 +1395,8 @@ function StockPage({ ticker, onBack, onNavigate }) {
                   { label: "P&L", val: (pl >= 0 ? "+" : "") + "$" + Math.abs(Math.round(pl)).toLocaleString() },
                 ].map((m, mi) => (
                   <div key={mi} style={{ background: "#FFFDF5", borderRadius: 6, padding: "4px 5px" }}>
-                    <div style={{ fontSize: 6, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 800, color: "#333334" }}>{m.val}</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, color: "#333334" }}>{m.val}</div>
                   </div>
                 ))}
               </div>
@@ -1402,48 +1408,50 @@ function StockPage({ ticker, onBack, onNavigate }) {
       {/* Buy / Sell */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-          <button onClick={() => setOrderType(orderType === "buy" ? null : "buy")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "#5B8C5A" : "#EDF5ED", color: orderType === "buy" ? "#fff" : "#5B8C5A", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy</button>
-          <button onClick={() => setOrderType(orderType === "sell" ? null : "sell")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "sell" ? "#EF5350" : "#FFEBEE", color: orderType === "sell" ? "#fff" : "#EF5350", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Sell</button>
+          <button onClick={() => setOrderType(orderType === "buy" ? null : "buy")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "#5B8C5A" : "#EDF5ED", color: orderType === "buy" ? "#fff" : "#5B8C5A", fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy</button>
+          <button onClick={() => setOrderType(orderType === "sell" ? null : "sell")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "sell" ? "#EF5350" : "#FFEBEE", color: orderType === "sell" ? "#fff" : "#EF5350", fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Sell</button>
         </div>
         {orderType && price > 0 && (
           <div style={{ animation: "fadeUp .2s ease both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: "#33333480" }}>Shares</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#33333480" }}>Shares</span>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <button onClick={() => setShares(Math.max(1, shares - 1))} style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#EF5350", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: "#333334", minWidth: 24, textAlign: "center" }}>{shares}</span>
-                <button onClick={() => setShares(shares + 1)} style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#5B8C5A", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                <button onClick={() => setShares(Math.max(1, shares - 1))} style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 18, fontWeight: 700, color: "#EF5350", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <span style={{ fontFamily: "JetBrains Mono", fontSize: 21, fontWeight: 900, color: "#333334", minWidth: 24, textAlign: "center" }}>{shares}</span>
+                <button onClick={() => setShares(shares + 1)} style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 18, fontWeight: 700, color: "#5B8C5A", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 8, color: "#33333480" }}>Market Price</span>
-              <span style={{ fontSize: 9, fontFamily: "JetBrains Mono", fontWeight: 700 }}>${price.toFixed(2)}</span>
+              <span style={{ fontSize: 12, color: "#33333480" }}>Market Price</span>
+              <span style={{ fontSize: 14, fontFamily: "JetBrains Mono", fontWeight: 700 }}>${price.toFixed(2)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid #33333420" }}>
-              <span style={{ fontSize: 8, color: "#33333480" }}>Est. Total</span>
-              <span style={{ fontSize: 11, fontFamily: "'Instrument Serif', serif", fontWeight: 900, color: "#333334" }}>${(price * shares).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span style={{ fontSize: 12, color: "#33333480" }}>Est. Total</span>
+              <span style={{ fontSize: 17, fontFamily: "'Instrument Serif', serif", fontWeight: 900, color: "#333334" }}>${(price * shares).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
-            <button style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "linear-gradient(135deg,#5B8C5A,#4CAF50)" : "linear-gradient(135deg,#EF5350,#E53935)", color: "#fff", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>
+            <button style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "linear-gradient(135deg,#5B8C5A,#4CAF50)" : "linear-gradient(135deg,#EF5350,#E53935)", color: "#fff", fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>
               {orderType === "buy" ? "Buy" : "Sell"} {shares} {shares === 1 ? "Share" : "Shares"}
             </button>
           </div>
         )}
       </div>
 
-      {/* Related News from Terminal Feed */}
+      {/* Related News (live from Finnhub, fallback to mock) */}
       {(() => {
-        const related = terminalFeed.filter(n => n.assets && n.assets.includes(ticker)).slice(0, 3);
+        const related = companyNews.length > 0
+          ? companyNews.slice(0, 3)
+          : terminalFeed.filter(n => n.assets && n.assets.includes(ticker)).slice(0, 3);
         if (related.length === 0) return null;
         return (
           <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Related News</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Related News</div>
             {related.map((n, i) => (
               <div key={n.id} style={{ padding: "6px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
-                <div style={{ fontSize: 8, fontWeight: 800, color: "#333334", lineHeight: 1.3 }}>{n.headline}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#333334", lineHeight: 1.3 }}>{n.headline}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 3, alignItems: "center" }}>
-                  <span style={{ fontSize: 7, color: "#33333480" }}>{n.time}</span>
-                  <span style={{ fontSize: 6, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: n.impact === "bullish" ? "#EDF5ED" : n.impact === "bearish" ? "#FFEBEE" : "#FFF8EE", color: n.impact === "bullish" ? "#5B8C5A" : n.impact === "bearish" ? "#EF5350" : "#C48830" }}>{n.impact.toUpperCase()}</span>
-                  <span style={{ fontSize: 7, fontFamily: "JetBrains Mono", fontWeight: 700, color: n.move.startsWith("+") ? "#5B8C5A" : "#EF5350" }}>{n.move}</span>
+                  <span style={{ fontSize: 11, color: "#33333480" }}>{n.time}</span>
+                  <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: n.impact === "bullish" ? "#EDF5ED" : n.impact === "bearish" ? "#FFEBEE" : "#FFF8EE", color: n.impact === "bullish" ? "#5B8C5A" : n.impact === "bearish" ? "#EF5350" : "#C48830" }}>{(n.impact || "mixed").toUpperCase()}</span>
+                  {n.move && <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", fontWeight: 700, color: n.move.startsWith("+") ? "#5B8C5A" : "#EF5350" }}>{n.move}</span>}
                 </div>
               </div>
             ))}
@@ -1457,18 +1465,18 @@ function StockPage({ ticker, onBack, onNavigate }) {
         if (events.length === 0) return null;
         return (
           <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Upcoming Events</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Upcoming Events</div>
             {events.map((e, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
                 <div style={{ width: 36, height: 36, borderRadius: 8, background: e.type === "earnings" ? "#FFF8EE" : "#EDF5ED", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: 6, fontWeight: 700, color: "#33333480" }}>{e.date.split("-")[1] === "02" ? "FEB" : "MAR"}</span>
-                  <span style={{ fontSize: 11, fontWeight: 900, color: "#333334", fontFamily: "'Instrument Serif', serif" }}>{parseInt(e.date.split("-")[2])}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: "#33333480" }}>{e.date.split("-")[1] === "02" ? "FEB" : "MAR"}</span>
+                  <span style={{ fontSize: 17, fontWeight: 900, color: "#333334", fontFamily: "'Instrument Serif', serif" }}>{parseInt(e.date.split("-")[2])}</span>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, color: "#333334" }}>{e.name}</div>
-                  <div style={{ fontSize: 7, color: "#33333480" }}>{e.type === "earnings" ? `${e.quarter} · ${e.time} · Est. ${e.expected}` : e.desc}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#333334" }}>{e.name}</div>
+                  <div style={{ fontSize: 11, color: "#33333480" }}>{e.type === "earnings" ? `${e.quarter} · ${e.time} · Est. ${e.expected}` : e.desc}</div>
                 </div>
-                <span style={{ fontSize: 6, fontWeight: 800, padding: "2px 5px", borderRadius: 4, background: e.impact === "high" ? "#FFEBEE" : e.impact === "medium" ? "#FFF3E0" : "#FFF8EE", color: e.impact === "high" ? "#EF5350" : e.impact === "medium" ? "#FFA726" : "#C48830" }}>{e.impact.toUpperCase()}</span>
+                <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 4, background: e.impact === "high" ? "#FFEBEE" : e.impact === "medium" ? "#FFF3E0" : "#FFF8EE", color: e.impact === "high" ? "#EF5350" : e.impact === "medium" ? "#FFA726" : "#C48830" }}>{e.impact.toUpperCase()}</span>
               </div>
             ))}
           </div>
@@ -1537,37 +1545,37 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
     <div style={{ animation: "slideRight .3s ease both" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <button onClick={onBack} style={{ background: "#fff", borderRadius: 10, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>←</button>
+        <button onClick={onBack} style={{ background: "#fff", borderRadius: 10, width: 34, height: 34, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>←</button>
         <StockLogo ticker={stock.ticker} size={40} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{stock.name}</div>
-          <div style={{ fontSize: 9, color: "#33333480", fontFamily: "JetBrains Mono" }}>{stock.ticker} · {basketName}</div>
+          <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{stock.name}</div>
+          <div style={{ fontSize: 14, color: "#33333480", fontFamily: "JetBrains Mono" }}>{stock.ticker} · {basketName}</div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 7, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: (stock.dir === "short" ? "#FFEBEE" : "#FFF8EE"), color: (stock.dir === "short" ? "#EF5350" : "#C48830"), textTransform: "uppercase" }}>{stock.dir || "long"}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: (stock.dir === "short" ? "#FFEBEE" : "#FFF8EE"), color: (stock.dir === "short" ? "#EF5350" : "#C48830"), textTransform: "uppercase" }}>{stock.dir || "long"}</div>
         </div>
       </div>
 
       {/* Price hero */}
       <div style={{ background: "#fff", borderRadius: 16, padding: "14px 14px 10px", marginBottom: 8 }}>
-        <div style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", letterSpacing: "-1px" }}>${stock.current >= 1000 ? stock.current.toLocaleString() : stock.current.toFixed(2)}</div>
+        <div style={{ fontSize: 42, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", letterSpacing: "-1px" }}>${stock.current >= 1000 ? stock.current.toLocaleString() : stock.current.toFixed(2)}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-          <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color }}>{isUp ? "▲" : "▼"} {isUp ? "+" : ""}{stock.change}%</span>
-          <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color, background: color + "12", padding: "2px 6px", borderRadius: 5 }}>{isUp ? "+" : ""}{(stock.current * stock.change / 100).toFixed(2)}</span>
-          <span style={{ fontSize: 8, color: "#33333480" }}>Today</span>
+          <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color }}>{isUp ? "▲" : "▼"} {isUp ? "+" : ""}{stock.change}%</span>
+          <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color, background: color + "12", padding: "2px 6px", borderRadius: 5 }}>{isUp ? "+" : ""}{(stock.current * stock.change / 100).toFixed(2)}</span>
+          <span style={{ fontSize: 12, color: "#33333480" }}>Today</span>
         </div>
         <div style={{ margin: "12px 0 6px", position: "relative" }}>
-          {chartLoading && <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,253,245,0.7)", zIndex: 2, borderRadius: 8 }}><span style={{ fontSize: 9, color: "#A09080", fontWeight: 700 }}>Loading chart...</span></div>}
+          {chartLoading && <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,253,245,0.7)", zIndex: 2, borderRadius: 8 }}><span style={{ fontSize: 14, color: "#A09080", fontWeight: 700 }}>Loading chart...</span></div>}
           <MiniChart data={history} color={color} chartId={"stock_" + stock.ticker.replace(/[^a-zA-Z]/g, "") + "_" + period} />
         </div>
         <div style={{ display: "flex", gap: 1, background: "#FFFDF5", borderRadius: 8, padding: 2, width: "fit-content" }}>
-          {["1D","1W","1M","3M","1Y","ALL"].map(t => <button key={t} onClick={() => setPeriod(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>)}
+          {["1D","1W","1M","3M","1Y","ALL"].map(t => <button key={t} onClick={() => setPeriod(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>)}
         </div>
       </div>
 
       {/* Your Position */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>Your Position</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>Your Position</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {[
             { label: "Shares", value: stock.shares.toString(), color: "#333334" },
@@ -1578,8 +1586,8 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
             { label: "Return %", value: (plUp ? "+" : "") + plPct.toFixed(2) + "%", color: plUp ? "#5B8C5A" : "#EF5350" },
           ].map((m, i) => (
             <div key={i} style={{ background: "#FFFDF5", borderRadius: 8, padding: "7px 8px" }}>
-              <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 800, color: m.color }}>{m.value}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: m.color }}>{m.value}</div>
             </div>
           ))}
         </div>
@@ -1587,7 +1595,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
 
       {/* Key Stats */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Key Stats</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Key Stats</div>
         {[
           { label: "Prev Close", val: "$" + (stock._prevClose || stock.current).toFixed(2) },
           { label: "Day High", val: "$" + (stock._dayHigh || stock.current).toFixed(2) },
@@ -1596,8 +1604,8 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
           { label: "52W Low", val: chartMeta.fiftyTwoWeekLow ? "$" + chartMeta.fiftyTwoWeekLow.toFixed(2) : "—" },
         ].map((s, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
-            <span style={{ fontSize: 9, color: "#33333480", fontWeight: 600 }}>{s.label}</span>
-            <span style={{ fontSize: 9, fontFamily: "JetBrains Mono", fontWeight: 700, color: "#333334" }}>{s.val}</span>
+            <span style={{ fontSize: 14, color: "#33333480", fontWeight: 600 }}>{s.label}</span>
+            <span style={{ fontSize: 14, fontFamily: "JetBrains Mono", fontWeight: 700, color: "#333334" }}>{s.val}</span>
           </div>
         ))}
       </div>
@@ -1605,28 +1613,28 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
       {/* Buy / Sell Actions */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-          <button onClick={() => setOrderType(orderType === "buy" ? null : "buy")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "#5B8C5A" : "#EDF5ED", color: orderType === "buy" ? "#fff" : "#5B8C5A", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy</button>
-          <button onClick={() => setOrderType(orderType === "sell" ? null : "sell")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "sell" ? "#EF5350" : "#FFEBEE", color: orderType === "sell" ? "#fff" : "#EF5350", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Sell</button>
+          <button onClick={() => setOrderType(orderType === "buy" ? null : "buy")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "#5B8C5A" : "#EDF5ED", color: orderType === "buy" ? "#fff" : "#5B8C5A", fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy</button>
+          <button onClick={() => setOrderType(orderType === "sell" ? null : "sell")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: orderType === "sell" ? "#EF5350" : "#FFEBEE", color: orderType === "sell" ? "#fff" : "#EF5350", fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Sell</button>
         </div>
         {orderType && (
           <div style={{ animation: "fadeUp .2s ease both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: "#33333480" }}>Shares</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#33333480" }}>Shares</span>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <button onClick={() => setShares(Math.max(1, shares - 1))} style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#EF5350", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: "#333334", minWidth: 24, textAlign: "center" }}>{shares}</span>
-                <button onClick={() => setShares(shares + 1)} style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "#5B8C5A", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                <button onClick={() => setShares(Math.max(1, shares - 1))} style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 18, fontWeight: 700, color: "#EF5350", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <span style={{ fontFamily: "JetBrains Mono", fontSize: 21, fontWeight: 900, color: "#333334", minWidth: 24, textAlign: "center" }}>{shares}</span>
+                <button onClick={() => setShares(shares + 1)} style={{ width: 26, height: 26, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 18, fontWeight: 700, color: "#5B8C5A", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 8, color: "#33333480" }}>Market Price</span>
-              <span style={{ fontSize: 9, fontFamily: "JetBrains Mono", fontWeight: 700 }}>${stock.current.toFixed(2)}</span>
+              <span style={{ fontSize: 12, color: "#33333480" }}>Market Price</span>
+              <span style={{ fontSize: 14, fontFamily: "JetBrains Mono", fontWeight: 700 }}>${stock.current.toFixed(2)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid #33333420" }}>
-              <span style={{ fontSize: 8, color: "#33333480" }}>Est. Total</span>
-              <span style={{ fontSize: 11, fontFamily: "'Instrument Serif', serif", fontWeight: 900, color: "#333334" }}>${(stock.current * shares).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span style={{ fontSize: 12, color: "#33333480" }}>Est. Total</span>
+              <span style={{ fontSize: 17, fontFamily: "'Instrument Serif', serif", fontWeight: 900, color: "#333334" }}>${(stock.current * shares).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
-            <button style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "linear-gradient(135deg,#5B8C5A,#4CAF50)" : "linear-gradient(135deg,#EF5350,#E53935)", color: "#fff", fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>
+            <button style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: orderType === "buy" ? "linear-gradient(135deg,#5B8C5A,#4CAF50)" : "linear-gradient(135deg,#EF5350,#E53935)", color: "#fff", fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>
               {orderType === "buy" ? "cart" : "upload"} {orderType === "buy" ? "Buy" : "Sell"} {shares} {shares === 1 ? "Share" : "Shares"}
             </button>
           </div>
@@ -1635,7 +1643,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
 
       {/* Full Details Button */}
       {onGoToStock && /^[A-Z.]{1,6}$/.test(stock.ticker) && (
-        <button onClick={() => onGoToStock(stock.ticker)} style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1.5px solid #C4883044", background: "#FFF8EE", color: "#C48830", fontSize: 10, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <button onClick={() => onGoToStock(stock.ticker)} style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1.5px solid #C4883044", background: "#FFF8EE", color: "#C48830", fontSize: 15, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
           <Icon name="chart-bar" size={12} color="#C48830" /> View Full Stock Page →
         </button>
       )}
@@ -1913,8 +1921,8 @@ BEHAVIOR:
           <div style={{ padding: "10px 16px", borderBottom: "1px solid #F0F0F0", background: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
               <GoldenEggSmall size={18} />
-              <span style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#2C2C2C" }}>Hatch AI</span>
-              <span style={{ fontSize: 9, fontWeight: 700, color: mc.color, background: mc.color + "14", padding: "2px 8px", borderRadius: 10, fontFamily: "Quicksand" }}>{mc.label}</span>
+              <span style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#2C2C2C" }}>Hatch AI</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: mc.color, background: mc.color + "14", padding: "2px 8px", borderRadius: 10, fontFamily: "Quicksand" }}>{mc.label}</span>
             </div>
             <button onClick={() => { setMessages([]); setChatTopic(null); setExecutedActions(new Set()); }}
               style={{ width: 28, height: 28, borderRadius: 8, border: "1px solid #E8E8E8", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -1933,8 +1941,8 @@ BEHAVIOR:
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: "20px 0" }}>
                 <GoldenEggSmall size={44} />
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#2C2C2C", marginBottom: 4 }}>What can I help with?</div>
-                  <div style={{ fontSize: 11, color: "#999" }}>Choose a mode to get started</div>
+                  <div style={{ fontSize: 27, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#2C2C2C", marginBottom: 4 }}>What can I help with?</div>
+                  <div style={{ fontSize: 17, color: "#999" }}>Choose a mode to get started</div>
                 </div>
 
                 {/* Mode selector cards */}
@@ -1952,12 +1960,12 @@ BEHAVIOR:
                         <Icon name={m.icon} size={16} color={chatMode === m.id ? "#fff" : m.color} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 800, color: "#2C2C2C", fontFamily: "Quicksand", marginBottom: 2 }}>{m.label}</div>
-                        <div style={{ fontSize: 10, color: "#777", lineHeight: 1.4 }}>{m.desc}</div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#2C2C2C", fontFamily: "Quicksand", marginBottom: 2 }}>{m.label}</div>
+                        <div style={{ fontSize: 15, color: "#777", lineHeight: 1.4 }}>{m.desc}</div>
                         <div style={{ display: "flex", gap: 4, marginTop: 6, flexWrap: "wrap" }}>
                           {m.examples.map((ex, i) => (
                             <span key={i} onClick={e => { e.stopPropagation(); setChatMode(m.id); sendMessage(ex); }}
-                              style={{ fontSize: 9, padding: "3px 8px", borderRadius: 8, background: m.color + "10", color: m.color, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand" }}>{ex}</span>
+                              style={{ fontSize: 14, padding: "3px 8px", borderRadius: 8, background: m.color + "10", color: m.color, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand" }}>{ex}</span>
                           ))}
                         </div>
                       </div>
@@ -1976,7 +1984,7 @@ BEHAVIOR:
                     <GoldenEggSmall size={16} />
                   </div>
                 )}
-                <div style={{ maxWidth: "80%", borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "10px 14px", background: msg.role === "user" ? "#2C2C2C" : "#F7F7F8", color: msg.role === "user" ? "#fff" : "#2C2C2C", fontSize: 12, lineHeight: 1.6 }}>
+                <div style={{ maxWidth: "80%", borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "10px 14px", background: msg.role === "user" ? "#2C2C2C" : "#F7F7F8", color: msg.role === "user" ? "#fff" : "#2C2C2C", fontSize: 18, lineHeight: 1.6 }}>
                   {msg.role === "user" ? msg.content : (
                     <div>
                       {parseMessage(msg.content).map((part, pi) => {
@@ -1987,14 +1995,14 @@ BEHAVIOR:
                         return (
                           <button key={pi} onClick={() => !executed && executeAction(part, actionIdx)}
                             style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", margin: "6px 0", padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${executed ? "#26A69A" : "#E8E8E8"}`, background: executed ? "#F0FFF4" : "#fff", cursor: executed ? "default" : "pointer", transition: "all .2s", textAlign: "left" }}>
-                            <div style={{ width: 26, height: 26, borderRadius: 8, background: executed ? "#26A69A" : (aCol[part.actionType] || "#C48830"), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 11, fontWeight: 900, flexShrink: 0 }}>
+                            <div style={{ width: 26, height: 26, borderRadius: 8, background: executed ? "#26A69A" : (aCol[part.actionType] || "#C48830"), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 17, fontWeight: 900, flexShrink: 0 }}>
                               {executed ? "\u2713" : part.actionType.charAt(0)}
                             </div>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 10, fontWeight: 800, color: "#2C2C2C" }}>{executed ? "Done: " : ""}{part.label}</div>
-                              <div style={{ fontSize: 9, color: "#888" }}>{part.details}</div>
+                              <div style={{ fontSize: 15, fontWeight: 800, color: "#2C2C2C" }}>{executed ? "Done: " : ""}{part.label}</div>
+                              <div style={{ fontSize: 14, color: "#888" }}>{part.details}</div>
                             </div>
-                            {!executed && <span style={{ fontSize: 9, fontWeight: 800, color: aCol[part.actionType] || "#C48830", whiteSpace: "nowrap" }}>Run</span>}
+                            {!executed && <span style={{ fontSize: 14, fontWeight: 800, color: aCol[part.actionType] || "#C48830", whiteSpace: "nowrap" }}>Run</span>}
                           </button>
                         );
                       })}
@@ -2023,7 +2031,7 @@ BEHAVIOR:
                 { id: "ask", icon: "search", label: "Ask", color: "#26A69A" },
               ].map(m => (
                 <button key={m.id} onClick={() => setChatMode(m.id)}
-                  style={{ padding: "5px 12px", borderRadius: 20, border: chatMode === m.id ? `1.5px solid ${m.color}` : "1.5px solid #E8E8E8", background: chatMode === m.id ? m.color + "10" : "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", color: chatMode === m.id ? m.color : "#888", display: "flex", alignItems: "center", gap: 4, fontFamily: "Quicksand", transition: "all .15s" }}>
+                  style={{ padding: "5px 12px", borderRadius: 20, border: chatMode === m.id ? `1.5px solid ${m.color}` : "1.5px solid #E8E8E8", background: chatMode === m.id ? m.color + "10" : "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", color: chatMode === m.id ? m.color : "#888", display: "flex", alignItems: "center", gap: 4, fontFamily: "Quicksand", transition: "all .15s" }}>
                   <Icon name={m.icon} size={10} color={chatMode === m.id ? m.color : "#aaa"} /> {m.label}
                 </button>
               ))}
@@ -2033,7 +2041,7 @@ BEHAVIOR:
                 <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
                   placeholder={mc.placeholder}
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 22, border: "1.5px solid #E8E8E8", fontSize: 12, fontFamily: "Quicksand", outline: "none", background: "#F7F7F8", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: 22, border: "1.5px solid #E8E8E8", fontSize: 18, fontFamily: "Quicksand", outline: "none", background: "#F7F7F8", boxSizing: "border-box" }}
                   onFocus={e => { e.target.style.borderColor = mc.color; e.target.style.background = "#fff"; }}
                   onBlur={e => { e.target.style.borderColor = "#E8E8E8"; e.target.style.background = "#F7F7F8"; }} />
               </div>
@@ -2105,8 +2113,8 @@ function MacroTidesPage() {
   return (
     <div>
       <div style={{ marginBottom: 8, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Tides</h1>
-        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>The waterline reflects the current <span style={{ color: currentRegime.color, fontWeight: 800 }}>{currentRegime.name}</span> regime. What's above is overvalued. What's submerged is cheap. Drag to simulate scenarios.</p>
+        <h1 style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Tides</h1>
+        <p style={{ color: "#33333480", fontSize: 15, marginTop: 3 }}>The waterline reflects the current <span style={{ color: currentRegime.color, fontWeight: 800 }}>{currentRegime.name}</span> regime. What's above is overvalued. What's submerged is cheap. Drag to simulate scenarios.</p>
       </div>
 
       {/* ── Current Regime Status ── */}
@@ -2118,30 +2126,30 @@ function MacroTidesPage() {
             </div>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: currentRegime.color }}>{currentRegime.name}</span>
-                <span style={{ fontSize: 8, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#fff", color: currentRegime.color, border: `1px solid ${currentRegime.color}33` }}>ACTIVE REGIME</span>
-                <span style={{ fontSize: 8, fontWeight: 700, fontFamily: "JetBrains Mono", color: currentRegime.color + "aa" }}>{currentRegime.confidence}% confidence</span>
+                <span style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: currentRegime.color }}>{currentRegime.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#fff", color: currentRegime.color, border: `1px solid ${currentRegime.color}33` }}>ACTIVE REGIME</span>
+                <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "JetBrains Mono", color: currentRegime.color + "aa" }}>{currentRegime.confidence}% confidence</span>
               </div>
-              <div style={{ fontSize: 10, color: "#33333480", marginTop: 2, lineHeight: 1.4 }}>{currentRegime.desc}</div>
+              <div style={{ fontSize: 15, color: "#33333480", marginTop: 2, lineHeight: 1.4 }}>{currentRegime.desc}</div>
             </div>
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
           {macroIndicators.filter(i => ["gdp", "cpi", "pmi", "vix"].includes(i.id)).map(ind => (
             <div key={ind.id} style={{ background: "#fff", borderRadius: 12, padding: "8px 10px", textAlign: "center", border: "1px solid #33333410" }}>
-              <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 3 }}>{ind.name}</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 13, fontWeight: 700, color: ind.signal === "bullish" ? "#5B8C5A" : ind.signal === "bearish" ? "#EF5350" : "#FFA726" }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 3 }}>{ind.name}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 20, fontWeight: 700, color: ind.signal === "bullish" ? "#5B8C5A" : ind.signal === "bearish" ? "#EF5350" : "#FFA726" }}>
                 {ind.value}{ind.unit}
               </div>
-              <div style={{ fontSize: 8, color: "#33333460", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "#33333460", marginTop: 2 }}>
                 prev {ind.prev}{ind.unit} <span style={{ color: ind.trend === "up" ? "#5B8C5A" : ind.trend === "down" ? "#EF5350" : "#FFA726", fontWeight: 700 }}>{ind.trend === "up" ? "▲" : ind.trend === "down" ? "▼" : "—"}</span>
               </div>
             </div>
           ))}
         </div>
         <div style={{ padding: "8px 12px", background: "#fff", borderRadius: 12, border: `1px solid ${currentRegime.color}22` }}>
-          <div style={{ fontSize: 8, fontWeight: 800, color: currentRegime.color, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>Playbook</div>
-          <div style={{ fontSize: 10, color: "#5A4A3A", lineHeight: 1.5 }}>{currentRegime.playbook}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: currentRegime.color, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3 }}>Playbook</div>
+          <div style={{ fontSize: 15, color: "#5A4A3A", lineHeight: 1.5 }}>{currentRegime.playbook}</div>
         </div>
       </div>
 
@@ -2149,17 +2157,17 @@ function MacroTidesPage() {
       <div style={{ background: "#fff", borderRadius: 18, padding: "16px 22px", marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 12 }}></span>
+            <span style={{ fontSize: 18 }}></span>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Tide Control</div>
-              <div style={{ fontSize: 10, color: "#33333480" }}>Regime sets the baseline. Drag to simulate scenarios from here.</div>
+              <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Tide Control</div>
+              <div style={{ fontSize: 15, color: "#33333480" }}>Regime sets the baseline. Drag to simulate scenarios from here.</div>
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 10, background: tideLevel < 35 ? "#FFEBEE" : tideLevel > 65 ? "#FFF8EE" : "#FFF3E0", color: tideLevel < 35 ? "#EF5350" : tideLevel > 65 ? "#C48830" : "#FFA726" }}>
+            <span style={{ fontSize: 17, fontWeight: 800, padding: "4px 12px", borderRadius: 10, background: tideLevel < 35 ? "#FFEBEE" : tideLevel > 65 ? "#FFF8EE" : "#FFF3E0", color: tideLevel < 35 ? "#EF5350" : tideLevel > 65 ? "#C48830" : "#FFA726" }}>
               {tideLevel < 25 ? "Crash" : tideLevel < 40 ? "Correction" : tideLevel > 75 ? "FOMO" : tideLevel > 60 ? "Risk-On" : "Current"}
             </span>
-            <button onClick={() => setTideLevel(regimeTide)} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid #F0E6D0", background: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", color: "#8A7040" }}>Reset to Regime</button>
+            <button onClick={() => setTideLevel(regimeTide)} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid #F0E6D0", background: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", color: "#8A7040" }}>Reset to Regime</button>
           </div>
         </div>
         <div style={{ position: "relative", height: 38, display: "flex", alignItems: "center" }}>
@@ -2170,7 +2178,7 @@ function MacroTidesPage() {
             style={{ position: "relative", width: "100%", height: 38, appearance: "none", background: "transparent", cursor: "pointer", zIndex: 2, WebkitAppearance: "none", outline: "none" }} />
           <style>{`input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C48830,#EF5350);border:3px solid #fff;box-shadow:0 2px 10px rgba(212,113,78,.4);cursor:grab}input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.15)}`}</style>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, fontWeight: 800, color: "#33333480", marginTop: 3 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 800, color: "#33333480", marginTop: 3 }}>
           <span>Tide pulls back</span><span style={{ color: currentRegime.color, fontWeight: 900 }}>▼ {currentRegime.name}</span><span>Everything pumps</span>
         </div>
       </div>
@@ -2179,23 +2187,23 @@ function MacroTidesPage() {
       <div style={{ position: "relative", background: "linear-gradient(180deg, #F0F4FA 0%, #E8EEF8 " + waterPct + "%, #D4E4F4 " + (waterPct + 2) + "%, #C4D8EC " + (waterPct + 20) + "%, #B0CCE4 100%)", border: "1px solid #33333440", borderRadius: 14, overflow: "hidden", marginBottom: 8, animation: "fadeUp .4s ease .15s both", minHeight: 440 }}>
 
         {/* Zone labels */}
-        <div style={{ position: "absolute", top: 10, left: 16, fontSize: 10, fontWeight: 800, color: "#EF5350", opacity: 0.6, textTransform: "uppercase", letterSpacing: 1, zIndex: 2 }}>▲ Above Tide — Expensive / Overvalued</div>
-        <div style={{ position: "absolute", bottom: 10, left: 16, fontSize: 10, fontWeight: 800, color: "#fff", opacity: 0.7, textTransform: "uppercase", letterSpacing: 1, zIndex: 2 }}>▼ Below Tide — Cheap / Undervalued</div>
+        <div style={{ position: "absolute", top: 10, left: 16, fontSize: 15, fontWeight: 800, color: "#EF5350", opacity: 0.6, textTransform: "uppercase", letterSpacing: 1, zIndex: 2 }}>▲ Above Tide — Expensive / Overvalued</div>
+        <div style={{ position: "absolute", bottom: 10, left: 16, fontSize: 15, fontWeight: 800, color: "#fff", opacity: 0.7, textTransform: "uppercase", letterSpacing: 1, zIndex: 2 }}>▼ Below Tide — Cheap / Undervalued</div>
 
         {/* Animated waterline — colored by macro regime */}
         <div style={{ position: "absolute", left: 0, right: 0, top: waterPct + "%", height: 3, zIndex: 10, transition: "top .5s ease" }}>
           <div style={{ height: 2, background: `linear-gradient(90deg, ${currentRegime.color}44, ${currentRegime.color}, ${currentRegime.color}44)`, borderRadius: 1 }} />
           <div style={{ position: "absolute", left: 16, top: -10, display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ fontSize: 8, fontWeight: 900, color: currentRegime.color, background: currentRegime.bg, padding: "2px 8px", borderRadius: 6, border: `1px solid ${currentRegime.color}33`, letterSpacing: 0.5, textTransform: "uppercase" }}>
+            <div style={{ fontSize: 12, fontWeight: 900, color: currentRegime.color, background: currentRegime.bg, padding: "2px 8px", borderRadius: 6, border: `1px solid ${currentRegime.color}33`, letterSpacing: 0.5, textTransform: "uppercase" }}>
               {currentRegime.name} Regime
             </div>
-            <div style={{ fontSize: 8, fontWeight: 600, color: currentRegime.color + "cc", maxWidth: 200, lineHeight: 1.2 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: currentRegime.color + "cc", maxWidth: 200, lineHeight: 1.2 }}>
               {currentRegime.desc.split("—")[0].trim()}
             </div>
           </div>
           <div style={{ position: "absolute", right: 16, top: -10, display: "flex", alignItems: "center", gap: 4 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: currentRegime.color, animation: "pulse 2s ease infinite" }} />
-            <span style={{ fontSize: 8, fontWeight: 800, color: currentRegime.color, fontFamily: "JetBrains Mono" }}>{currentRegime.confidence}% conf.</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: currentRegime.color, fontFamily: "JetBrains Mono" }}>{currentRegime.confidence}% conf.</span>
           </div>
         </div>
 
@@ -2218,12 +2226,12 @@ function MacroTidesPage() {
                 onMouseEnter={e => { e.currentTarget.style.transform = `translateY(${Math.max(0, 50 - deviation) * 0.6 - 4}px)`; e.currentTarget.style.boxShadow = `0 6px 20px ${asset.color}22`; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = `translateY(${Math.max(0, 50 - deviation) * 0.6}px)`; e.currentTarget.style.boxShadow = isSel ? `0 4px 16px ${asset.color}33` : "0 2px 8px rgba(0,0,0,.04)"; }}>
                 <Icon name={asset.icon} size={12} />
-                <div style={{ fontWeight: 800, fontSize: 10, fontFamily: "'Instrument Serif', serif", textAlign: "center", color: "#333334" }}>{asset.name}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: "#EF5350" }}>{Math.round(adj)}</div>
+                <div style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif", textAlign: "center", color: "#333334" }}>{asset.name}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: "#EF5350" }}>{Math.round(adj)}</div>
                 <div style={{ height: 4, width: 40, borderRadius: 2, background: "#FFF5E6", overflow: "hidden" }}>
                   <div style={{ height: "100%", width: Math.min(adj, 100) + "%", background: adj > 70 ? "#EF5350" : "#FFA726", borderRadius: 2, transition: "width .5s" }} />
                 </div>
-                {isCascade && <div style={{ fontSize: 7, fontWeight: 900, color: selected.cascadeDir === "up" ? "#5B8C5A" : "#EF5350", background: selected.cascadeDir === "up" ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 6 }}>{selected.cascadeDir === "up" ? "▲ RISES" : "▼ FALLS"}</div>}
+                {isCascade && <div style={{ fontSize: 11, fontWeight: 900, color: selected.cascadeDir === "up" ? "#5B8C5A" : "#EF5350", background: selected.cascadeDir === "up" ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 6 }}>{selected.cascadeDir === "up" ? "▲ RISES" : "▼ FALLS"}</div>}
               </div>
             );
           })}
@@ -2242,12 +2250,12 @@ function MacroTidesPage() {
                 onMouseEnter={e => { e.currentTarget.style.transform = `translateY(${Math.min(depth * 0.5, 30) - 4}px)`; e.currentTarget.style.background = "rgba(255,255,255,.95)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = `translateY(${Math.min(depth * 0.5, 30)}px)`; e.currentTarget.style.background = isSel ? asset.color + "22" : "rgba(255,255,255,.85)"; }}>
                 <Icon name={asset.icon} size={12} />
-                <div style={{ fontWeight: 800, fontSize: 10, fontFamily: "'Instrument Serif', serif", textAlign: "center", color: "#333334" }}>{asset.name}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: "#C48830" }}>{Math.round(adj)}</div>
+                <div style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif", textAlign: "center", color: "#333334" }}>{asset.name}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: "#C48830" }}>{Math.round(adj)}</div>
                 <div style={{ height: 4, width: 40, borderRadius: 2, background: "rgba(255,255,255,.5)", overflow: "hidden" }}>
                   <div style={{ height: "100%", width: Math.min(adj, 100) + "%", background: adj < 25 ? "#C48830" : "#FFA726", borderRadius: 2, transition: "width .5s" }} />
                 </div>
-                {isCascade && <div style={{ fontSize: 7, fontWeight: 900, color: selected.cascadeDir === "up" ? "#5B8C5A" : "#EF5350", background: selected.cascadeDir === "up" ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 6 }}>{selected.cascadeDir === "up" ? "▲ RISES" : "▼ FALLS"}</div>}
+                {isCascade && <div style={{ fontSize: 11, fontWeight: 900, color: selected.cascadeDir === "up" ? "#5B8C5A" : "#EF5350", background: selected.cascadeDir === "up" ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 6 }}>{selected.cascadeDir === "up" ? "▲ RISES" : "▼ FALLS"}</div>}
               </div>
             );
           })}
@@ -2262,46 +2270,46 @@ function MacroTidesPage() {
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
               <div style={{ width: 52, height: 52, borderRadius: 16, background: selected.color + "18", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={selected.icon} size={24} color={selected.color} /></div>
               <div>
-                <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{selected.name}</div>
+                <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{selected.name}</div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 10, fontFamily: "JetBrains Mono", color: "#33333480" }}>{selected.ticker}</span>
-                  <span style={{ fontSize: 8, fontWeight: 800, padding: "1px 6px", borderRadius: 4, background: (typeColors[selected.type] || "#A09080") + "22", color: typeColors[selected.type] || "#A09080", textTransform: "uppercase" }}>{typeLabels[selected.type] || selected.type}</span>
+                  <span style={{ fontSize: 15, fontFamily: "JetBrains Mono", color: "#33333480" }}>{selected.ticker}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, padding: "1px 6px", borderRadius: 4, background: (typeColors[selected.type] || "#A09080") + "22", color: typeColors[selected.type] || "#A09080", textTransform: "uppercase" }}>{typeLabels[selected.type] || selected.type}</span>
                 </div>
               </div>
             </div>
-            <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.6, marginBottom: 7, padding: "7px 10px", background: "#FFFDF5", borderRadius: 12 }}>{selected.desc}</div>
+            <div style={{ fontSize: 18, color: "#6B5A2E", lineHeight: 1.6, marginBottom: 7, padding: "7px 10px", background: "#FFFDF5", borderRadius: 12 }}>{selected.desc}</div>
 
             {/* Thermometer */}
             <div style={{ marginBottom: 7 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: "#33333480" }}>VALUATION THERMOMETER</span>
-                <span style={{ fontSize: 10, fontWeight: 800, color: selected.level > 50 ? "#EF5350" : "#C48830" }}>{selected.level > 65 ? "Overheated" : selected.level > 50 ? "Elevated" : selected.level > 35 ? "Fair Zone" : "Deep Value"}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "#33333480" }}>VALUATION THERMOMETER</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: selected.level > 50 ? "#EF5350" : "#C48830" }}>{selected.level > 65 ? "Overheated" : selected.level > 50 ? "Elevated" : selected.level > 35 ? "Fair Zone" : "Deep Value"}</span>
               </div>
               <div style={{ height: 28, background: "linear-gradient(90deg, #C48830 0%, #FFA726 40%, #EF5350 70%, #C94040 100%)", borderRadius: 14, position: "relative", overflow: "visible", border: "1px solid #33333440" }}>
                 <div style={{ position: "absolute", left: selected.fair + "%", top: -6, bottom: -6, width: 2, background: "#8A7040", zIndex: 2, borderRadius: 1 }}>
-                  <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", fontSize: 7, fontWeight: 800, color: "#8A7040", whiteSpace: "nowrap" }}>Fair</div>
+                  <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", fontSize: 11, fontWeight: 800, color: "#8A7040", whiteSpace: "nowrap" }}>Fair</div>
                 </div>
-                <div style={{ position: "absolute", left: `calc(${Math.min(Math.round(getAdjustedLevel(selected)), 96)}% - 12px)`, top: "50%", transform: "translateY(-50%)", width: 24, height: 24, borderRadius: "50%", background: "#fff", border: `3px solid ${selected.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900, fontFamily: "JetBrains Mono", color: selected.color, boxShadow: `0 2px 8px ${selected.color}44`, transition: "left .5s ease", zIndex: 3 }}>
+                <div style={{ position: "absolute", left: `calc(${Math.min(Math.round(getAdjustedLevel(selected)), 96)}% - 12px)`, top: "50%", transform: "translateY(-50%)", width: 24, height: 24, borderRadius: "50%", background: "#fff", border: `3px solid ${selected.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 900, fontFamily: "JetBrains Mono", color: selected.color, boxShadow: `0 2px 8px ${selected.color}44`, transition: "left .5s ease", zIndex: 3 }}>
                   {Math.round(getAdjustedLevel(selected))}
                 </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, fontWeight: 700, color: "#33333480", marginTop: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, color: "#33333480", marginTop: 4 }}>
                 <span>Deep Value</span><span>Fair</span><span>Rich</span><span>Extreme</span>
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
               <div style={{ background: selected.level > 50 ? "#FFEBEE" : "#FFF8EE", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
-                <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Current</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: selected.level > 50 ? "#EF5350" : "#C48830" }}>{selected.level}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Current</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: selected.level > 50 ? "#EF5350" : "#C48830" }}>{selected.level}</div>
               </div>
               <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
-                <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Fair Value</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: "#FFA726" }}>{selected.fair}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Fair Value</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: "#FFA726" }}>{selected.fair}</div>
               </div>
               <div style={{ background: "#E3F2FD", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
-                <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Tide-Adjusted</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: "#42A5F5" }}>{Math.round(getAdjustedLevel(selected))}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Tide-Adjusted</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: "#42A5F5" }}>{Math.round(getAdjustedLevel(selected))}</div>
               </div>
             </div>
           </div>
@@ -2309,10 +2317,10 @@ function MacroTidesPage() {
           {/* Right: Cascade Effects */}
           <div style={{ background: "#fff", borderRadius: 14, padding: 12 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
-              <span style={{ fontSize: 11 }}></span>
-              <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>When This Tide Rolls Over</div>
+              <span style={{ fontSize: 17 }}></span>
+              <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>When This Tide Rolls Over</div>
             </div>
-            <div style={{ fontSize: 11, color: "#33333480", marginBottom: 7, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 17, color: "#33333480", marginBottom: 7, lineHeight: 1.5 }}>
               If <span style={{ fontWeight: 800, color: selected.color }}>{selected.name}</span> {selected.level > 50 ? "crashes down from " + selected.level + " toward fair value" : "recovers from " + selected.level + " toward fair value"}, these assets get pushed {selected.cascadeDir === "up" ? "upward" : "downward"}:
             </div>
             {cascadeTargets.length > 0 ? cascadeTargets.map((target) => {
@@ -2326,25 +2334,25 @@ function MacroTidesPage() {
                   onMouseLeave={e => { e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.transform = ""; }}>
                   <Icon name={target.icon} size={12} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{target.name}</div>
-                    <div style={{ fontSize: 10, color: "#8A7040" }}>{target.ticker}</div>
+                    <div style={{ fontWeight: 800, fontSize: 18, fontFamily: "'Instrument Serif', serif" }}>{target.name}</div>
+                    <div style={{ fontSize: 15, color: "#8A7040" }}>{target.ticker}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: goesUp ? "#5B8C5A" : "#EF5350" }}>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: goesUp ? "#5B8C5A" : "#EF5350" }}>
                       {goesUp ? "▲" : "▼"}{diff !== 0 ? (diff > 0 ? " +" : " ") + diff : ""}
                     </div>
-                    <div style={{ fontSize: 9, color: "#33333480" }}>{target.level} → {tAdj}</div>
+                    <div style={{ fontSize: 14, color: "#33333480" }}>{target.level} → {tAdj}</div>
                   </div>
                 </div>
               );
             }) : (
-              <div style={{ textAlign: "center", padding: 30, color: "#33333480", fontSize: 12 }}>Move the tide slider to see cascade effects</div>
+              <div style={{ textAlign: "center", padding: 30, color: "#33333480", fontSize: 18 }}>Move the tide slider to see cascade effects</div>
             )}
 
             {cascadeTargets.length > 0 && (
               <div style={{ marginTop: 10, padding: "7px 10px", background: "#fff", borderRadius: 12, border: "1px solid #F0E6D0" }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: "#C48830", marginBottom: 2 }}>Inverse Correlation</div>
-                <div style={{ fontSize: 10, color: "#8A7040", lineHeight: 1.5 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#C48830", marginBottom: 2 }}>Inverse Correlation</div>
+                <div style={{ fontSize: 15, color: "#8A7040", lineHeight: 1.5 }}>
                   {selected.name} going {selected.level > 50 ? "down" : "up"} historically pushes {cascadeTargets.map(t => t.name).join(", ")} in the opposite direction. Drag the tide slider left to simulate.
                 </div>
               </div>
@@ -2356,11 +2364,11 @@ function MacroTidesPage() {
       {/* ── All Assets Ranked Table ── */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, animation: "fadeUp .4s ease .25s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Full Tide Map — Ranked by Elevation</div>
-          <div style={{ fontSize: 10, color: "#33333480" }}>Tap any row to see cascade</div>
+          <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Full Tide Map — Ranked by Elevation</div>
+          <div style={{ fontSize: 15, color: "#33333480" }}>Tap any row to see cascade</div>
         </div>
         <div className="mobile-scroll-x" style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #F0E6D0" }}>
-          <div className="tide-table-header" style={{ display: "grid", gridTemplateColumns: "1.2fr .6fr .4fr .4fr .4fr .6fr", padding: "6px 10px", background: "#fff", borderBottom: "2px solid #F0E6D0", fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>
+          <div className="tide-table-header" style={{ display: "grid", gridTemplateColumns: "1.2fr .6fr .4fr .4fr .4fr .6fr", padding: "6px 10px", background: "#fff", borderBottom: "2px solid #F0E6D0", fontSize: 14, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>
             <div>Asset</div><div>Instrument</div><div>Level</div><div>Fair</div><div>Gap</div><div style={{ textAlign: "right" }}>Tide Effect</div>
           </div>
           {[...tideAssets].sort((a, b) => getAdjustedLevel(b) - getAdjustedLevel(a)).map((asset, i) => {
@@ -2377,21 +2385,21 @@ function MacroTidesPage() {
                   <Icon name={asset.icon} size={10} />
                   <div>
                     <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                      <span style={{ fontWeight: 800, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{asset.name}</span>
-                      <span style={{ fontSize: 7, fontWeight: 900, padding: "1px 5px", borderRadius: 4, background: isAbove ? "#FFEBEE" : "#FFF8EE", color: isAbove ? "#EF5350" : "#C48830" }}>{isAbove ? "ABOVE" : "BELOW"}</span>
+                      <span style={{ fontWeight: 800, fontSize: 18, fontFamily: "'Instrument Serif', serif" }}>{asset.name}</span>
+                      <span style={{ fontSize: 11, fontWeight: 900, padding: "1px 5px", borderRadius: 4, background: isAbove ? "#FFEBEE" : "#FFF8EE", color: isAbove ? "#EF5350" : "#C48830" }}>{isAbove ? "ABOVE" : "BELOW"}</span>
                     </div>
-                    <span style={{ fontSize: 8, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: (typeColors[asset.type] || "#A09080") + "18", color: typeColors[asset.type] || "#A09080", textTransform: "uppercase" }}>{typeLabels[asset.type] || asset.type}</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: (typeColors[asset.type] || "#A09080") + "18", color: typeColors[asset.type] || "#A09080", textTransform: "uppercase" }}>{typeLabels[asset.type] || asset.type}</span>
                   </div>
                 </div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, color: "#33333480" }}>{asset.ticker}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: adj > 60 ? "#EF5350" : adj < 35 ? "#C48830" : "#FFA726" }}>{adj}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, color: "#33333480" }}>{asset.fair}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: gap > 10 ? "#EF5350" : gap < -10 ? "#C48830" : "#FFA726" }}>{gap > 0 ? "+" : ""}{gap}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, color: "#33333480" }}>{asset.ticker}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: adj > 60 ? "#EF5350" : adj < 35 ? "#C48830" : "#FFA726" }}>{adj}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, color: "#33333480" }}>{asset.fair}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: gap > 10 ? "#EF5350" : gap < -10 ? "#C48830" : "#FFA726" }}>{gap > 0 ? "+" : ""}{gap}</div>
                 <div style={{ textAlign: "right" }}>
                   {effect !== 0 ? (
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: effect > 0 ? "#EDF5ED" : "#FFEBEE", color: effect > 0 ? "#5B8C5A" : "#EF5350" }}>{effect > 0 ? "▲ +" + effect : "▼ " + effect}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: effect > 0 ? "#EDF5ED" : "#FFEBEE", color: effect > 0 ? "#5B8C5A" : "#EF5350" }}>{effect > 0 ? "▲ +" + effect : "▼ " + effect}</span>
                   ) : (
-                    <span style={{ fontSize: 10, color: "#33333480" }}>—</span>
+                    <span style={{ fontSize: 15, color: "#33333480" }}>—</span>
                   )}
                 </div>
               </div>
@@ -2550,8 +2558,8 @@ function MyBasketsPage({ onSelectBasket }) {
   return (
     <div>
       <div style={{ marginBottom: 8, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>My Baskets & Macro Map</h1>
-        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Portfolio overview, macro product correlations & hedging seesaw</p>
+        <h1 style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>My Baskets & Macro Map</h1>
+        <p style={{ color: "#33333480", fontSize: 15, marginTop: 3 }}>Portfolio overview, macro product correlations & hedging seesaw</p>
       </div>
 
       {/* ── Portfolio Summary ── */}
@@ -2565,8 +2573,8 @@ function MyBasketsPage({ onSelectBasket }) {
           { label: "Hedge Pairs", val: macroCorrelations.filter(c => c.corr < -0.3).length, color: "#EF5350", bg: "#FFEBEE" },
         ].map((m, i) => (
           <div key={i} style={{ background: m.bg, borderRadius: 16, padding: "8px 10px", textAlign: "center", animation: "fadeUp .4s ease " + (i * .03) + "s both" }}>
-            <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>{m.label}</div>
-            <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: m.color, marginTop: 2 }}>{m.val}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>{m.label}</div>
+            <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: m.color, marginTop: 2 }}>{m.val}</div>
           </div>
         ))}
       </div>
@@ -2580,13 +2588,13 @@ function MyBasketsPage({ onSelectBasket }) {
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
               {isHighestReturn ? <Icon name="egg" size={14} color="#DAA520" /> : <Icon name={b.icon} size={12} />}
               <div>
-                <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: isHighestReturn ? "#B8860B" : undefined }}>{b.name}</div>
-                <div style={{ fontSize: 9, color: "#33333480" }}>{(basketStocks[b.id] || []).length} positions · {b.strategy}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: isHighestReturn ? "#B8860B" : undefined }}>{b.name}</div>
+                <div style={{ fontSize: 14, color: "#33333480" }}>{(basketStocks[b.id] || []).length} positions · {b.strategy}</div>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: isHighestReturn ? "#DAA520" : undefined }}>${(b.value / 1000).toFixed(1)}k</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>{isTrendiest && !isHighestReturn && <Icon name="fire" size={12} color="#FF6B35" />}<span style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: isHighestReturn ? "#DAA520" : b.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{b.change >= 0 ? "+" : ""}{b.change}%</span></div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 700, color: isHighestReturn ? "#DAA520" : undefined }}>${(b.value / 1000).toFixed(1)}k</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>{isTrendiest && !isHighestReturn && <Icon name="fire" size={12} color="#FF6B35" />}<span style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 700, color: isHighestReturn ? "#DAA520" : b.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{b.change >= 0 ? "+" : ""}{b.change}%</span></div>
             </div>
             <div style={{ height: 4, background: "#FFF5E6", borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
               <div style={{ height: "100%", width: b.allocation + "%", background: clr.a, borderRadius: 2 }} />
@@ -2598,11 +2606,11 @@ function MyBasketsPage({ onSelectBasket }) {
       <div style={{ background: "#fff", borderRadius: 14, padding: "10px 22px 18px", marginBottom: 8, animation: "fadeUp .4s ease .12s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hedging Seesaw</div>
-            <div style={{ fontSize: 11, color: "#33333480", marginTop: 2 }}>When one side weighs down, the other lifts up — pick any pair to visualize</div>
+            <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hedging Seesaw</div>
+            <div style={{ fontSize: 17, color: "#33333480", marginTop: 2 }}>When one side weighs down, the other lifts up — pick any pair to visualize</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 8, background: corrVal < -0.5 ? "#FFF8EE" : corrVal < 0 ? "#FFF3E0" : "#FFEBEE", color: corrVal < -0.5 ? "#C48830" : corrVal < 0 ? "#FFA726" : "#EF5350" }}>
+            <span style={{ fontSize: 15, fontWeight: 800, padding: "4px 10px", borderRadius: 8, background: corrVal < -0.5 ? "#FFF8EE" : corrVal < 0 ? "#FFF3E0" : "#FFEBEE", color: corrVal < -0.5 ? "#C48830" : corrVal < 0 ? "#FFA726" : "#EF5350" }}>
               ρ = {corrVal.toFixed(2)} · {corrVal < -0.6 ? "Strong Hedge" : corrVal < -0.3 ? "Moderate Hedge" : corrVal < 0 ? "Weak Hedge" : corrVal < 0.3 ? "Weak +" : "Correlated"}
             </span>
           </div>
@@ -2611,17 +2619,17 @@ function MyBasketsPage({ onSelectBasket }) {
         {/* Pair selectors */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8, alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 200px", maxWidth: 260 }}>
-            <div style={{ fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>LEFT SIDE</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>LEFT SIDE</div>
             <select value={seesawPair.a} onChange={e => setSeesawPair(p => ({ ...p, a: e.target.value }))}
-              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #42A5F544", fontSize: 10, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#E3F2FD", color: "#333334", cursor: "pointer" }}>
+              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #42A5F544", fontSize: 15, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#E3F2FD", color: "#333334", cursor: "pointer" }}>
               {macroProducts.map(p => <option key={p.id} value={p.id}>{p.ticker} — {p.name}</option>)}
             </select>
           </div>
-          <div style={{ fontSize: 12, color: "#33333480", fontWeight: 900 }}>⟺</div>
+          <div style={{ fontSize: 18, color: "#33333480", fontWeight: 900 }}>⟺</div>
           <div style={{ flex: "1 1 200px", maxWidth: 260 }}>
-            <div style={{ fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>RIGHT SIDE</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>RIGHT SIDE</div>
             <select value={seesawPair.b} onChange={e => setSeesawPair(p => ({ ...p, b: e.target.value }))}
-              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #EF535044", fontSize: 10, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#FFEBEE", color: "#333334", cursor: "pointer" }}>
+              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #EF535044", fontSize: 15, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#FFEBEE", color: "#333334", cursor: "pointer" }}>
               {macroProducts.map(p => <option key={p.id} value={p.id}>{p.ticker} — {p.name}</option>)}
             </select>
           </div>
@@ -2640,7 +2648,7 @@ function MyBasketsPage({ onSelectBasket }) {
             { a:"tlt", b:"sp500", label:"TLT vs SPX" },
           ].map((preset, i) => (
             <button key={i} onClick={() => setSeesawPair({ a: preset.a, b: preset.b })}
-              style={{ padding: "4px 10px", borderRadius: 8, border: "1.5px solid " + (seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#F0E6D0"), background: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#FFF8EE" : "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", color: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#8A7040" }}>{preset.label}</button>
+              style={{ padding: "4px 10px", borderRadius: 8, border: "1.5px solid " + (seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#F0E6D0"), background: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#FFF8EE" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#8A7040" }}>{preset.label}</button>
           ))}
         </div>
 
@@ -2710,24 +2718,24 @@ function MyBasketsPage({ onSelectBasket }) {
       <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", marginBottom: 8, animation: "fadeUp .4s ease .18s both" }}>
         <div style={{ padding: "18px 22px", borderBottom: "2px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Correlation Network</div>
-            <div style={{ fontSize: 11, color: "#33333480" }}>Futures · Commodities · Currencies · Metals · Rates — click any node</div>
+            <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Correlation Network</div>
+            <div style={{ fontSize: 17, color: "#33333480" }}>Futures · Commodities · Currencies · Metals · Rates — click any node</div>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 9, fontWeight: 800, color: "#33333480" }}>MIN |ρ|</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: "#33333480" }}>MIN |ρ|</span>
             {[0.15, 0.3, 0.5, 0.7].map(t => (
-              <button key={t} onClick={() => setCorrThreshold(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "1.5px solid " + (corrThreshold === t ? "#C48830" : "#F0E6D0"), background: corrThreshold === t ? "#FFF8EE" : "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "JetBrains Mono", color: corrThreshold === t ? "#C48830" : "#A09080" }}>{t}</button>
+              <button key={t} onClick={() => setCorrThreshold(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "1.5px solid " + (corrThreshold === t ? "#C48830" : "#F0E6D0"), background: corrThreshold === t ? "#FFF8EE" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "JetBrains Mono", color: corrThreshold === t ? "#C48830" : "#A09080" }}>{t}</button>
             ))}
           </div>
         </div>
 
         {/* Category filters */}
         <div style={{ padding: "8px 22px", background: "#FFFDF5", borderBottom: "1px solid #33333420", display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-          <button onClick={() => setCatFilter("ALL")} style={{ padding: "3px 10px", borderRadius: 6, border: "1.5px solid " + (catFilter === "ALL" ? "#C48830" : "#F0E6D0"), background: catFilter === "ALL" ? "#FFF8EE" : "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", color: catFilter === "ALL" ? "#C48830" : "#A09080" }}>ALL</button>
+          <button onClick={() => setCatFilter("ALL")} style={{ padding: "3px 10px", borderRadius: 6, border: "1.5px solid " + (catFilter === "ALL" ? "#C48830" : "#F0E6D0"), background: catFilter === "ALL" ? "#FFF8EE" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: catFilter === "ALL" ? "#C48830" : "#A09080" }}>ALL</button>
           {cats.map(c => { const cc = catConfig[c] || { color:"#A09080", icon:"chart-bar" }; return (
-            <button key={c} onClick={() => setCatFilter(catFilter === c ? "ALL" : c)} style={{ padding: "3px 10px", borderRadius: 6, border: "1.5px solid " + (catFilter === c ? cc.color : "#F0E6D0"), background: catFilter === c ? cc.color + "18" : "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", color: catFilter === c ? cc.color : "#A09080", display: "inline-flex", alignItems: "center", gap: 3 }}><Icon name={cc.icon} size={10} color={catFilter === c ? cc.color : "#A09080"} /> {c}</button>
+            <button key={c} onClick={() => setCatFilter(catFilter === c ? "ALL" : c)} style={{ padding: "3px 10px", borderRadius: 6, border: "1.5px solid " + (catFilter === c ? cc.color : "#F0E6D0"), background: catFilter === c ? cc.color + "18" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: catFilter === c ? cc.color : "#A09080", display: "inline-flex", alignItems: "center", gap: 3 }}><Icon name={cc.icon} size={10} color={catFilter === c ? cc.color : "#A09080"} /> {c}</button>
           ); })}
-          <span style={{ marginLeft: "auto", display: "flex", gap: 6, fontSize: 9, fontWeight: 700, color: "#33333480" }}>
+          <span style={{ marginLeft: "auto", display: "flex", gap: 6, fontSize: 14, fontWeight: 700, color: "#33333480" }}>
             <span><span style={{ display: "inline-block", width: 16, height: 3, background: "#C48830", borderRadius: 2, verticalAlign: "middle", marginRight: 3 }} />Positive</span>
             <span><span style={{ display: "inline-block", width: 16, height: 3, background: "#EF5350", borderRadius: 2, verticalAlign: "middle", marginRight: 3, borderTop: "1px dashed #EF5350" }} />Inverse (hedge)</span>
           </span>
@@ -2807,9 +2815,9 @@ function MyBasketsPage({ onSelectBasket }) {
               <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
                 <div style={{ width: 52, height: 52, borderRadius: 16, background: node.color + "18", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={node.icon} size={24} color={node.color} /></div>
                 <div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: node.color }}>{node.ticker}</div>
-                  <div style={{ fontSize: 11, color: "#33333480" }}>{node.name}</div>
-                  <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: (catConfig[node.cat]?.color || "#A09080") + "18", color: catConfig[node.cat]?.color || "#A09080" }}>{node.cat}</span>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: node.color }}>{node.ticker}</div>
+                  <div style={{ fontSize: 17, color: "#33333480" }}>{node.name}</div>
+                  <span style={{ fontSize: 14, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: (catConfig[node.cat]?.color || "#A09080") + "18", color: catConfig[node.cat]?.color || "#A09080" }}>{node.cat}</span>
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -2820,18 +2828,18 @@ function MyBasketsPage({ onSelectBasket }) {
                   { label: "Connections", val: nodeCorrs.length, color: "#42A5F5" },
                 ].map((m, i) => (
                   <div key={i} style={{ background: "#FFFDF5", borderRadius: 10, padding: "8px 10px" }}>
-                    <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: m.color }}>{m.val}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 700, color: m.color }}>{m.val}</div>
                   </div>
                 ))}
               </div>
-              <button onClick={() => setSeesawPair(p => ({ ...p, a: selectedNode }))} style={{ width: "100%", marginTop: 10, padding: "8px", borderRadius: 10, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>Set as Seesaw Left Side</button>
+              <button onClick={() => setSeesawPair(p => ({ ...p, a: selectedNode }))} style={{ width: "100%", marginTop: 10, padding: "8px", borderRadius: 10, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 17, fontWeight: 800, cursor: "pointer" }}>Set as Seesaw Left Side</button>
             </div>
 
             {/* Correlations list */}
             <div style={{ background: "#fff", borderRadius: 14, padding: 12, maxHeight: 300, overflow: "auto" }}>
-              <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>All Correlations for {node.ticker}</div>
-              <div style={{ fontSize: 11, color: "#33333480", marginBottom: 12 }}>Click any row to load into seesaw · red = hedge opportunity</div>
+              <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>All Correlations for {node.ticker}</div>
+              <div style={{ fontSize: 17, color: "#33333480", marginBottom: 12 }}>Click any row to load into seesaw · red = hedge opportunity</div>
               {nodeCorrs.map((c, i) => {
                 const otherId = c.a === selectedNode ? c.b : c.a;
                 const other = macroProducts.find(p => p.id === otherId);
@@ -2846,14 +2854,14 @@ function MyBasketsPage({ onSelectBasket }) {
                     <Icon name={other.icon} size={11} />
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <span style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 12 }}>{other.ticker}</span>
-                        <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: (catConfig[other.cat]?.color || "#A09080") + "15", color: catConfig[other.cat]?.color || "#A09080" }}>{other.cat}</span>
+                        <span style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 18 }}>{other.ticker}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: (catConfig[other.cat]?.color || "#A09080") + "15", color: catConfig[other.cat]?.color || "#A09080" }}>{other.cat}</span>
                       </div>
-                      <div style={{ fontSize: 9, color: "#8A7040", marginTop: 1 }}>{c.desc.length > 60 ? c.desc.slice(0, 58) + ".." : c.desc}</div>
+                      <div style={{ fontSize: 14, color: "#8A7040", marginTop: 1 }}>{c.desc.length > 60 ? c.desc.slice(0, 58) + ".." : c.desc}</div>
                     </div>
                     <div style={{ textAlign: "right", minWidth: 0 }}>
-                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: isPos ? "#5B8C5A" : "#EF5350" }}>{isPos ? "+" : ""}{c.corr.toFixed(2)}</div>
-                      <div style={{ fontSize: 8, fontWeight: 800, color: isPos ? "#5B8C5A" : "#EF5350" }}>{isPos ? "▲ Correlated" : "▼ Hedge"}</div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 700, color: isPos ? "#5B8C5A" : "#EF5350" }}>{isPos ? "+" : ""}{c.corr.toFixed(2)}</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: isPos ? "#5B8C5A" : "#EF5350" }}>{isPos ? "▲ Correlated" : "▼ Hedge"}</div>
                     </div>
                     <div style={{ width: 44, height: 6, background: "#FFF5E6", borderRadius: 3, overflow: "hidden" }}>
                       <div style={{ height: "100%", width: strength * 100 + "%", background: isPos ? "#5B8C5A" : "#EF5350", borderRadius: 3 }} />
@@ -2870,7 +2878,7 @@ function MyBasketsPage({ onSelectBasket }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8, animation: "fadeUp .4s ease .25s both" }}>
         {/* Best Hedging Pairs */}
         <div style={{ background: "#fff", borderRadius: 14, padding: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Best Hedging Pairs</div>
+          <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Best Hedging Pairs</div>
           {topHedges.map((c, i) => {
             const pA = macroProducts.find(p => p.id === c.a);
             const pB = macroProducts.find(p => p.id === c.b);
@@ -2881,12 +2889,12 @@ function MyBasketsPage({ onSelectBasket }) {
                 onMouseEnter={e => { e.currentTarget.style.background = "#FFEBEE22"; e.currentTarget.style.borderColor = "#EF535033"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "#FFEBEE08"; e.currentTarget.style.borderColor = "#F0E6D0"; }}>
                 <Icon name={pA.icon} size={12} />
-                <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 11, minWidth: 30 }}>{pA.ticker}</span>
-                <span style={{ color: "#EF5350", fontSize: 12, fontWeight: 700 }}>⟺</span>
-                <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 11, minWidth: 30 }}>{pB.ticker}</span>
+                <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 17, minWidth: 30 }}>{pA.ticker}</span>
+                <span style={{ color: "#EF5350", fontSize: 18, fontWeight: 700 }}>⟺</span>
+                <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 17, minWidth: 30 }}>{pB.ticker}</span>
                 <Icon name={pB.icon} size={12} />
                 <div style={{ flex: 1 }} />
-                <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 12, color: "#EF5350" }}>ρ {c.corr.toFixed(2)}</span>
+                <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 18, color: "#EF5350" }}>ρ {c.corr.toFixed(2)}</span>
                 <div style={{ width: 36, height: 5, background: "#FFF5E6", borderRadius: 3, overflow: "hidden" }}>
                   <div style={{ height: "100%", width: Math.abs(c.corr) * 100 + "%", background: "#EF5350", borderRadius: 3 }} />
                 </div>
@@ -2897,7 +2905,7 @@ function MyBasketsPage({ onSelectBasket }) {
 
         {/* Asset Class Diversification */}
         <div style={{ background: "#fff", borderRadius: 14, padding: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Macro Diversification Score</div>
+          <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Macro Diversification Score</div>
           {cats.map(cat => {
             const cc = catConfig[cat] || { color: "#33333480", icon: "chart-bar" };
             const count = (catGroups[cat] || []).length;
@@ -2907,8 +2915,8 @@ function MyBasketsPage({ onSelectBasket }) {
                 <Icon name={cc.icon} size={12} />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700 }}>{cat}</span>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: cc.color }}>{count} products</span>
+                    <span style={{ fontSize: 15, fontWeight: 700 }}>{cat}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: cc.color }}>{count} products</span>
                   </div>
                   <div style={{ height: 6, background: "#FFF5E6", borderRadius: 3, overflow: "hidden" }}>
                     <div style={{ height: "100%", width: pct + "%", background: cc.color, borderRadius: 3 }} />
@@ -2917,7 +2925,7 @@ function MyBasketsPage({ onSelectBasket }) {
               </div>
             );
           })}
-          <div style={{ marginTop: 10, padding: "8px 10px", background: "#FFF8EE", borderRadius: 10, fontSize: 10, fontWeight: 700, color: "#C48830" }}>
+          <div style={{ marginTop: 10, padding: "8px 10px", background: "#FFF8EE", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#C48830" }}>
             {cats.length} macro asset classes across {macroProducts.length} products — well diversified
           </div>
         </div>
@@ -2975,8 +2983,8 @@ function BrokeragesPage() {
   return (
     <div>
       <div style={{ marginBottom: 8, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Linked Accounts</h1>
-        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Connect your brokerages — BasketTrade executes trades on your existing accounts</p>
+        <h1 style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Linked Accounts</h1>
+        <p style={{ color: "#33333480", fontSize: 15, marginTop: 3 }}>Connect your brokerages — BasketTrade executes trades on your existing accounts</p>
       </div>
 
       {/* ── Aggregated Stats ── */}
@@ -2991,8 +2999,8 @@ function BrokeragesPage() {
           <div key={i} style={{ background: m.bg, borderRadius: 16, padding: "8px 10px", animation: "fadeUp .4s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>{m.label}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: m.color, marginTop: 2 }}>{m.val}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>{m.label}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 700, color: m.color, marginTop: 2 }}>{m.val}</div>
               </div>
               <Icon name={m.icon} size={12} />
             </div>
@@ -3004,15 +3012,15 @@ function BrokeragesPage() {
       <div style={{ background: "linear-gradient(135deg, #fff, #FFF8EE)", border: "1px solid #33333440", borderRadius: 14, padding: "18px 22px", marginBottom: 10, animation: "fadeUp .4s ease .08s both" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 300px" }}>
-            <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>How It Works</div>
-            <div style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.6 }}>BasketTrade connects to your existing brokerage via secure OAuth — we never store your password. When you buy a basket, we send orders directly to your broker for execution. Your funds stay with your broker at all times.</div>
+            <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>How It Works</div>
+            <div style={{ fontSize: 18, color: "#8A7040", lineHeight: 1.6 }}>BasketTrade connects to your existing brokerage via secure OAuth — we never store your password. When you buy a basket, we send orders directly to your broker for execution. Your funds stay with your broker at all times.</div>
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             {[{ step: "1", label: "Link Account", icon: "link" }, { step: "2", label: "Choose Basket", icon: "basket" }, { step: "3", label: "We Execute", icon: "bolt" }].map(s => (
               <div key={s.step} style={{ textAlign: "center", minWidth: 0, flex: "1" }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 4px", border: "1px solid #33333440" }}><Icon name={s.icon} size={18} color="#C48830" /></div>
-                <div style={{ fontSize: 9, fontWeight: 800, color: "#C48830" }}>STEP {s.step}</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#6B5A2E" }}>{s.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#C48830" }}>STEP {s.step}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#6B5A2E" }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -3022,7 +3030,7 @@ function BrokeragesPage() {
       {/* ── Connected Brokerages ── */}
       {connected.length > 0 && (
         <div style={{ marginBottom: 10, animation: "fadeUp .4s ease .12s both" }}>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#C48830" }} /> Connected ({connected.length})
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -3034,19 +3042,19 @@ function BrokeragesPage() {
                   <div onClick={() => setSelectedBroker(isExpanded ? null : broker.id)}
                     style={{ padding: "18px 22px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
                     onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
-                    <div style={{ width: 48, height: 48, borderRadius: 14, background: broker.color + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, border: "1.5px solid " + broker.color + "22" }}>{broker.logo}</div>
+                    <div style={{ width: 48, height: 48, borderRadius: 14, background: broker.color + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, border: "1.5px solid " + broker.color + "22" }}>{broker.logo}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{broker.name}</span>
-                        <span style={{ fontSize: 8, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFF8EE", color: "#C48830" }}>● CONNECTED</span>
+                        <span style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{broker.name}</span>
+                        <span style={{ fontSize: 12, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFF8EE", color: "#C48830" }}>● CONNECTED</span>
                       </div>
-                      <div style={{ fontSize: 11, color: "#33333480", marginTop: 2 }}>{broker.accts.length} account{broker.accts.length !== 1 ? "s" : ""} · Last sync: {broker.lastSync}</div>
+                      <div style={{ fontSize: 17, color: "#33333480", marginTop: 2 }}>{broker.accts.length} account{broker.accts.length !== 1 ? "s" : ""} · Last sync: {broker.lastSync}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700 }}>${(broker.accts.reduce((s, a) => s + a.balance, 0) / 1000).toFixed(1)}k</div>
-                      <div style={{ fontSize: 10, color: "#33333480" }}>Total Balance</div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700 }}>${(broker.accts.reduce((s, a) => s + a.balance, 0) / 1000).toFixed(1)}k</div>
+                      <div style={{ fontSize: 15, color: "#33333480" }}>Total Balance</div>
                     </div>
-                    <span style={{ fontSize: 12, color: "#33333480", transform: isExpanded ? "rotate(180deg)" : "", transition: "transform .3s" }}>▾</span>
+                    <span style={{ fontSize: 18, color: "#33333480", transform: isExpanded ? "rotate(180deg)" : "", transition: "transform .3s" }}>▾</span>
                   </div>
 
                   {/* Expanded Account Details */}
@@ -3056,19 +3064,19 @@ function BrokeragesPage() {
                       <div style={{ padding: "16px 22px" }}>
                         {broker.accts.map((acct, ai) => (
                           <div key={ai} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", background: "#FFFDF5", borderRadius: 16, marginBottom: 8, border: "1px solid #F0E6D0" }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 12, background: broker.color + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, fontFamily: "JetBrains Mono", color: broker.color }}>{acct.type === "Retirement" ? "IRA" : "MRG"}</div>
+                            <div style={{ width: 40, height: 40, borderRadius: 12, background: broker.color + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, fontFamily: "JetBrains Mono", color: broker.color }}>{acct.type === "Retirement" ? "IRA" : "MRG"}</div>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 800, fontSize: 10, fontFamily: "'Instrument Serif', serif" }}>{acct.name}</div>
-                              <div style={{ fontSize: 10, color: "#33333480", fontFamily: "JetBrains Mono" }}>{acct.num} · {acct.type}</div>
+                              <div style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif" }}>{acct.name}</div>
+                              <div style={{ fontSize: 15, color: "#33333480", fontFamily: "JetBrains Mono" }}>{acct.num} · {acct.type}</div>
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, textAlign: "right" }}>
                               <div>
-                                <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Balance</div>
-                                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700 }}>${(acct.balance / 1000).toFixed(1)}k</div>
+                                <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Balance</div>
+                                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700 }}>${(acct.balance / 1000).toFixed(1)}k</div>
                               </div>
                               <div>
-                                <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Buying Power</div>
-                                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: "#C48830" }}>${(acct.buying / 1000).toFixed(1)}k</div>
+                                <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Buying Power</div>
+                                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: "#C48830" }}>${(acct.buying / 1000).toFixed(1)}k</div>
                               </div>
                             </div>
                           </div>
@@ -3079,12 +3087,12 @@ function BrokeragesPage() {
                       <div style={{ padding: "0 22px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                           {broker.features.map(f => (
-                            <span key={f} style={{ fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: broker.color + "12", color: broker.color }}>{f}</span>
+                            <span key={f} style={{ fontSize: 14, fontWeight: 700, padding: "3px 8px", borderRadius: 6, background: broker.color + "12", color: broker.color }}>{f}</span>
                           ))}
                         </div>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button style={{ padding: "6px 14px", borderRadius: 10, border: "1px solid #33333440", background: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer", color: "#8A7040" }}>Sync Now</button>
-                          <button onClick={() => setShowConfirm(broker.id)} style={{ padding: "6px 14px", borderRadius: 10, border: "1.5px solid #EF535033", background: "#FFEBEE", fontSize: 11, fontWeight: 700, cursor: "pointer", color: "#EF5350" }}>Disconnect</button>
+                          <button style={{ padding: "6px 14px", borderRadius: 10, border: "1px solid #33333440", background: "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", color: "#8A7040" }}>Sync Now</button>
+                          <button onClick={() => setShowConfirm(broker.id)} style={{ padding: "6px 14px", borderRadius: 10, border: "1.5px solid #EF535033", background: "#FFEBEE", fontSize: 17, fontWeight: 700, cursor: "pointer", color: "#EF5350" }}>Disconnect</button>
                         </div>
                       </div>
                     </div>
@@ -3098,7 +3106,7 @@ function BrokeragesPage() {
 
       {/* ── Available Brokerages ── */}
       <div style={{ animation: "fadeUp .4s ease .16s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Add a Brokerage</div>
+        <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Add a Brokerage</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
           {available.map((broker, i) => {
             const isConnecting = connecting === broker.id;
@@ -3107,19 +3115,19 @@ function BrokeragesPage() {
                 onMouseEnter={e => { e.currentTarget.style.borderColor = broker.color + "44"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: broker.color + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, border: "1.5px solid " + broker.color + "18" }}>{broker.logo}</div>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: broker.color + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, border: "1.5px solid " + broker.color + "18" }}>{broker.logo}</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{broker.name}</div>
+                    <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{broker.name}</div>
                     <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginTop: 3 }}>
                       {broker.features.slice(0, 4).map(f => (
-                        <span key={f} style={{ fontSize: 8, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "#FFF5E6", color: "#8A7040" }}>{f}</span>
+                        <span key={f} style={{ fontSize: 12, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "#FFF5E6", color: "#8A7040" }}>{f}</span>
                       ))}
-                      {broker.features.length > 4 && <span style={{ fontSize: 8, color: "#33333480" }}>+{broker.features.length - 4}</span>}
+                      {broker.features.length > 4 && <span style={{ fontSize: 12, color: "#33333480" }}>+{broker.features.length - 4}</span>}
                     </div>
                   </div>
                 </div>
                 <button onClick={() => handleConnect(broker.id)} disabled={isConnecting}
-                  style={{ width: "100%", padding: "10px", borderRadius: 14, border: "none", background: isConnecting ? "#FFF5E6" : "linear-gradient(135deg, " + broker.color + ", " + broker.color + "CC)", color: isConnecting ? "#A09080" : "#fff", fontSize: 10, fontWeight: 800, cursor: isConnecting ? "default" : "pointer", fontFamily: "'Instrument Serif', serif", transition: "all .2s" }}>
+                  style={{ width: "100%", padding: "10px", borderRadius: 14, border: "none", background: isConnecting ? "#FFF5E6" : "linear-gradient(135deg, " + broker.color + ", " + broker.color + "CC)", color: isConnecting ? "#A09080" : "#fff", fontSize: 15, fontWeight: 800, cursor: isConnecting ? "default" : "pointer", fontFamily: "'Instrument Serif', serif", transition: "all .2s" }}>
                   {isConnecting ? (
                     <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                       <span style={{ display: "inline-block", width: 14, height: 14, border: "1.5px solid #A09080", borderTopColor: "transparent", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
@@ -3135,8 +3143,8 @@ function BrokeragesPage() {
 
       {/* ── Order Routing Preferences ── */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginTop: 10, animation: "fadeUp .4s ease .2s both" }}>
-        <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Execution Settings</div>
-        <div style={{ fontSize: 11, color: "#33333480", marginBottom: 7 }}>Control how BasketTrade routes orders across your linked accounts</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Execution Settings</div>
+        <div style={{ fontSize: 17, color: "#33333480", marginBottom: 7 }}>Control how BasketTrade routes orders across your linked accounts</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
           {[
             { id: "smart", name: "Smart Routing", desc: "Auto-select best account based on buying power, margin, and commission", icon: "brain", rec: true },
@@ -3146,13 +3154,13 @@ function BrokeragesPage() {
           ].map(opt => (
             <div key={opt.id} onClick={() => setRoutePref(opt.id)}
               style={{ padding: "8px 10px", borderRadius: 16, border: "1.5px solid " + (routePref === opt.id ? "#C48830" : "#F0E6D0"), background: routePref === opt.id ? "#FFF8EE" : "#FFFDF5", cursor: "pointer", transition: "all .2s", position: "relative" }}>
-              {opt.rec && <span style={{ position: "absolute", top: -6, right: 10, fontSize: 8, fontWeight: 800, padding: "1px 8px", borderRadius: 6, background: "#C48830", color: "#fff" }}>RECOMMENDED</span>}
+              {opt.rec && <span style={{ position: "absolute", top: -6, right: 10, fontSize: 12, fontWeight: 800, padding: "1px 8px", borderRadius: 6, background: "#C48830", color: "#fff" }}>RECOMMENDED</span>}
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
                 <Icon name={opt.icon} size={10} />
-                <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: routePref === opt.id ? "#C48830" : "#5C4A1E" }}>{opt.name}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: routePref === opt.id ? "#C48830" : "#5C4A1E" }}>{opt.name}</span>
               </div>
-              <div style={{ fontSize: 11, color: "#8A7040", lineHeight: 1.5 }}>{opt.desc}</div>
-              {routePref === opt.id && <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#C48830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900, position: "absolute", top: 14, right: 14 }}>✓</div>}
+              <div style={{ fontSize: 17, color: "#8A7040", lineHeight: 1.5 }}>{opt.desc}</div>
+              {routePref === opt.id && <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#C48830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 900, position: "absolute", top: 14, right: 14 }}>✓</div>}
             </div>
           ))}
         </div>
@@ -3169,8 +3177,8 @@ function BrokeragesPage() {
           <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flex: "1 1 140px" }}>
             <Icon name={s.icon} size={11} />
             <div>
-              <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{s.label}</div>
-              <div style={{ fontSize: 9, color: "#33333480" }}>{s.desc}</div>
+              <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{s.label}</div>
+              <div style={{ fontSize: 14, color: "#33333480" }}>{s.desc}</div>
             </div>
           </div>
         ))}
@@ -3181,13 +3189,13 @@ function BrokeragesPage() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(45,32,22,.4)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowConfirm(null)}>
           <div style={{ background: "#fff", borderRadius: 14, padding: "14px 28px 22px", width: 380, animation: "popIn .3s ease", border: "1px solid #33333440" }} onClick={e => e.stopPropagation()}>
             <div style={{ textAlign: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 40 }}></span>
-              <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginTop: 8 }}>Disconnect Brokerage?</div>
-              <div style={{ fontSize: 12, color: "#8A7040", marginTop: 4, lineHeight: 1.5 }}>This will revoke BasketTrade's access. Open orders will still execute, but new basket trades won't route to this account.</div>
+              <span style={{ fontSize: 60 }}></span>
+              <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginTop: 8 }}>Disconnect Brokerage?</div>
+              <div style={{ fontSize: 18, color: "#8A7040", marginTop: 4, lineHeight: 1.5 }}>This will revoke BasketTrade's access. Open orders will still execute, but new basket trades won't route to this account.</div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setShowConfirm(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid #33333440", background: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", color: "#8A7040" }}>Cancel</button>
-              <button onClick={() => handleDisconnect(showConfirm)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: "#EF5350", color: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer" }}>Disconnect</button>
+              <button onClick={() => setShowConfirm(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid #33333440", background: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", color: "#8A7040" }}>Cancel</button>
+              <button onClick={() => handleDisconnect(showConfirm)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: "#EF5350", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>Disconnect</button>
             </div>
           </div>
         </div>
@@ -3201,10 +3209,11 @@ function BrokeragesPage() {
 
 // ═══════════════ NEWS PAGE ═══════════════
 
-function NewsPage() {
-  const [activeSection, setActiveSection] = useState("all");
+function NewsPage({ liveNews = [], newsStatus = "mock" }) {
+  const [activeSection, setActiveSection] = useState("terminal");
   const sections = [
     { id: "all", label: "All", icon: "newspaper" },
+    { id: "terminal", label: "Terminal", icon: "bolt" },
     { id: "x", label: "X", icon: "𝕏" },
     { id: "analyst", label: "Analyst", icon: "target" },
     { id: "sector", label: "Sectors", icon: "globe" },
@@ -3265,9 +3274,15 @@ function NewsPage() {
   const actionCol = { UPGRADE: "#5B8C5A", DOWNGRADE: "#EF5350", HOLD: "#FFA726", ALERT: "#7E57C2" };
   const actionBg = { UPGRADE: "#EDF5ED", DOWNGRADE: "#FFEBEE", HOLD: "#FFF3E0", ALERT: "#F3E8FD" };
 
+  const showTerminal = activeSection === "all" || activeSection === "terminal";
   const showX = activeSection === "all" || activeSection === "x";
   const showAnalyst = activeSection === "all" || activeSection === "analyst";
   const showSector = activeSection === "all" || activeSection === "sector";
+
+  const priorityCol = { flash: "#EF5350", urgent: "#FFA726", high: "#C48830", normal: "#A09080" };
+  const priorityBg = { flash: "#FFEBEE", urgent: "#FFF3E0", high: "#FFF8EE", normal: "#F5F5F3" };
+  const impactCol = { bullish: "#5B8C5A", bearish: "#EF5350", mixed: "#C48830" };
+  const impactBg = { bullish: "#EDF5ED", bearish: "#FFEBEE", mixed: "#FFF8EE" };
 
   return (
     <div>
@@ -3275,36 +3290,66 @@ function NewsPage() {
       <div className="no-scrollbar" style={{ display: "flex", gap: 4, marginBottom: 10, overflowX: "auto", paddingBottom: 2 }}>
         {sections.map(s => (
           <button key={s.id} onClick={() => setActiveSection(s.id)}
-            style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 10, border: activeSection === s.id ? "1.5px solid #C48830" : "1.5px solid #F0E6D0", background: activeSection === s.id ? "#FFF8EE" : "#fff", color: activeSection === s.id ? "#C48830" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap", transition: "all .2s" }}>
+            style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 10, border: activeSection === s.id ? "1.5px solid #C48830" : "1.5px solid #F0E6D0", background: activeSection === s.id ? "#FFF8EE" : "#fff", color: activeSection === s.id ? "#C48830" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap", transition: "all .2s" }}>
             <Icon name={s.icon} size={10} /> {s.label}
           </button>
         ))}
       </div>
 
+      {/* ── Live Terminal Feed ── */}
+      {showTerminal && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease both" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Terminal Feed</div>
+          <span style={{ fontSize: 12, fontWeight: 700, color: newsStatus === "live" ? "#5B8C5A" : newsStatus === "mock" ? "#FFA726" : "#A09080" }}>
+            {newsStatus === "live" ? "● Live" : newsStatus === "loading" ? "● Loading..." : "● Sample"}
+          </span>
+        </div>
+        {liveNews.slice(0, 20).map((n, i) => (
+          <div key={n.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 10, fontFamily: "JetBrains Mono", color: "#33333460", fontWeight: 600 }}>{n.time}</span>
+              <span style={{ fontSize: 9, fontWeight: 900, padding: "1px 4px", borderRadius: 3, background: priorityBg[n.priority] || "#F5F5F3", color: priorityCol[n.priority] || "#A09080", textTransform: "uppercase" }}>{n.priority}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: "#F0E6D0", color: "#8A7040" }}>{n.cat}</span>
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#333334", lineHeight: 1.3, marginBottom: 3 }}>{n.headline}</div>
+            {n.desc && <div style={{ fontSize: 11, color: "#33333480", lineHeight: 1.3, marginBottom: 3 }}>{n.desc.slice(0, 120)}{n.desc.length > 120 ? "..." : ""}</div>}
+            <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 10, color: "#33333460" }}>{n.source}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: impactBg[n.impact] || "#F5F5F3", color: impactCol[n.impact] || "#A09080" }}>{(n.impact || "mixed").toUpperCase()}</span>
+              {n.move && <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", fontWeight: 700, color: n.move.startsWith("+") ? "#5B8C5A" : "#EF5350" }}>{n.move}</span>}
+              {n.assets && n.assets.length > 0 && n.assets.slice(0, 4).map(a => (
+                <span key={a} style={{ fontSize: 9, fontWeight: 700, padding: "1px 3px", borderRadius: 2, background: "#FFFDF5", border: "1px solid #F0E6D0", color: "#8A7040" }}>{a}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+        {liveNews.length === 0 && <div style={{ textAlign: "center", padding: 20, color: "#33333440", fontSize: 13 }}>No news available</div>}
+      </div>}
+
       {/* ── News from X ── */}
       {showX && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .05s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>𝕏 Trending on X</div>
-          <span style={{ fontSize: 8, color: "#5B8C5A", fontWeight: 700 }}>● Live</span>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>𝕏 Trending on X</div>
+          <span style={{ fontSize: 12, color: "#5B8C5A", fontWeight: 700 }}>● Live</span>
         </div>
         {xPosts.map((p, i) => (
           <div key={p.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1A1A1A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#fff", fontWeight: 900 }}>{p.name.charAt(0)}</div>
-                <span style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{p.name}</span>
+                <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1A1A1A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 900 }}>{p.name.charAt(0)}</div>
+                <span style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{p.name}</span>
                 {p.verified && <svg width="10" height="10" viewBox="0 0 24 24" fill="#1DA1F2"><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-.115-.094-2.415-2.415c-.293-.293-.293-.768 0-1.06s.768-.294 1.06 0l1.77 1.767 3.825-5.74c.23-.345.696-.436 1.04-.207.346.23.44.696.21 1.04z"/></svg>}
-                <span style={{ fontSize: 7, color: "#33333480" }}>{p.handle}</span>
+                <span style={{ fontSize: 11, color: "#33333480" }}>{p.handle}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: 7, fontWeight: 700, color: "#1A1A1A", background: "#F0E6D0", padding: "1px 5px", borderRadius: 3 }}>{p.tag}</span>
-                <span style={{ fontSize: 7, color: "#33333480" }}>{p.time}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#1A1A1A", background: "#F0E6D0", padding: "1px 5px", borderRadius: 3 }}>{p.tag}</span>
+                <span style={{ fontSize: 11, color: "#33333480" }}>{p.time}</span>
               </div>
             </div>
-            <div style={{ fontSize: 9, color: "#333334", lineHeight: 1.4, marginLeft: 26, marginBottom: 4 }}>{p.text}</div>
+            <div style={{ fontSize: 14, color: "#333334", lineHeight: 1.4, marginLeft: 26, marginBottom: 4 }}>{p.text}</div>
             <div style={{ display: "flex", gap: 12, marginLeft: 26 }}>
-              <span style={{ fontSize: 7, color: "#33333480" }}>♡ {p.likes}</span>
-              <span style={{ fontSize: 7, color: "#33333480" }}>⟳ {p.reposts}</span>
+              <span style={{ fontSize: 11, color: "#33333480" }}>♡ {p.likes}</span>
+              <span style={{ fontSize: 11, color: "#33333480" }}>⟳ {p.reposts}</span>
             </div>
           </div>
         ))}
@@ -3313,23 +3358,23 @@ function NewsPage() {
       {/* ── Analyst Reports ── */}
       {showAnalyst && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Analyst Reports</div>
-          <span style={{ fontSize: 8, color: "#33333480" }}>{analystNotes.length} notes</span>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Analyst Reports</div>
+          <span style={{ fontSize: 12, color: "#33333480" }}>{analystNotes.length} notes</span>
         </div>
         {analystNotes.map((a, i) => (
           <div key={a.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 7, fontWeight: 900, color: actionCol[a.action], background: actionBg[a.action], padding: "2px 6px", borderRadius: 4 }}>{a.action}</span>
-                <span style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{a.firm}</span>
+                <span style={{ fontSize: 11, fontWeight: 900, color: actionCol[a.action], background: actionBg[a.action], padding: "2px 6px", borderRadius: 4 }}>{a.action}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{a.firm}</span>
               </div>
-              <span style={{ fontSize: 7, color: "#33333480" }}>{a.time}</span>
+              <span style={{ fontSize: 11, color: "#33333480" }}>{a.time}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-              <span style={{ fontSize: 8, color: "#8A7040" }}>by {a.analyst}</span>
-              <span style={{ fontSize: 8, fontFamily: "JetBrains Mono", fontWeight: 800, color: a.color }}>{a.target}</span>
+              <span style={{ fontSize: 12, color: "#8A7040" }}>by {a.analyst}</span>
+              <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 800, color: a.color }}>{a.target}</span>
             </div>
-            <div style={{ fontSize: 8, color: "#333334", lineHeight: 1.4 }}>{a.summary}</div>
+            <div style={{ fontSize: 12, color: "#333334", lineHeight: 1.4 }}>{a.summary}</div>
           </div>
         ))}
       </div>}
@@ -3337,24 +3382,24 @@ function NewsPage() {
       {/* ── Global Sector News ── */}
       {showSector && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Global Sector News</div>
-          <span style={{ fontSize: 8, color: "#33333480" }}>6 sectors</span>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Global Sector News</div>
+          <span style={{ fontSize: 12, color: "#33333480" }}>6 sectors</span>
         </div>
         {sectorNews.map((s, si) => (
           <div key={s.sector} style={{ marginBottom: si < sectorNews.length - 1 ? 8 : 0 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, padding: "4px 6px", background: s.trend === "up" ? "#EDF5ED" : "#FFEBEE", borderRadius: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <Icon name={s.icon} size={12} />
-                <span style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{s.sector}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{s.sector}</span>
               </div>
-              <span style={{ fontSize: 9, fontFamily: "JetBrains Mono", fontWeight: 800, color: s.trend === "up" ? "#5B8C5A" : "#EF5350" }}>{s.change}</span>
+              <span style={{ fontSize: 14, fontFamily: "JetBrains Mono", fontWeight: 800, color: s.trend === "up" ? "#5B8C5A" : "#EF5350" }}>{s.change}</span>
             </div>
             {s.headlines.map((h, hi) => (
               <div key={hi} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 6px", borderBottom: hi < s.headlines.length - 1 ? "1px solid #F0E6D020" : "none" }}>
                 {h.hot && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#EF5350", flexShrink: 0 }} />}
                 {!h.hot && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#D0C8B8", flexShrink: 0 }} />}
-                <span style={{ fontSize: 8, color: "#333334", flex: 1, lineHeight: 1.3 }}>{h.title}</span>
-                <span style={{ fontSize: 7, color: "#33333480", flexShrink: 0 }}>{h.time}</span>
+                <span style={{ fontSize: 12, color: "#333334", flex: 1, lineHeight: 1.3 }}>{h.title}</span>
+                <span style={{ fontSize: 11, color: "#33333480", flexShrink: 0 }}>{h.time}</span>
               </div>
             ))}
           </div>
@@ -3377,7 +3422,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
 
   const Toggle = ({ on, onToggle, label }) => (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #33333420" }}>
-      <span style={{ fontSize: 10, fontWeight: 600, color: "#6B5A2E" }}>{label}</span>
+      <span style={{ fontSize: 15, fontWeight: 600, color: "#6B5A2E" }}>{label}</span>
       <div onClick={onToggle} style={{ width: 44, height: 24, borderRadius: 12, background: on ? "#C48830" : "#E8DCC8", cursor: "pointer", position: "relative", transition: "background .2s" }}>
         <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: on ? 22 : 2, transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,.15)" }} />
       </div>
@@ -3388,22 +3433,22 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
     <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", cursor: "pointer", borderBottom: "1px solid #33333420", transition: "background .15s" }}
       onMouseEnter={e => e.currentTarget.style.background = "#fff"}
       onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-      <div style={{ width: 40, height: 40, borderRadius: 12, background: danger ? "#FFEBEE" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, flexShrink: 0 }}><Icon name={icon} size={18} color={danger ? "#EF5350" : "#C48830"} /></div>
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: danger ? "#FFEBEE" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}><Icon name={icon} size={18} color={danger ? "#EF5350" : "#C48830"} /></div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: danger ? "#EF5350" : "#5C4A1E" }}>{label}</div>
-        {desc && <div style={{ fontSize: 11, color: "#33333480", marginTop: 1 }}>{desc}</div>}
+        <div style={{ fontSize: 17, fontWeight: 700, color: danger ? "#EF5350" : "#5C4A1E" }}>{label}</div>
+        {desc && <div style={{ fontSize: 17, color: "#33333480", marginTop: 1 }}>{desc}</div>}
       </div>
-      {badge && <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: (badgeColor || "#C48830") + "18", color: badgeColor || "#C48830" }}>{badge}</span>}
-      <span style={{ color: "#E8DCC8", fontSize: 12 }}>›</span>
+      {badge && <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: (badgeColor || "#C48830") + "18", color: badgeColor || "#C48830" }}>{badge}</span>}
+      <span style={{ color: "#E8DCC8", fontSize: 18 }}>›</span>
     </div>
   );
 
   // Sub-page: back button
   const BackHeader = ({ title, icon }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-      <button onClick={() => setAcctSection(null)} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+      <button onClick={() => setAcctSection(null)} style={{ width: 36, height: 36, borderRadius: 10, border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
       <div>
-        <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif", display: "flex", alignItems: "center", gap: 6 }}><Icon name={icon} size={14} /> {title}</div>
+        <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", display: "flex", alignItems: "center", gap: 6 }}><Icon name={icon} size={14} /> {title}</div>
       </div>
     </div>
   );
@@ -3415,13 +3460,13 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
     <div>
       <BackHeader title="Trade History" icon="clipboard" />
       <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.3fr .5fr .5fr .5fr .7fr", padding: "8px 12px", borderBottom: "2px solid #F0E6D0", fontSize: 10, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, background: "#fff" }}><div>Basket</div><div>Action</div><div>Date</div><div>Status</div><div style={{ textAlign: "right" }}>Amount</div></div>
+        <div style={{ display: "grid", gridTemplateColumns: "1.3fr .5fr .5fr .5fr .7fr", padding: "8px 12px", borderBottom: "2px solid #F0E6D0", fontSize: 15, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, background: "#fff" }}><div>Basket</div><div>Action</div><div>Date</div><div>Status</div><div style={{ textAlign: "right" }}>Amount</div></div>
         {recentTrades.map((t, i) => <div key={t.id} style={{ display: "grid", gridTemplateColumns: "1.3fr .5fr .5fr .5fr .7fr", padding: "8px 12px", borderBottom: i < recentTrades.length - 1 ? "1px solid #F0E6D0" : "none", alignItems: "center", transition: "background .2s" }} onMouseEnter={e => e.currentTarget.style.background = "#fff"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}><Icon name={t.icon} size={10} /><span style={{ fontWeight: 800, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{t.basket}</span></div>
-          <div style={{ fontSize: 11, fontWeight: 800, color: t.action === "Buy" || t.action === "Dividend" ? "#C48830" : t.action === "Sell" ? "#EF5350" : "#42A5F5" }}>{t.action}</div>
-          <div style={{ fontSize: 11, color: "#8A7040" }}>{t.date}</div>
-          <div><span style={{ fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 14, background: t.status === "Completed" ? "#FFF8EE" : "#FFF3E0", color: t.status === "Completed" ? "#5B8C5A" : "#FFA726" }}>{t.status}</span></div>
-          <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 12, color: t.amount.startsWith("+") ? "#5B8C5A" : "#EF5350" }}>{t.amount}</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}><Icon name={t.icon} size={10} /><span style={{ fontWeight: 800, fontSize: 18, fontFamily: "'Instrument Serif', serif" }}>{t.basket}</span></div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: t.action === "Buy" || t.action === "Dividend" ? "#C48830" : t.action === "Sell" ? "#EF5350" : "#42A5F5" }}>{t.action}</div>
+          <div style={{ fontSize: 17, color: "#8A7040" }}>{t.date}</div>
+          <div><span style={{ fontSize: 14, fontWeight: 800, padding: "3px 10px", borderRadius: 14, background: t.status === "Completed" ? "#FFF8EE" : "#FFF3E0", color: t.status === "Completed" ? "#5B8C5A" : "#FFA726" }}>{t.status}</span></div>
+          <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 18, color: t.amount.startsWith("+") ? "#5B8C5A" : "#EF5350" }}>{t.amount}</div>
         </div>)}
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
@@ -3435,11 +3480,11 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
       <BackHeader title="Profile" icon="person" />
       <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
         <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24, paddingBottom: 20, borderBottom: "2px solid #F0E6D0" }}>
-          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{user?.displayName || "Trader"}</div>
-            <div style={{ fontSize: 10, color: "#33333480" }}>{user?.email || ""}</div>
-            <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830", marginTop: 4, display: "inline-block" }}>Pro Member</span>
+            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{user?.displayName || "Trader"}</div>
+            <div style={{ fontSize: 15, color: "#33333480" }}>{user?.email || ""}</div>
+            <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830", marginTop: 4, display: "inline-block" }}>Pro Member</span>
           </div>
         </div>
         {[
@@ -3452,11 +3497,11 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
           { label: "Member Since", val: "January 2024" },
         ].map((f, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderBottom: i < 6 ? "1px solid #F0E6D0" : "none" }}>
-            <span style={{ fontSize: 12, color: "#33333480", fontWeight: 700 }}>{f.label}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: f.label.includes("Tax") || f.label.includes("Phone") ? "JetBrains Mono" : "Quicksand", color: "#333334" }}>{f.val}</span>
+            <span style={{ fontSize: 18, color: "#33333480", fontWeight: 700 }}>{f.label}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, fontFamily: f.label.includes("Tax") || f.label.includes("Phone") ? "JetBrains Mono" : "Quicksand", color: "#333334" }}>{f.val}</span>
           </div>
         ))}
-        <button style={{ marginTop: 8, width: "100%", padding: 12, borderRadius: 14, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 10, fontWeight: 800, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Edit Profile</button>
+        <button style={{ marginTop: 8, width: "100%", padding: 12, borderRadius: 14, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Edit Profile</button>
       </div>
     </div>
   );
@@ -3465,17 +3510,17 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
     <div>
       <BackHeader title="Login & Security" icon="lock" />
       <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "#6B5A2E" }}>Authentication</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "#6B5A2E" }}>Authentication</div>
         <div style={{ padding: "14px 0", borderBottom: "1px solid #33333420", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700 }}>Password</div>
-            <div style={{ fontSize: 11, color: "#33333480" }}>Last changed 42 days ago</div>
+            <div style={{ fontSize: 15, fontWeight: 700 }}>Password</div>
+            <div style={{ fontSize: 17, color: "#33333480" }}>Last changed 42 days ago</div>
           </div>
-          <button style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid #33333440", background: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", color: "#42A5F5" }}>Change</button>
+          <button style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid #33333440", background: "#fff", fontSize: 17, fontWeight: 800, cursor: "pointer", color: "#42A5F5" }}>Change</button>
         </div>
         <Toggle on={twoFA} onToggle={() => setTwoFA(!twoFA)} label="Two-Factor Authentication (2FA)" />
         <Toggle on={biometric} onToggle={() => setBiometric(!biometric)} label="Biometric Login (Face ID / Touch ID)" />
-        <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12, marginTop: 10, color: "#6B5A2E" }}>Active Sessions</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12, marginTop: 10, color: "#6B5A2E" }}>Active Sessions</div>
         {[
           { device: "MacBook Pro — Chrome", loc: "Portland, OR", time: "Active now", current: true },
           { device: "iPhone 15 Pro — Safari", loc: "Portland, OR", time: "2 hours ago", current: false },
@@ -3483,14 +3528,14 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
         ].map((s, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #33333420" }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700 }}>{s.device}</div>
-              <div style={{ fontSize: 10, color: "#33333480" }}>{s.loc} · {s.time}</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{s.device}</div>
+              <div style={{ fontSize: 15, color: "#33333480" }}>{s.loc} · {s.time}</div>
             </div>
-            {s.current ? <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>This device</span>
-            : <button style={{ padding: "5px 12px", borderRadius: 8, border: "1.5px solid #FFEBEE", background: "#fff", fontSize: 10, fontWeight: 800, cursor: "pointer", color: "#EF5350" }}>Revoke</button>}
+            {s.current ? <span style={{ fontSize: 14, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>This device</span>
+            : <button style={{ padding: "5px 12px", borderRadius: 8, border: "1.5px solid #FFEBEE", background: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", color: "#EF5350" }}>Revoke</button>}
           </div>
         ))}
-        <button style={{ marginTop: 8, width: "100%", padding: 12, borderRadius: 14, border: "1.5px solid #EF5350", background: "#FFEBEE", color: "#EF5350", fontSize: 10, fontWeight: 800, cursor: "pointer" }}>Sign Out All Other Devices</button>
+        <button style={{ marginTop: 8, width: "100%", padding: 12, borderRadius: 14, border: "1.5px solid #EF5350", background: "#FFEBEE", color: "#EF5350", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>Sign Out All Other Devices</button>
       </div>
     </div>
   );
@@ -3499,13 +3544,13 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
     <div>
       <BackHeader title="Notifications" icon="bell" />
       <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#6B5A2E" }}>Communication</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#6B5A2E" }}>Communication</div>
         <Toggle on={emailNotifs} onToggle={() => setEmailNotifs(!emailNotifs)} label="Email notifications" />
         <Toggle on={pushNotifs} onToggle={() => setPushNotifs(!pushNotifs)} label="Push notifications" />
-        <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4, marginTop: 10, color: "#6B5A2E" }}>Trading</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4, marginTop: 10, color: "#6B5A2E" }}>Trading</div>
         <Toggle on={tradeConfirm} onToggle={() => setTradeConfirm(!tradeConfirm)} label="Trade confirmations" />
         <Toggle on={priceAlerts} onToggle={() => setPriceAlerts(!priceAlerts)} label="Price & macro alerts" />
-        <div style={{ marginTop: 16, padding: "14px 18px", background: "#E3F2FD", borderRadius: 14, fontSize: 11, color: "#42A5F5", fontWeight: 700 }}>
+        <div style={{ marginTop: 16, padding: "14px 18px", background: "#E3F2FD", borderRadius: 14, fontSize: 17, color: "#42A5F5", fontWeight: 700 }}>
           Manage specific basket alerts from each Hatch's detail page.
         </div>
       </div>
@@ -3519,12 +3564,12 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
         <Toggle on={dataSharing} onToggle={() => setDataSharing(!dataSharing)} label="Share anonymized data for product improvement" />
         <Toggle on={analytics} onToggle={() => setAnalytics(!analytics)} label="Usage analytics" />
         <div style={{ padding: "14px 0", borderBottom: "1px solid #33333420", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontSize: 10, fontWeight: 700 }}>Download my data</div><div style={{ fontSize: 11, color: "#33333480" }}>Export all your account and trading data</div></div>
-          <button style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid #33333440", background: "#fff", fontSize: 11, fontWeight: 800, cursor: "pointer", color: "#42A5F5" }}>Request</button>
+          <div><div style={{ fontSize: 15, fontWeight: 700 }}>Download my data</div><div style={{ fontSize: 17, color: "#33333480" }}>Export all your account and trading data</div></div>
+          <button style={{ padding: "8px 16px", borderRadius: 10, border: "1px solid #33333440", background: "#fff", fontSize: 17, fontWeight: 800, cursor: "pointer", color: "#42A5F5" }}>Request</button>
         </div>
         <div style={{ padding: "14px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontSize: 10, fontWeight: 700, color: "#EF5350" }}>Delete my account</div><div style={{ fontSize: 11, color: "#33333480" }}>Permanently remove all data. This cannot be undone.</div></div>
-          <button style={{ padding: "8px 16px", borderRadius: 10, border: "1.5px solid #EF5350", background: "#FFEBEE", fontSize: 11, fontWeight: 800, cursor: "pointer", color: "#EF5350" }}>Delete</button>
+          <div><div style={{ fontSize: 15, fontWeight: 700, color: "#EF5350" }}>Delete my account</div><div style={{ fontSize: 17, color: "#33333480" }}>Permanently remove all data. This cannot be undone.</div></div>
+          <button style={{ padding: "8px 16px", borderRadius: 10, border: "1.5px solid #EF5350", background: "#FFEBEE", fontSize: 17, fontWeight: 800, cursor: "pointer", color: "#EF5350" }}>Delete</button>
         </div>
       </div>
     </div>
@@ -3546,14 +3591,14 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
             onMouseEnter={e => e.currentTarget.style.background = "#fff"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
             <Icon name={p.icon} size={11} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 10, fontWeight: 700 }}>{p.title}</div>
-              <div style={{ fontSize: 10, color: "#33333480" }}>{p.ver}</div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{p.title}</div>
+              <div style={{ fontSize: 15, color: "#33333480" }}>{p.ver}</div>
             </div>
-            <span style={{ color: "#42A5F5", fontSize: 11, fontWeight: 700 }}>View →</span>
+            <span style={{ color: "#42A5F5", fontSize: 17, fontWeight: 700 }}>View →</span>
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 14, padding: "14px 18px", background: "#fff", borderRadius: 14, border: "1px solid #F0E6D0", fontSize: 11, color: "#33333480" }}>
+      <div style={{ marginTop: 14, padding: "14px 18px", background: "#fff", borderRadius: 14, border: "1px solid #F0E6D0", fontSize: 17, color: "#33333480" }}>
         BasketTrade is not a registered broker-dealer. We do not hold customer funds. All trades are executed through your linked third-party brokerage accounts. Investing involves risk including possible loss of principal.
       </div>
     </div>
@@ -3566,18 +3611,18 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
       <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
         {/* Profile header */}
         <div style={{ background: "#fff", borderRadius: 14, padding: "14px 24px", display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif", flexShrink: 0 }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif", flexShrink: 0 }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{user?.displayName || "Trader"}</div>
-            <div style={{ fontSize: 12, color: "#33333480" }}>{user?.email || ""}</div>
+            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{user?.displayName || "Trader"}</div>
+            <div style={{ fontSize: 18, color: "#33333480" }}>{user?.email || ""}</div>
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>Pro Member</span>
-              <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>{connectedBrokers.length} Broker{connectedBrokers.length !== 1 ? "s" : ""} Linked</span>
+              <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>Pro Member</span>
+              <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>{connectedBrokers.length} Broker{connectedBrokers.length !== 1 ? "s" : ""} Linked</span>
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 800 }}>${(connectedBrokers.reduce((s, b) => s + b.accts.reduce((a, ac) => a + ac.balance, 0), 0) / 1000).toFixed(1)}k</div>
-            <div style={{ fontSize: 10, color: "#33333480", fontWeight: 700 }}>Aggregate Balance</div>
+            <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800 }}>${(connectedBrokers.reduce((s, b) => s + b.accts.reduce((a, ac) => a + ac.balance, 0), 0) / 1000).toFixed(1)}k</div>
+            <div style={{ fontSize: 15, color: "#33333480", fontWeight: 700 }}>Aggregate Balance</div>
           </div>
         </div>
       </div>
@@ -3587,7 +3632,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
         {/* Account */}
         <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .05s both" }}>
           <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Account</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Account</div>
           </div>
           <MenuItem icon="person" label="Profile" desc="Name, email, phone, personal info" onClick={() => setAcctSection("profile")} />
           <MenuItem icon="bank" label="Linked Brokerages" desc="Manage your connected brokerage accounts" badge={connectedBrokers.length + " connected"} badgeColor="#C48830" onClick={() => setAcctSection("brokerages")} />
@@ -3597,7 +3642,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
         {/* Security & Privacy */}
         <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .1s both" }}>
           <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Security & Privacy</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Security & Privacy</div>
           </div>
           <MenuItem icon="lock" label="Login & Security" desc="Password, 2FA, active sessions" badge="2FA On" badgeColor="#C48830" onClick={() => setAcctSection("security")} />
           <MenuItem icon="shield" label="Privacy" desc="Data sharing, analytics, account deletion" onClick={() => setAcctSection("privacy")} />
@@ -3607,7 +3652,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
         {/* Legal */}
         <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .15s both" }}>
           <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Legal & Support</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Legal & Support</div>
           </div>
           <MenuItem icon="document" label="Legal & Policies" desc="Terms, privacy policy, disclaimers" onClick={() => setAcctSection("policies")} />
           <MenuItem icon="chat" label="Support" desc="Help center, contact us, report an issue" badge="24/7" badgeColor="#FFA726" onClick={() => {}} />
@@ -3622,8 +3667,8 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
 
       {/* Footer */}
       <div style={{ textAlign: "center", padding: "12px 0 8px", animation: "fadeUp .4s ease .25s both" }}>
-        <div style={{ fontSize: 10, color: "#E8DCC8", fontWeight: 700 }}>BasketTrade v2.4.0 · © 2026 BasketTrade Inc.</div>
-        <div style={{ fontSize: 9, color: "#E8DCC8", marginTop: 2 }}>Not a broker-dealer. All trades executed via linked accounts.</div>
+        <div style={{ fontSize: 15, color: "#E8DCC8", fontWeight: 700 }}>BasketTrade v2.4.0 · © 2026 BasketTrade Inc.</div>
+        <div style={{ fontSize: 14, color: "#E8DCC8", marginTop: 2 }}>Not a broker-dealer. All trades executed via linked accounts.</div>
       </div>
     </div>
   );
@@ -3712,8 +3757,8 @@ function HedgeGuidesPage() {
   // ── Guide Detail View ──
   if (activeGuide) return (
     <div style={{ animation: "fadeUp .3s ease both" }}>
-      <button onClick={() => setOpenGuide(null)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "#C48830", fontSize: 10, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginBottom: 8, padding: 0 }}>
-        <span style={{ fontSize: 14 }}>&larr;</span> Back to Hedge
+      <button onClick={() => setOpenGuide(null)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "#C48830", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginBottom: 8, padding: 0 }}>
+        <span style={{ fontSize: 21 }}>&larr;</span> Back to Hedge
       </button>
       <div style={{ background: `linear-gradient(135deg, ${activeGuide.color}12, ${activeGuide.color}04)`, border: `1.5px solid ${activeGuide.color}30`, borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -3721,12 +3766,12 @@ function HedgeGuidesPage() {
             <Icon name={activeGuide.icon} size={18} color={activeGuide.color} />
           </div>
           <div style={{ flex: 1 }}>
-            <span style={{ fontSize: 7, fontWeight: 800, color: activeGuide.color, background: activeGuide.color + "18", padding: "2px 8px", borderRadius: 4, textTransform: "uppercase" }}>{activeGuide.tag}</span>
-            <div style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3, marginTop: 3 }}>{activeGuide.title}</div>
+            <span style={{ fontSize: 11, fontWeight: 800, color: activeGuide.color, background: activeGuide.color + "18", padding: "2px 8px", borderRadius: 4, textTransform: "uppercase" }}>{activeGuide.tag}</span>
+            <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3, marginTop: 3 }}>{activeGuide.title}</div>
           </div>
         </div>
-        <div style={{ fontSize: 9, color: "#8A7040", lineHeight: 1.5 }}>{activeGuide.summary}</div>
-        <div style={{ display: "flex", gap: 8, marginTop: 8, fontSize: 8, color: "#33333480", fontWeight: 700 }}>
+        <div style={{ fontSize: 14, color: "#8A7040", lineHeight: 1.5 }}>{activeGuide.summary}</div>
+        <div style={{ display: "flex", gap: 8, marginTop: 8, fontSize: 12, color: "#33333480", fontWeight: 700 }}>
           <span>{activeGuide.time}</span>
           <span>·</span>
           <span>{activeGuide.sections.length} sections</span>
@@ -3735,13 +3780,13 @@ function HedgeGuidesPage() {
       {activeGuide.sections.map((s, i) => (
         <div key={i} style={{ background: "#fff", borderRadius: 14, padding: "12px 14px", marginBottom: 6, animation: `fadeUp .4s ease ${i * 0.05}s both` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-            <div style={{ width: 18, height: 18, borderRadius: 6, background: activeGuide.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 900, color: activeGuide.color, fontFamily: "JetBrains Mono" }}>{i + 1}</div>
-            <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{s.heading}</div>
+            <div style={{ width: 18, height: 18, borderRadius: 6, background: activeGuide.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900, color: activeGuide.color, fontFamily: "JetBrains Mono" }}>{i + 1}</div>
+            <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{s.heading}</div>
           </div>
-          <div style={{ fontSize: 9, color: "#4A4030", lineHeight: 1.7, fontFamily: "Quicksand", fontWeight: 500 }}>{s.body}</div>
+          <div style={{ fontSize: 14, color: "#4A4030", lineHeight: 1.7, fontFamily: "Quicksand", fontWeight: 500 }}>{s.body}</div>
         </div>
       ))}
-      <button onClick={() => setOpenGuide(null)} style={{ width: "100%", padding: "10px", borderRadius: 12, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 10, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginTop: 4 }}>
+      <button onClick={() => setOpenGuide(null)} style={{ width: "100%", padding: "10px", borderRadius: 12, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginTop: 4 }}>
         &larr; Back to Hedge
       </button>
     </div>
@@ -3752,8 +3797,8 @@ function HedgeGuidesPage() {
       {/* ═══ HATCH GUIDES & HEDGING (now on top) ═══ */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hatch Guides & Hedging</div>
-          <span style={{ fontSize: 8, color: "#33333480" }}>{guides.length} articles</span>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hatch Guides & Hedging</div>
+          <span style={{ fontSize: 12, color: "#33333480" }}>{guides.length} articles</span>
         </div>
         {/* Featured cards */}
         <div className="no-scrollbar" style={{ display: "flex", gap: 6, marginBottom: 8, overflowX: "auto" }}>
@@ -3762,13 +3807,13 @@ function HedgeGuidesPage() {
               onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.borderColor = g.color + "55"; }} onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.borderColor = g.color + "22"; }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <Icon name={g.icon} size={20} />
-                <span style={{ fontSize: 7, fontWeight: 800, color: g.color, background: g.color + "14", padding: "2px 6px", borderRadius: 4, textTransform: "uppercase" }}>{g.tag}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: g.color, background: g.color + "14", padding: "2px 6px", borderRadius: 4, textTransform: "uppercase" }}>{g.tag}</span>
               </div>
-              <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3, marginBottom: 4 }}>{g.title}</div>
-              <div style={{ fontSize: 8, color: "#8A7040", lineHeight: 1.4 }}>{g.summary.slice(0, 80)}...</div>
+              <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3, marginBottom: 4 }}>{g.title}</div>
+              <div style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.4 }}>{g.summary.slice(0, 80)}...</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-                <span style={{ fontSize: 7, color: "#33333480", fontWeight: 600 }}>{g.time}</span>
-                <span style={{ fontSize: 8, fontWeight: 800, color: g.color }}>Read &rarr;</span>
+                <span style={{ fontSize: 11, color: "#33333480", fontWeight: 600 }}>{g.time}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: g.color }}>Read &rarr;</span>
               </div>
             </div>
           ))}
@@ -3779,15 +3824,15 @@ function HedgeGuidesPage() {
             onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
             <Icon name={g.icon} size={18} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3 }}>{g.title}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3 }}>{g.title}</div>
               <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
-                <span style={{ fontSize: 7, fontWeight: 700, color: g.color, background: g.color + "14", padding: "1px 5px", borderRadius: 3 }}>{g.tag}</span>
-                <span style={{ fontSize: 7, color: "#33333480" }}>{g.time}</span>
-                <span style={{ fontSize: 7, color: "#33333480" }}>·</span>
-                <span style={{ fontSize: 7, color: "#33333480" }}>{g.sections.length} sections</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: g.color, background: g.color + "14", padding: "1px 5px", borderRadius: 3 }}>{g.tag}</span>
+                <span style={{ fontSize: 11, color: "#33333480" }}>{g.time}</span>
+                <span style={{ fontSize: 11, color: "#33333480" }}>·</span>
+                <span style={{ fontSize: 11, color: "#33333480" }}>{g.sections.length} sections</span>
               </div>
             </div>
-            <span style={{ fontSize: 8, fontWeight: 800, color: g.color }}>Read &rarr;</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: g.color }}>Read &rarr;</span>
           </div>
         ))}
       </div>
@@ -3796,11 +3841,11 @@ function HedgeGuidesPage() {
       <div style={{ background: "#fff", borderRadius: 14, padding: "10px 22px 18px", marginBottom: 8, animation: "fadeUp .4s ease .06s both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hedging Seesaw</div>
-            <div style={{ fontSize: 11, color: "#33333480", marginTop: 2 }}>When one side weighs down, the other lifts up — pick any pair to visualize</div>
+            <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Hedging Seesaw</div>
+            <div style={{ fontSize: 17, color: "#33333480", marginTop: 2 }}>When one side weighs down, the other lifts up — pick any pair to visualize</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 8, background: corrVal < -0.5 ? "#FFF8EE" : corrVal < 0 ? "#FFF3E0" : "#FFEBEE", color: corrVal < -0.5 ? "#C48830" : corrVal < 0 ? "#FFA726" : "#EF5350" }}>
+            <span style={{ fontSize: 15, fontWeight: 800, padding: "4px 10px", borderRadius: 8, background: corrVal < -0.5 ? "#FFF8EE" : corrVal < 0 ? "#FFF3E0" : "#FFEBEE", color: corrVal < -0.5 ? "#C48830" : corrVal < 0 ? "#FFA726" : "#EF5350" }}>
               ρ = {corrVal.toFixed(2)} · {corrVal < -0.6 ? "Strong Hedge" : corrVal < -0.3 ? "Moderate Hedge" : corrVal < 0 ? "Weak Hedge" : corrVal < 0.3 ? "Weak +" : "Correlated"}
             </span>
           </div>
@@ -3809,17 +3854,17 @@ function HedgeGuidesPage() {
         {/* Pair selectors */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8, alignItems: "center", justifyContent: "center" }}>
           <div style={{ flex: "1 1 200px", maxWidth: 260 }}>
-            <div style={{ fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>LEFT SIDE</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>LEFT SIDE</div>
             <select value={seesawPair.a} onChange={e => setSeesawPair(p => ({ ...p, a: e.target.value }))}
-              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #42A5F544", fontSize: 10, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#E3F2FD", color: "#333334", cursor: "pointer" }}>
+              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #42A5F544", fontSize: 15, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#E3F2FD", color: "#333334", cursor: "pointer" }}>
               {macroProducts.map(p => <option key={p.id} value={p.id}>{p.ticker} — {p.name}</option>)}
             </select>
           </div>
-          <div style={{ fontSize: 12, color: "#33333480", fontWeight: 900 }}>⟺</div>
+          <div style={{ fontSize: 18, color: "#33333480", fontWeight: 900 }}>⟺</div>
           <div style={{ flex: "1 1 200px", maxWidth: 260 }}>
-            <div style={{ fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>RIGHT SIDE</div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 4, textAlign: "center" }}>RIGHT SIDE</div>
             <select value={seesawPair.b} onChange={e => setSeesawPair(p => ({ ...p, b: e.target.value }))}
-              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #EF535044", fontSize: 10, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#FFEBEE", color: "#333334", cursor: "pointer" }}>
+              style={{ width: "100%", padding: "7px 10px", borderRadius: 12, border: "1.5px solid #EF535044", fontSize: 15, fontWeight: 700, fontFamily: "Quicksand", outline: "none", background: "#FFEBEE", color: "#333334", cursor: "pointer" }}>
               {macroProducts.map(p => <option key={p.id} value={p.id}>{p.ticker} — {p.name}</option>)}
             </select>
           </div>
@@ -3838,7 +3883,7 @@ function HedgeGuidesPage() {
             { a:"tlt", b:"sp500", label:"TLT vs SPX" },
           ].map((preset, i) => (
             <button key={i} onClick={() => setSeesawPair({ a: preset.a, b: preset.b })}
-              style={{ padding: "4px 10px", borderRadius: 8, border: "1.5px solid " + (seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#F0E6D0"), background: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#FFF8EE" : "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", color: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#8A7040" }}>{preset.label}</button>
+              style={{ padding: "4px 10px", borderRadius: 8, border: "1.5px solid " + (seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#F0E6D0"), background: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#FFF8EE" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#8A7040" }}>{preset.label}</button>
           ))}
         </div>
 
@@ -3906,7 +3951,7 @@ function HedgeGuidesPage() {
 
       {/* ═══ BEST HEDGING PAIRS ═══ */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .12s both" }}>
-        <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Best Hedging Pairs</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12 }}>Best Hedging Pairs</div>
         {topHedges.map((c, i) => {
           const pA = macroProducts.find(p => p.id === c.a);
           const pB = macroProducts.find(p => p.id === c.b);
@@ -3917,12 +3962,12 @@ function HedgeGuidesPage() {
               onMouseEnter={e => { e.currentTarget.style.background = "#FFEBEE22"; e.currentTarget.style.borderColor = "#EF535033"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "#FFEBEE08"; e.currentTarget.style.borderColor = "#F0E6D0"; }}>
               <Icon name={pA.icon} size={12} />
-              <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 11, minWidth: 30 }}>{pA.ticker}</span>
-              <span style={{ color: "#EF5350", fontSize: 12, fontWeight: 700 }}>⟺</span>
-              <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 11, minWidth: 30 }}>{pB.ticker}</span>
+              <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 17, minWidth: 30 }}>{pA.ticker}</span>
+              <span style={{ color: "#EF5350", fontSize: 18, fontWeight: 700 }}>⟺</span>
+              <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 17, minWidth: 30 }}>{pB.ticker}</span>
               <Icon name={pB.icon} size={12} />
               <div style={{ flex: 1 }} />
-              <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 12, color: "#EF5350" }}>ρ {c.corr.toFixed(2)}</span>
+              <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 18, color: "#EF5350" }}>ρ {c.corr.toFixed(2)}</span>
               <div style={{ width: 36, height: 5, background: "#FFF5E6", borderRadius: 3, overflow: "hidden" }}>
                 <div style={{ height: "100%", width: Math.abs(c.corr) * 100 + "%", background: "#EF5350", borderRadius: 3 }} />
               </div>
@@ -3981,14 +4026,14 @@ function HoroscopePage() {
   return (
     <div>
       <div style={{ marginBottom: 8 }}>
-        <h1 style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Celestial Market Cycles</h1>
-        <p style={{ color: "#33333480", fontSize: 9, marginTop: 2 }}>Lunar phases, planetary retrogrades & astronomical cycle correlations</p>
+        <h1 style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Celestial Market Cycles</h1>
+        <p style={{ color: "#33333480", fontSize: 14, marginTop: 2 }}>Lunar phases, planetary retrogrades & astronomical cycle correlations</p>
       </div>
 
       {/* View tabs */}
       <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
         {[{ id: "lunar", l: "Lunar" }, { id: "planets", l: "Planets" }, { id: "cycles", l: "Cycles" }].map(t => (
-          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", background: view === t.id ? "#1A1A2E" : "#fff", color: view === t.id ? "#E8DCC8" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", border: view !== t.id ? "1.5px solid #F0E6D0" : "1.5px solid #1A1A2E" }}>{t.l}</button>
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", background: view === t.id ? "#1A1A2E" : "#fff", color: view === t.id ? "#E8DCC8" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", border: view !== t.id ? "1.5px solid #F0E6D0" : "1.5px solid #1A1A2E" }}>{t.l}</button>
         ))}
       </div>
 
@@ -3999,23 +4044,23 @@ function HoroscopePage() {
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div>
-              <div style={{ fontSize: 8, fontWeight: 700, color: "#7A8BA0", textTransform: "uppercase", letterSpacing: 1 }}>Celestial Weather</div>
-              <div style={{ fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: celestialWeather.color }}>{celestialWeather.overall}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#7A8BA0", textTransform: "uppercase", letterSpacing: 1 }}>Celestial Weather</div>
+              <div style={{ fontSize: 21, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: celestialWeather.color }}>{celestialWeather.overall}</div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "JetBrains Mono", color: celestialWeather.color }}>{celestialWeather.score}</div>
-              <div style={{ fontSize: 7, color: "#7A8BA0", fontWeight: 700 }}>/ 100 SCORE</div>
+              <div style={{ fontSize: 30, fontWeight: 900, fontFamily: "JetBrains Mono", color: celestialWeather.color }}>{celestialWeather.score}</div>
+              <div style={{ fontSize: 11, color: "#7A8BA0", fontWeight: 700 }}>/ 100 SCORE</div>
             </div>
           </div>
           {/* Moon Phase Visual */}
           <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(255,255,255,.05)", borderRadius: 10, padding: "8px 10px", marginBottom: 8 }}>
-            <div style={{ fontSize: 28, lineHeight: 1 }}></div>
+            <div style={{ fontSize: 42, lineHeight: 1 }}></div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif" }}>{moonPhase}</div>
-              <div style={{ fontSize: 8, color: "#7A8BA0" }}>Day {lunarDay} of 29.5 · {moonPct}% illuminated</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif" }}>{moonPhase}</div>
+              <div style={{ fontSize: 12, color: "#7A8BA0" }}>Day {lunarDay} of 29.5 · {moonPct}% illuminated</div>
               <div style={{ display: "flex", gap: 8, marginTop: 3 }}>
-                <span style={{ fontSize: 7, color: "#C48830", fontWeight: 700 }}>Full in {nextFull}d</span>
-                <span style={{ fontSize: 7, color: "#7A8BA0", fontWeight: 700 }}>New in {nextNew}d</span>
+                <span style={{ fontSize: 11, color: "#C48830", fontWeight: 700 }}>Full in {nextFull}d</span>
+                <span style={{ fontSize: 11, color: "#7A8BA0", fontWeight: 700 }}>New in {nextNew}d</span>
               </div>
             </div>
             {/* Moon progress bar */}
@@ -4023,30 +4068,30 @@ function HoroscopePage() {
               <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: moonPct + "%", background: "#E8DCC8", transition: "width .5s" }} />
             </div>
           </div>
-          <p style={{ fontSize: 8, color: "#9AABBD", lineHeight: 1.5 }}>{celestialWeather.summary}</p>
+          <p style={{ fontSize: 12, color: "#9AABBD", lineHeight: 1.5 }}>{celestialWeather.summary}</p>
         </div>
       </div>
 
       {/* ── LUNAR VIEW ── */}
       {view === "lunar" && <div>
         {/* Signals */}
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Active Celestial Signals</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Active Celestial Signals</div>
         {celestialWeather.signals.map((s, i) => (
           <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
               <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                 <Icon name={s.icon} size={12} />
-                <span style={{ fontSize: 9, fontWeight: 800, color: "#333334" }}>{s.signal}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: "#333334" }}>{s.signal}</span>
               </div>
-              <span style={{ fontSize: 8, fontWeight: 800, color: s.color, background: s.color + "15", padding: "1px 6px", borderRadius: 4 }}>{s.bias}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: s.color, background: s.color + "15", padding: "1px 6px", borderRadius: 4 }}>{s.bias}</span>
             </div>
-            <div style={{ fontSize: 8, color: "#8A7A68", lineHeight: 1.3, paddingLeft: 20 }}>{s.desc}</div>
+            <div style={{ fontSize: 12, color: "#8A7A68", lineHeight: 1.3, paddingLeft: 20 }}>{s.desc}</div>
           </div>
         ))}
 
         {/* Historical lunar pattern */}
         <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginTop: 6 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Lunar Cycle → Market Pattern (50yr data)</div>
+          <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Lunar Cycle → Market Pattern (50yr data)</div>
           <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 50, marginBottom: 4 }}>
             {[3,5,7,8,10,9,7,4,2,-1,-3,-4,-2,0,2,4,6,8,9,10,8,6,4,3,2,1,0,-1,3,5].map((v, i) => (
               <div key={i} style={{ flex: 1, height: Math.abs(v) * 4 + 2, background: v >= 0 ? "#C48830" : "#EF5350", borderRadius: 1, opacity: i === lunarDay ? 1 : 0.4, transition: "all .3s", position: "relative" }}>
@@ -4054,10 +4099,10 @@ function HoroscopePage() {
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 7, color: "#33333480" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#33333480" }}>
             <span>New</span><span>Q1</span><span>Full</span><span>Q3</span><span>New</span>
           </div>
-          <div style={{ fontSize: 8, color: "#8A7A68", marginTop: 6, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 12, color: "#8A7A68", marginTop: 6, lineHeight: 1.4 }}>
             Strongest returns cluster around waxing phases (days 5-13). Post-full-moon correction is statistically significant (p &lt; 0.03). Current position: <span style={{ fontWeight: 800, color: "#C48830" }}>day {lunarDay} — approaching peak</span>.
           </div>
         </div>
@@ -4065,31 +4110,31 @@ function HoroscopePage() {
 
       {/* ── PLANETS VIEW ── */}
       {view === "planets" && <div>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Planetary Positions & Market Effects</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Planetary Positions & Market Effects</div>
         {planets.map((p, i) => (
           <div key={i} style={{ background: p.retro ? "#1A1A2E" : "#fff", border: `1.5px solid ${p.retro ? "#EF535044" : "#F0E6D0"}`, borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
               <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                <span style={{ fontSize: 16, fontFamily: "serif" }}>{p.symbol}</span>
+                <span style={{ fontSize: 24, fontFamily: "serif" }}>{p.symbol}</span>
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: p.retro ? "#E8DCC8" : "#5C4A1E" }}>{p.name} <span style={{ fontWeight: 600, color: p.retro ? "#7A8BA0" : "#8A7A68" }}>in {p.sign}</span></div>
+                  <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: p.retro ? "#E8DCC8" : "#5C4A1E" }}>{p.name} <span style={{ fontWeight: 600, color: p.retro ? "#7A8BA0" : "#8A7A68" }}>in {p.sign}</span></div>
                   {p.retro && <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 1 }}>
-                    <span style={{ fontSize: 7, fontWeight: 900, background: "#EF5350", color: "#fff", padding: "1px 5px", borderRadius: 3, animation: "blink 2s ease infinite" }}>℞ RETROGRADE</span>
-                    <span style={{ fontSize: 7, color: "#7A8BA0" }}>{p.retroDates}</span>
+                    <span style={{ fontSize: 11, fontWeight: 900, background: "#EF5350", color: "#fff", padding: "1px 5px", borderRadius: 3, animation: "blink 2s ease infinite" }}>℞ RETROGRADE</span>
+                    <span style={{ fontSize: 11, color: "#7A8BA0" }}>{p.retroDates}</span>
                   </div>}
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <span style={{ fontSize: 8, fontWeight: 800, color: p.color, background: p.color + "18", padding: "1px 6px", borderRadius: 4 }}>{p.intensity}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: p.color, background: p.color + "18", padding: "1px 6px", borderRadius: 4 }}>{p.intensity}</span>
               </div>
             </div>
-            <div style={{ fontSize: 8, color: p.retro ? "#9AABBD" : "#8A7A68", lineHeight: 1.4, marginTop: 2 }}>{p.marketEffect}</div>
+            <div style={{ fontSize: 12, color: p.retro ? "#9AABBD" : "#8A7A68", lineHeight: 1.4, marginTop: 2 }}>{p.marketEffect}</div>
           </div>
         ))}
 
         {/* Retrograde Calendar */}
         <div style={{ background: "#1A1A2E", borderRadius: 10, padding: "8px 10px", marginTop: 6 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Retrograde Calendar 2026</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Retrograde Calendar 2026</div>
           {[
             { planet: "Mercury", dates: "Feb 4 – Feb 24", status: "ACTIVE", color: "#EF5350" },
             { planet: "Mercury", dates: "May 29 – Jun 22", status: "Upcoming", color: "#FFA726" },
@@ -4098,9 +4143,9 @@ function HoroscopePage() {
             { planet: "Mars", dates: "Oct 30 – Jan 12 '27", status: "Upcoming", color: "#FFA726" },
           ].map((r, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderTop: i > 0 ? "1px solid #ffffff11" : "none" }}>
-              <span style={{ fontSize: 9, color: "#E8DCC8", fontWeight: 600 }}>{r.planet}</span>
-              <span style={{ fontSize: 8, color: "#7A8BA0", fontFamily: "JetBrains Mono" }}>{r.dates}</span>
-              <span style={{ fontSize: 7, fontWeight: 800, color: r.color, background: r.color + "22", padding: "1px 5px", borderRadius: 3 }}>{r.status}</span>
+              <span style={{ fontSize: 14, color: "#E8DCC8", fontWeight: 600 }}>{r.planet}</span>
+              <span style={{ fontSize: 12, color: "#7A8BA0", fontFamily: "JetBrains Mono" }}>{r.dates}</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: r.color, background: r.color + "22", padding: "1px 5px", borderRadius: 3 }}>{r.status}</span>
             </div>
           ))}
         </div>
@@ -4108,44 +4153,44 @@ function HoroscopePage() {
 
       {/* ── CYCLES VIEW ── */}
       {view === "cycles" && <div>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Astronomical Cycles × Market Correlation</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Astronomical Cycles × Market Correlation</div>
         {cycles.map((c, i) => (
           <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                 <Icon name={c.icon} size={14} />
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{c.name}</div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: c.phase === "IN RETROGRADE" ? "#EF5350" : "#8A7A68" }}>{c.phase}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{c.name}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: c.phase === "IN RETROGRADE" ? "#EF5350" : "#8A7A68" }}>{c.phase}</div>
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, color: c.color }}>{c.correlation}</div>
-                <div style={{ fontSize: 7, color: "#33333480" }}>correlation</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: c.color }}>{c.correlation}</div>
+                <div style={{ fontSize: 11, color: "#33333480" }}>correlation</div>
               </div>
             </div>
             {/* Correlation bar */}
             <div style={{ height: 4, background: "#F0E6D0", borderRadius: 2, marginBottom: 4 }}>
               <div style={{ height: "100%", width: c.barPct + "%", background: c.color, borderRadius: 2, transition: "width .5s" }} />
             </div>
-            <div style={{ fontSize: 8, color: "#8A7A68", lineHeight: 1.4 }}>{c.note}</div>
+            <div style={{ fontSize: 12, color: "#8A7A68", lineHeight: 1.4 }}>{c.note}</div>
           </div>
         ))}
 
         {/* Historical echo */}
         <div style={{ background: "linear-gradient(135deg, #0D1B2A, #162447)", borderRadius: 10, padding: "10px 12px", marginTop: 6 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Cyclical Echo: 2007 → 2026</div>
-          <div style={{ fontSize: 8, color: "#9AABBD", lineHeight: 1.5 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Cyclical Echo: 2007 → 2026</div>
+          <div style={{ fontSize: 12, color: "#9AABBD", lineHeight: 1.5 }}>
             The Metonic cycle (19 years) places 2026 as a lunar echo of 2007. Key parallels: yield curve normalization after prolonged inversion, housing market stretched, credit conditions tightening, and Saturn in the same sign. The 2007 analog suggests a <span style={{ fontWeight: 800, color: "#EF5350" }}>Q3 vulnerability window</span> — but Jupiter's Taurus transit (absent in 2007) provides a stabilizing counterweight through material wealth expansion.
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 8 }}>
             <div style={{ background: "rgba(255,255,255,.06)", borderRadius: 6, padding: "6px 8px" }}>
-              <div style={{ fontSize: 7, color: "#7A8BA0", fontWeight: 700, textTransform: "uppercase" }}>2007 Analog</div>
-              <div style={{ fontSize: 9, color: "#EF5350", fontWeight: 800 }}>S&P peaked Oct</div>
+              <div style={{ fontSize: 11, color: "#7A8BA0", fontWeight: 700, textTransform: "uppercase" }}>2007 Analog</div>
+              <div style={{ fontSize: 14, color: "#EF5350", fontWeight: 800 }}>S&P peaked Oct</div>
             </div>
             <div style={{ background: "rgba(255,255,255,.06)", borderRadius: 6, padding: "6px 8px" }}>
-              <div style={{ fontSize: 7, color: "#7A8BA0", fontWeight: 700, textTransform: "uppercase" }}>2026 Projection</div>
-              <div style={{ fontSize: 9, color: "#FFA726", fontWeight: 800 }}>Watch Aug-Oct</div>
+              <div style={{ fontSize: 11, color: "#7A8BA0", fontWeight: 700, textTransform: "uppercase" }}>2026 Projection</div>
+              <div style={{ fontSize: 14, color: "#FFA726", fontWeight: 800 }}>Watch Aug-Oct</div>
             </div>
           </div>
         </div>
@@ -4201,56 +4246,56 @@ function WeatherMarketPage() {
   return (
     <div>
       <div style={{ marginBottom: 8 }}>
-        <h1 style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Weather × Markets</h1>
-        <p style={{ color: "#33333480", fontSize: 9, marginTop: 2 }}>US weather patterns & their impact on stock performance</p>
+        <h1 style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Weather × Markets</h1>
+        <p style={{ color: "#33333480", fontSize: 14, marginTop: 2 }}>US weather patterns & their impact on stock performance</p>
       </div>
 
       <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
         {[{ id: "current", l: "Live" }, { id: "seasonal", l: "Seasonal" }, { id: "alpha", l: "Alpha" }].map(t => (
-          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#42A5F5" : "#F0E6D0"}`, background: view === t.id ? "#42A5F5" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#42A5F5" : "#F0E6D0"}`, background: view === t.id ? "#42A5F5" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
         ))}
       </div>
 
       {/* ── WEATHER ALPHA BANNER ── */}
       <div style={{ background: "linear-gradient(135deg, #1B3A5C, #2D5A87, #1B4B6C)", borderRadius: 14, padding: "10px 12px", marginBottom: 8, position: "relative", overflow: "hidden" }}>
         {/* Cloud/sun decorations */}
-        <div style={{ position: "absolute", top: 4, right: 12, fontSize: 20, opacity: 0.15 }}></div>
-        <div style={{ position: "absolute", bottom: 4, right: 40, fontSize: 14, opacity: 0.1 }}></div>
+        <div style={{ position: "absolute", top: 4, right: 12, fontSize: 30, opacity: 0.15 }}></div>
+        <div style={{ position: "absolute", bottom: 4, right: 40, fontSize: 21, opacity: 0.1 }}></div>
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div>
-              <div style={{ fontSize: 7, fontWeight: 700, color: "#7AAEDB", textTransform: "uppercase", letterSpacing: 1 }}>Weather Alpha Score</div>
-              <div style={{ fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: weatherAlpha.color }}>{weatherAlpha.label}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#7AAEDB", textTransform: "uppercase", letterSpacing: 1 }}>Weather Alpha Score</div>
+              <div style={{ fontSize: 21, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: weatherAlpha.color }}>{weatherAlpha.label}</div>
             </div>
             <div style={{ width: 44, height: 44, borderRadius: "50%", border: `3px solid ${weatherAlpha.color}`, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.3)" }}>
-              <span style={{ fontFamily: "JetBrains Mono", fontSize: 16, fontWeight: 900, color: weatherAlpha.color }}>{weatherAlpha.score}</span>
+              <span style={{ fontFamily: "JetBrains Mono", fontSize: 24, fontWeight: 900, color: weatherAlpha.color }}>{weatherAlpha.score}</span>
             </div>
           </div>
-          <p style={{ fontSize: 8, color: "#AECCE6", lineHeight: 1.4 }}>{weatherAlpha.summary}</p>
+          <p style={{ fontSize: 12, color: "#AECCE6", lineHeight: 1.4 }}>{weatherAlpha.summary}</p>
         </div>
       </div>
 
       {/* ── LIVE VIEW ── */}
       {view === "current" && <div>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>US Regional Weather & Market Impact</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>US Regional Weather & Market Impact</div>
         {regions.map((r, i) => (
           <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                 <Icon name={r.icon} size={14} />
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{r.name}</div>
-                  <div style={{ fontSize: 8, color: "#33333480" }}>{r.condition} · {r.temp} · Wind {r.wind}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{r.name}</div>
+                  <div style={{ fontSize: 12, color: "#33333480" }}>{r.condition} · {r.temp} · Wind {r.wind}</div>
                 </div>
               </div>
-              <span style={{ fontSize: 8, fontWeight: 800, color: r.color, background: r.color + "15", padding: "2px 6px", borderRadius: 4 }}>{r.sentiment}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: r.color, background: r.color + "15", padding: "2px 6px", borderRadius: 4 }}>{r.sentiment}</span>
             </div>
-            <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.3, marginBottom: 6 }}>{r.impact}</div>
+            <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3, marginBottom: 6 }}>{r.impact}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 3 }}>
               {r.affected.map((a, j) => (
                 <div key={j} style={{ background: "#FFFDF5", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 800 }}>{a.ticker}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 700, color: a.clr }}>{a.move}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800 }}>{a.ticker}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: a.clr }}>{a.move}</div>
                 </div>
               ))}
             </div>
@@ -4260,43 +4305,43 @@ function WeatherMarketPage() {
 
       {/* ── SEASONAL VIEW ── */}
       {view === "seasonal" && <div>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Seasonal Weather Patterns × Market Correlation</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Seasonal Weather Patterns × Market Correlation</div>
         {seasonal.map((s, i) => (
           <div key={i} style={{ background: s.active ? s.color + "08" : "#fff", border: `1.5px solid ${s.active ? s.color + "44" : "#F0E6D0"}`, borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div>
-                <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>
-                  {s.pattern} {s.active && <span style={{ fontSize: 7, background: s.color, color: "#fff", padding: "1px 5px", borderRadius: 3, marginLeft: 4 }}>ACTIVE</span>}
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>
+                  {s.pattern} {s.active && <span style={{ fontSize: 11, background: s.color, color: "#fff", padding: "1px 5px", borderRadius: 3, marginLeft: 4 }}>ACTIVE</span>}
                 </div>
-                <div style={{ fontSize: 8, color: "#33333480" }}>{s.period}</div>
+                <div style={{ fontSize: 12, color: "#33333480" }}>{s.period}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, color: s.color }}>{s.correlation}</div>
-                <div style={{ fontSize: 7, color: "#33333480" }}>correlation</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: s.color }}>{s.correlation}</div>
+                <div style={{ fontSize: 11, color: "#33333480" }}>correlation</div>
               </div>
             </div>
             <div style={{ height: 4, background: "#F0E6D0", borderRadius: 2, marginBottom: 4 }}>
               <div style={{ height: "100%", width: s.barPct + "%", background: s.color, borderRadius: 2 }} />
             </div>
-            <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.3 }}>{s.desc}</div>
+            <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3 }}>{s.desc}</div>
           </div>
         ))}
 
         {/* Seasonal Calendar Mini */}
         <div style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginTop: 6 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Weather-Sensitive Calendar</div>
+          <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Weather-Sensitive Calendar</div>
           <div className="month-grid" style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 2 }}>
             {["J","F","M","A","M","J","J","A","S","O","N","D"].map((m, i) => {
               const isCurrent = i === 1;
               const risk = i >= 5 && i <= 10 ? "#EF5350" : i >= 0 && i <= 2 ? "#42A5F5" : i >= 2 && i <= 4 ? "#5B8C5A" : "#FFA726";
               return (
                 <div key={i} style={{ textAlign: "center", padding: "4px 0", borderRadius: 4, background: isCurrent ? risk : risk + "15", border: isCurrent ? `2px solid ${risk}` : "none" }}>
-                  <div style={{ fontSize: 7, fontWeight: 800, color: isCurrent ? "#fff" : risk }}>{m}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: isCurrent ? "#fff" : risk }}>{m}</div>
                 </div>
               );
             })}
           </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 6, fontSize: 7, color: "#33333480", justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 6, fontSize: 11, color: "#33333480", justifyContent: "center" }}>
             <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: 1, background: "#42A5F5", marginRight: 2, verticalAlign: "middle" }} />Winter</span>
             <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: 1, background: "#5B8C5A", marginRight: 2, verticalAlign: "middle" }} />Planting</span>
             <span><span style={{ display: "inline-block", width: 6, height: 6, borderRadius: 1, background: "#EF5350", marginRight: 2, verticalAlign: "middle" }} />Hurricane</span>
@@ -4307,25 +4352,25 @@ function WeatherMarketPage() {
 
       {/* ── ALPHA VIEW ── */}
       {view === "alpha" && <div>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Weather-Driven Trade Signals</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Weather-Driven Trade Signals</div>
         {weatherAlpha.signals.map((s, i) => (
           <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: s.color }}>{s.signal}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: s.color }}>{s.signal}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{ width: 40, height: 4, background: "#F0E6D0", borderRadius: 2 }}>
                   <div style={{ height: "100%", width: s.confidence + "%", background: s.color, borderRadius: 2 }} />
                 </div>
-                <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: s.color }}>{s.confidence}%</span>
+                <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: s.color }}>{s.confidence}%</span>
               </div>
             </div>
-            <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.3 }}>{s.reason}</div>
+            <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3 }}>{s.reason}</div>
           </div>
         ))}
 
         {/* Historical weather alpha */}
         <div style={{ background: "linear-gradient(135deg, #1B3A5C, #2D5A87)", borderRadius: 10, padding: "10px 12px", marginTop: 6 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Historical Weather Alpha (10yr backtest)</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Historical Weather Alpha (10yr backtest)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
             {[
               { label: "Cold Snap → Nat Gas", win: "78%", avgReturn: "+4.2%", clr: "#5B8C5A" },
@@ -4336,15 +4381,15 @@ function WeatherMarketPage() {
               { label: "Heat Wave → Utilities", win: "69%", avgReturn: "+3.1%", clr: "#5B8C5A" },
             ].map((h, i) => (
               <div key={i} style={{ background: "rgba(255,255,255,.06)", borderRadius: 6, padding: "6px 8px" }}>
-                <div style={{ fontSize: 8, color: "#AECCE6", fontWeight: 700, marginBottom: 2 }}>{h.label}</div>
+                <div style={{ fontSize: 12, color: "#AECCE6", fontWeight: 700, marginBottom: 2 }}>{h.label}</div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: h.clr }}>{h.avgReturn}</span>
-                  <span style={{ fontSize: 8, color: "#7AAEDB" }}>Win: {h.win}</span>
+                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: h.clr }}>{h.avgReturn}</span>
+                  <span style={{ fontSize: 12, color: "#7AAEDB" }}>Win: {h.win}</span>
                 </div>
               </div>
             ))}
           </div>
-          <div style={{ marginTop: 8, fontSize: 8, color: "#7AAEDB", textAlign: "center" }}>Based on NOAA data × equity returns 2015–2025</div>
+          <div style={{ marginTop: 8, fontSize: 12, color: "#7AAEDB", textAlign: "center" }}>Based on NOAA data × equity returns 2015–2025</div>
         </div>
       </div>}
     </div>
@@ -4385,32 +4430,32 @@ function CurrenciesScenarioPage() {
   return (
     <div>
       <div style={{ marginBottom: 8 }}>
-        <h1 style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Currency Scenarios</h1>
-        <p style={{ color: "#33333480", fontSize: 9, marginTop: 2 }}>FX pair scenarios — rate differentials & macro flows</p>
+        <h1 style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Currency Scenarios</h1>
+        <p style={{ color: "#33333480", fontSize: 14, marginTop: 2 }}>FX pair scenarios — rate differentials & macro flows</p>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4, marginBottom: 8 }}>
         {Object.entries(pairs).map(([id, pr]) => (
           <button key={id} onClick={() => setPair(id)} style={{ padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${pair === id ? "#C48830" : "#F0E6D0"}`, background: pair === id ? "#FFF8EE" : "#fff", cursor: "pointer", textAlign: "center" }}>
             <div><Icon name={pr.icon} size={14} /></div>
-            <div style={{ fontSize: 8, fontWeight: 800, color: pair === id ? "#C48830" : "#A09080" }}>{id.toUpperCase()}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: pair === id ? "#C48830" : "#A09080" }}>{id.toUpperCase()}</div>
           </button>
         ))}
       </div>
       <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{p.name}</div>
-          <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700 }}>{p.price} <span style={{ color: p.clr, fontSize: 9 }}>{p.change}</span></div>
+          <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{p.name}</div>
+          <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700 }}>{p.price} <span style={{ color: p.clr, fontSize: 14 }}>{p.change}</span></div>
         </div>
         {p.scenarios.map((sc, i) => (
           <div key={i} style={{ background: sc.color + "11", borderRadius: 8, padding: "8px 10px", marginBottom: 4, border: `1px solid ${sc.color}22` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: sc.color }}>{sc.name}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: sc.color }}>{sc.name}</span>
               <div style={{ display: "flex", gap: 6 }}>
-                <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: sc.color }}>{sc.target}</span>
-                <span style={{ fontSize: 8, fontWeight: 700, color: "#33333480" }}>{sc.prob}</span>
+                <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: sc.color }}>{sc.target}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#33333480" }}>{sc.prob}</span>
               </div>
             </div>
-            <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.3 }}>{sc.desc}</div>
+            <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3 }}>{sc.desc}</div>
           </div>
         ))}
       </div>
@@ -4419,7 +4464,7 @@ function CurrenciesScenarioPage() {
 }
 
 // ═══════════════ INDICATOR DETAIL PAGE ═══════════════
-function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
+function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews }) {
   const ind = macroDashboardData.find(i => i.id === indicatorId);
   const details = INDICATOR_DETAILS[indicatorId] || {};
   const newsMap = INDICATOR_NEWS_MAP[indicatorId] || { cats: [], keywords: [] };
@@ -4444,7 +4489,8 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
     a.tags.some(t => newsMap.keywords.some(kw => t.toLowerCase().includes(kw.toLowerCase()))) ||
     newsMap.keywords.some(kw => a.title.toLowerCase().includes(kw.toLowerCase()))
   );
-  const relatedNews = terminalFeed.filter(f =>
+  const newsSource = (liveNews && liveNews.length > 0) ? liveNews : terminalFeed;
+  const relatedNews = newsSource.filter(f =>
     newsMap.cats.includes(f.cat) ||
     newsMap.keywords.some(kw => f.headline.toLowerCase().includes(kw.toLowerCase()))
   ).slice(0, 5);
@@ -4485,38 +4531,38 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
     <div style={{ animation: "fadeUp .3s ease both" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <button onClick={onBack} style={{ background: "#fff", borderRadius: 12, width: 34, height: 34, border: "1.5px solid #F0E6D0", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>←</button>
+        <button onClick={onBack} style={{ background: "#fff", borderRadius: 12, width: 34, height: 34, border: "1.5px solid #F0E6D0", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>←</button>
         <Icon name={details.icon || "chart-bar"} size={16} color={clr} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{ind.name}</div>
-          <div style={{ fontSize: 8, color: "#33333480" }}>{ind.source} · {ind.freq}</div>
+          <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{ind.name}</div>
+          <div style={{ fontSize: 12, color: "#33333480" }}>{ind.source} · {ind.freq}</div>
         </div>
-        <span style={{ fontSize: 8, fontWeight: 800, background: clr + "18", color: clr, padding: "3px 10px", borderRadius: 8, textTransform: "uppercase" }}>{ind.signal}</span>
+        <span style={{ fontSize: 12, fontWeight: 800, background: clr + "18", color: clr, padding: "3px 10px", borderRadius: 8, textTransform: "uppercase" }}>{ind.signal}</span>
       </div>
 
       {/* Combined Hero + Interactive Chart */}
       <div style={{ background: "#fff", borderRadius: 18, padding: "18px 16px 12px", marginBottom: 8, position: "relative", overflow: "hidden" }}>
-        <div style={{ fontSize: 8, color: "#33333480", fontWeight: 700, marginBottom: 4 }}>
+        <div style={{ fontSize: 12, color: "#33333480", fontWeight: 700, marginBottom: 4 }}>
           {chartHover ? <span style={{ transition: "all .15s" }}>{chartHover.label}</span> : (details.fullName || ind.name)}
         </div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-          <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28, fontWeight: 900, color: "#333334", lineHeight: 1, transition: "all .15s" }}>
+          <span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 42, fontWeight: 900, color: "#333334", lineHeight: 1, transition: "all .15s" }}>
             {typeof displayVal === "number" ? (displayVal >= 100 ? displayVal.toFixed(1) : displayVal.toFixed(2)) : displayVal}{ind.unit}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-          <span style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: displayColor, background: displayDelta >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "2px 8px", borderRadius: 8, transition: "all .15s" }}>
+          <span style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: displayColor, background: displayDelta >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "2px 8px", borderRadius: 8, transition: "all .15s" }}>
             {displayDelta >= 0 ? "+" : ""}{displayPct.toFixed(2)}%
           </span>
-          <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: displayColor, transition: "all .15s" }}>
+          <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: displayColor, transition: "all .15s" }}>
             {displayDelta >= 0 ? "▲" : "▼"} {displayDelta >= 0 ? "+" : ""}{displayDelta.toFixed(ind.unit === "%" ? 2 : 1)}
           </span>
-          <span style={{ fontSize: 9, color: "#8A7A68", fontWeight: 600 }}>{chartHover ? "from start" : "vs prev"}</span>
+          <span style={{ fontSize: 14, color: "#8A7A68", fontWeight: 600 }}>{chartHover ? "from start" : "vs prev"}</span>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
-          <span style={{ fontSize: 7, fontWeight: 700, color: sc[analysis.maSignal], background: sc[analysis.maSignal] + "15", padding: "2px 8px", borderRadius: 6 }}>MA-5: {analysis.ma5.toFixed(2)}</span>
-          <span style={{ fontSize: 7, fontWeight: 700, color: "#33333480", background: "#F5F0E8", padding: "2px 8px", borderRadius: 6 }}>MA-10: {analysis.ma10.toFixed(2)}</span>
-          <span style={{ fontSize: 7, fontWeight: 700, color: "#C48830", background: "#FFF8EE", padding: "2px 8px", borderRadius: 6 }}>Weight: {(ind.weight * 100).toFixed(0)}%</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: sc[analysis.maSignal], background: sc[analysis.maSignal] + "15", padding: "2px 8px", borderRadius: 6 }}>MA-5: {analysis.ma5.toFixed(2)}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#33333480", background: "#F5F0E8", padding: "2px 8px", borderRadius: 6 }}>MA-10: {analysis.ma10.toFixed(2)}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#C48830", background: "#FFF8EE", padding: "2px 8px", borderRadius: 6 }}>Weight: {(ind.weight * 100).toFixed(0)}%</span>
         </div>
 
         {/* Interactive Chart */}
@@ -4572,22 +4618,22 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
             </g>}
           </svg>
           {/* Hover tooltip on chart */}
-          {chartHover && <div style={{ position: "absolute", top: 6, right: 6, background: "#fff", borderRadius: 12, padding: "6px 12px", fontFamily: "JetBrains Mono", fontSize: 12, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
+          {chartHover && <div style={{ position: "absolute", top: 6, right: 6, background: "#fff", borderRadius: 12, padding: "6px 12px", fontFamily: "JetBrains Mono", fontSize: 18, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
             <span style={{ color: "#33333480" }}>{chartHover.label}</span>
             <span style={{ marginLeft: 8, color: clr, fontWeight: 700 }}>{chartHover.v.toFixed(ind.unit === "%" ? 2 : 1)}{ind.unit}</span>
           </div>}
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
           <div style={{ display: "flex", gap: 8 }}>
-            <span style={{ fontSize: 7, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 2, background: clr, borderRadius: 1 }} />Price</span>
-            <span style={{ fontSize: 7, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #C48830" }} />MA-5</span>
-            <span style={{ fontSize: 7, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #5B8C5A" }} />S</span>
-            <span style={{ fontSize: 7, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #EF5350" }} />R</span>
+            <span style={{ fontSize: 11, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 2, background: clr, borderRadius: 1 }} />Price</span>
+            <span style={{ fontSize: 11, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #C48830" }} />MA-5</span>
+            <span style={{ fontSize: 11, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #5B8C5A" }} />S</span>
+            <span style={{ fontSize: 11, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #EF5350" }} />R</span>
           </div>
           <div style={{ display: "flex", gap: 1, background: "#FFFDF5", borderRadius: 8, padding: 2 }}>
             {["1Y","2Y","5Y","10Y"].map(t => (
               <button key={t} onClick={() => { setPeriod(t); setChartHover(null); }}
-                style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none", transition: "all .15s" }}>{t}</button>
+                style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none", transition: "all .15s" }}>{t}</button>
             ))}
           </div>
         </div>
@@ -4595,41 +4641,41 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
 
       {/* Pattern Recognition */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #C4883022" }}>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "#C48830" }}>Pattern Recognition</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "#C48830" }}>Pattern Recognition</div>
         {analysis.patterns.length > 0 ? (
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
             {analysis.patterns.map((p, i) => (
-              <span key={i} style={{ fontSize: 7, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: sc[p.type] + "15", color: sc[p.type], border: `1px solid ${sc[p.type]}30` }}>{p.label}</span>
+              <span key={i} style={{ fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: sc[p.type] + "15", color: sc[p.type], border: `1px solid ${sc[p.type]}30` }}>{p.label}</span>
             ))}
           </div>
-        ) : <div style={{ fontSize: 8, color: "#A09080", marginBottom: 8 }}>No significant patterns detected</div>}
+        ) : <div style={{ fontSize: 12, color: "#A09080", marginBottom: 8 }}>No significant patterns detected</div>}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
-            <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Trend</div>
-            <div style={{ fontSize: 10, fontWeight: 800, color: analysis.trendDirection === "rising" ? "#5B8C5A" : analysis.trendDirection === "falling" ? "#EF5350" : "#A09080", textTransform: "capitalize" }}>{analysis.trendDirection}</div>
-            <div style={{ fontSize: 7, color: "#A09080", fontFamily: "JetBrains Mono" }}>slope {analysis.slope >= 0 ? "+" : ""}{analysis.slope.toFixed(3)}/p</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Trend</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: analysis.trendDirection === "rising" ? "#5B8C5A" : analysis.trendDirection === "falling" ? "#EF5350" : "#A09080", textTransform: "capitalize" }}>{analysis.trendDirection}</div>
+            <div style={{ fontSize: 11, color: "#A09080", fontFamily: "JetBrains Mono" }}>slope {analysis.slope >= 0 ? "+" : ""}{analysis.slope.toFixed(3)}/p</div>
           </div>
           <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
-            <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Momentum</div>
-            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "JetBrains Mono", color: analysis.roc5 >= 0 ? "#5B8C5A" : "#EF5350" }}>{analysis.roc5 >= 0 ? "+" : ""}{analysis.roc5.toFixed(1)}%</div>
-            <div style={{ fontSize: 7, color: "#A09080" }}>5-period ROC</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Momentum</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "JetBrains Mono", color: analysis.roc5 >= 0 ? "#5B8C5A" : "#EF5350" }}>{analysis.roc5 >= 0 ? "+" : ""}{analysis.roc5.toFixed(1)}%</div>
+            <div style={{ fontSize: 11, color: "#A09080" }}>5-period ROC</div>
           </div>
           <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
-            <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Streak</div>
-            <div style={{ fontSize: 10, fontWeight: 800, color: analysis.streak > 0 ? "#5B8C5A" : analysis.streak < 0 ? "#EF5350" : "#A09080" }}>{analysis.streak > 0 ? "+" : ""}{analysis.streak} periods</div>
-            <div style={{ fontSize: 7, color: "#A09080" }}>{analysis.streak > 0 ? "consecutive rises" : analysis.streak < 0 ? "consecutive falls" : "no streak"}</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Streak</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: analysis.streak > 0 ? "#5B8C5A" : analysis.streak < 0 ? "#EF5350" : "#A09080" }}>{analysis.streak > 0 ? "+" : ""}{analysis.streak} periods</div>
+            <div style={{ fontSize: 11, color: "#A09080" }}>{analysis.streak > 0 ? "consecutive rises" : analysis.streak < 0 ? "consecutive falls" : "no streak"}</div>
           </div>
           <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
-            <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Volatility</div>
-            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "JetBrains Mono", color: "#333334" }}>{analysis.volatility.toFixed(3)}</div>
-            <div style={{ fontSize: 7, color: "#A09080" }}>avg chg: {analysis.avgChange.toFixed(3)}</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Volatility</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "JetBrains Mono", color: "#333334" }}>{analysis.volatility.toFixed(3)}</div>
+            <div style={{ fontSize: 11, color: "#A09080" }}>avg chg: {analysis.avgChange.toFixed(3)}</div>
           </div>
         </div>
       </div>
 
       {/* Statistical Profile */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Statistical Profile</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Statistical Profile</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
           {[
             { label: "Range Low", val: analysis.min.toFixed(2) + (ind.unit || ""), clr: "#5B8C5A" },
@@ -4640,14 +4686,14 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
             { label: "Percentile", val: analysis.percentile + "th", clr: "#C48830" },
           ].map((s, i) => (
             <div key={i} style={{ background: "#FAFAFA", borderRadius: 8, padding: "5px 7px", textAlign: "center" }}>
-              <div style={{ fontSize: 6, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>{s.label}</div>
-              <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "JetBrains Mono", color: s.clr }}>{s.val}</div>
+              <div style={{ fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "JetBrains Mono", color: s.clr }}>{s.val}</div>
             </div>
           ))}
         </div>
         {/* Range bar */}
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", marginBottom: 3 }}>Position in Range</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", marginBottom: 3 }}>Position in Range</div>
           <div style={{ position: "relative", height: 8, background: "#F5F0E8", borderRadius: 4 }}>
             <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${analysis.percentile}%`, background: `linear-gradient(90deg, #5B8C5A, ${analysis.percentile > 70 ? "#EF5350" : "#C48830"})`, borderRadius: 4 }} />
             <div style={{ position: "absolute", top: -2, left: `${analysis.percentile}%`, transform: "translateX(-50%)", width: 12, height: 12, borderRadius: "50%", background: "#fff", border: `2px solid ${clr}`, boxShadow: "0 1px 4px rgba(0,0,0,.15)" }} />
@@ -4657,24 +4703,24 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
 
       {/* About */}
       {details.desc && <div style={{ background: "#FFF8EE", borderRadius: 12, padding: "10px 12px", marginBottom: 8, border: "1px solid #C4883022" }}>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#C48830", marginBottom: 4 }}>About {ind.name}</div>
-        <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.5 }}>{details.desc}</div>
-        {details.release && <div style={{ fontSize: 7, color: "#A09080", marginTop: 4 }}>Next release: <span style={{ fontWeight: 800, color: "#C48830" }}>{details.release}</span></div>}
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#C48830", marginBottom: 4 }}>About {ind.name}</div>
+        <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.5 }}>{details.desc}</div>
+        {details.release && <div style={{ fontSize: 11, color: "#A09080", marginTop: 4 }}>Next release: <span style={{ fontWeight: 800, color: "#C48830" }}>{details.release}</span></div>}
       </div>}
 
       {/* Impact Assets */}
       {details.impactAssets && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Impacted Assets</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Impacted Assets</div>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {details.impactAssets.map(t => (
-            <span key={t} style={{ fontSize: 8, fontWeight: 800, fontFamily: "JetBrains Mono", padding: "4px 10px", borderRadius: 8, background: "#F5F0E8", color: "#5C4A1E", cursor: "pointer" }}>{t}</span>
+            <span key={t} style={{ fontSize: 12, fontWeight: 800, fontFamily: "JetBrains Mono", padding: "4px 10px", borderRadius: 8, background: "#F5F0E8", color: "#5C4A1E", cursor: "pointer" }}>{t}</span>
           ))}
         </div>
       </div>}
 
       {/* Active Alerts */}
       {relatedAlerts.length > 0 && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Active Alerts ({relatedAlerts.length})</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Active Alerts ({relatedAlerts.length})</div>
         {relatedAlerts.map((a, i) => {
           const sevCol = { critical: "#EF5350", warning: "#FFA726", info: "#42A5F5" };
           const sevBg = { critical: "#FFEBEE", warning: "#FFF3E0", info: "#E3F2FD" };
@@ -4682,12 +4728,12 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
             <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
               <Icon name={a.icon} size={11} color={sevCol[a.severity]} />
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 9, fontWeight: 800 }}>{a.title}</div>
-                <div style={{ fontSize: 8, color: "#33333480" }}>{a.summary}</div>
+                <div style={{ fontSize: 14, fontWeight: 800 }}>{a.title}</div>
+                <div style={{ fontSize: 12, color: "#33333480" }}>{a.summary}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <span style={{ fontSize: 7, fontWeight: 800, background: sevBg[a.severity], color: sevCol[a.severity], padding: "2px 6px", borderRadius: 4 }}>{a.severity.toUpperCase()}</span>
-                <div style={{ fontSize: 7, color: "#A09080", marginTop: 2 }}>{a.time} ago</div>
+                <span style={{ fontSize: 11, fontWeight: 800, background: sevBg[a.severity], color: sevCol[a.severity], padding: "2px 6px", borderRadius: 4 }}>{a.severity.toUpperCase()}</span>
+                <div style={{ fontSize: 11, color: "#A09080", marginTop: 2 }}>{a.time} ago</div>
               </div>
             </div>
           );
@@ -4696,18 +4742,18 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
 
       {/* Related News */}
       {relatedNews.length > 0 && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Related News</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Related News</div>
         {relatedNews.map((f, i) => (
           <div key={f.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-              <span style={{ fontSize: 6, fontWeight: 800, padding: "2px 5px", borderRadius: 4, background: f.impact === "bullish" ? "#5B8C5A18" : f.impact === "bearish" ? "#EF535018" : "#F5F0E8", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "#A09080", flexShrink: 0, marginTop: 1 }}>{f.cat}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 4, background: f.impact === "bullish" ? "#5B8C5A18" : f.impact === "bearish" ? "#EF535018" : "#F5F0E8", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "#A09080", flexShrink: 0, marginTop: 1 }}>{f.cat}</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 8, fontWeight: 700, color: "#333334", lineHeight: 1.3, marginBottom: 2 }}>{f.headline}</div>
-                <div style={{ fontSize: 7, color: "#33333480", lineHeight: 1.4 }}>{f.desc.slice(0, 100)}...</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#333334", lineHeight: 1.3, marginBottom: 2 }}>{f.headline}</div>
+                <div style={{ fontSize: 11, color: "#33333480", lineHeight: 1.4 }}>{f.desc.slice(0, 100)}...</div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 7, color: "#A09080", fontFamily: "JetBrains Mono" }}>{f.time}</div>
-                <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "JetBrains Mono", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "#A09080" }}>{f.move}</div>
+                <div style={{ fontSize: 11, color: "#A09080", fontFamily: "JetBrains Mono" }}>{f.time}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "JetBrains Mono", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "#A09080" }}>{f.move}</div>
               </div>
             </div>
           </div>
@@ -4716,7 +4762,7 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
 
       {/* Related Indicators */}
       {details.related && details.related.length > 0 && <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Related Indicators</div>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Related Indicators</div>
         <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
           {details.related.map(rid => {
             const ri = macroDashboardData.find(m => m.id === rid);
@@ -4725,9 +4771,9 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator }) {
             const rDelta = ri.value - ri.prev;
             return (
               <div key={rid} onClick={() => onSelectIndicator && onSelectIndicator(rid)} style={{ background: "#fff", borderRadius: 10, padding: "8px 12px", border: `1px solid ${rClr}22`, cursor: "pointer", flexShrink: 0, minWidth: 100 }}>
-                <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>{ri.name}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 13, fontWeight: 900, color: "#333334" }}>{ri.value}{ri.unit}</div>
-                <div style={{ fontSize: 8, fontWeight: 700, color: rClr }}>{rDelta >= 0 ? "▲" : "▼"} {ri.signal}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>{ri.name}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 20, fontWeight: 900, color: "#333334" }}>{ri.value}{ri.unit}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: rClr }}>{rDelta >= 0 ? "▲" : "▼"} {ri.signal}</div>
               </div>
             );
           })}
@@ -4751,11 +4797,11 @@ function PieChartInteractive({ arcs, slices, cx, cy, rx, ry, depth, darken, divC
   return (
     <div style={{ background: "#fff", borderRadius: 14, padding: "12px 10px", border: "1px solid #F0E6D0", marginBottom: 8 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Portfolio Allocation</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Portfolio Allocation</div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <div style={{ width: 6, height: 6, borderRadius: 3, background: divColor }} />
-          <span style={{ fontSize: 7, fontWeight: 800, color: divColor }}>{divLabel}</span>
-          <span style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 800, color: divColor }}>{diversScore.toFixed(0)}%</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: divColor }}>{divLabel}</span>
+          <span style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, color: divColor }}>{diversScore.toFixed(0)}%</span>
         </div>
       </div>
 
@@ -4793,13 +4839,13 @@ function PieChartInteractive({ arcs, slices, cx, cy, rx, ry, depth, darken, divC
           {/* Center label */}
           {active ? (
             <>
-              <text x={cx} y={cy - 4} textAnchor="middle" style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, fill: active.color }}>{active.pct.toFixed(1)}%</text>
-              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 7, fontWeight: 700, fill: "#A09080" }}>{active.ticker}</text>
+              <text x={cx} y={cy - 4} textAnchor="middle" style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, fill: active.color }}>{active.pct.toFixed(1)}%</text>
+              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 11, fontWeight: 700, fill: "#A09080" }}>{active.ticker}</text>
             </>
           ) : (
             <>
-              <text x={cx} y={cy - 3} textAnchor="middle" style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 900, fill: "#333334" }}>{slices.length}</text>
-              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 7, fontWeight: 700, fill: "#A09080" }}>stocks</text>
+              <text x={cx} y={cy - 3} textAnchor="middle" style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 900, fill: "#333334" }}>{slices.length}</text>
+              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 11, fontWeight: 700, fill: "#A09080" }}>stocks</text>
             </>
           )}
         </svg>
@@ -4811,14 +4857,14 @@ function PieChartInteractive({ arcs, slices, cx, cy, rx, ry, depth, darken, divC
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div style={{ width: 8, height: 8, borderRadius: 2, background: active.color }} />
-              <span style={{ fontWeight: 800, fontSize: 10, fontFamily: "'Instrument Serif', serif" }}>{active.ticker}</span>
-              <span style={{ fontSize: 8, color: "#A09080" }}>{active.name}</span>
+              <span style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif" }}>{active.ticker}</span>
+              <span style={{ fontSize: 12, color: "#A09080" }}>{active.name}</span>
             </div>
-            <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 900, color: active.color }}>{active.pct.toFixed(1)}%</span>
+            <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 900, color: active.color }}>{active.pct.toFixed(1)}%</span>
           </div>
           <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-            <div><div style={{ fontSize: 7, color: "#A09080", fontWeight: 700 }}>VALUE</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800 }}>{fmt(active.value)}</div></div>
-            <div><div style={{ fontSize: 7, color: "#A09080", fontWeight: 700 }}>OF TOTAL</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800 }}>{fmt(totalVal)}</div></div>
+            <div><div style={{ fontSize: 11, color: "#A09080", fontWeight: 700 }}>VALUE</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800 }}>{fmt(active.value)}</div></div>
+            <div><div style={{ fontSize: 11, color: "#A09080", fontWeight: 700 }}>OF TOTAL</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800 }}>{fmt(totalVal)}</div></div>
           </div>
         </div>
       )}
@@ -4830,8 +4876,8 @@ function PieChartInteractive({ arcs, slices, cx, cy, rx, ry, depth, darken, divC
             onClick={() => setActiveIdx(activeIdx === i ? null : i)}
             onMouseEnter={() => setActiveIdx(i)} onMouseLeave={() => setActiveIdx(null)}>
             <div style={{ width: 7, height: 7, borderRadius: 2, background: a.color, flexShrink: 0 }} />
-            <span style={{ fontSize: 8, fontWeight: 700, color: "#333334", flex: 1 }}>{a.ticker}</span>
-            <span style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 800, color: activeIdx === i ? a.color : "#333334", transition: "color .15s" }}>{a.pct.toFixed(1)}%</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#333334", flex: 1 }}>{a.ticker}</span>
+            <span style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, color: activeIdx === i ? a.color : "#333334", transition: "color .15s" }}>{a.pct.toFixed(1)}%</span>
           </div>
         ))}
       </div>
@@ -4854,10 +4900,10 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
     <div>
       {/* ── Header with Back Button ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, animation: "fadeUp .3s ease both" }}>
-        <button onClick={() => onNavigate("dashboard")} style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, border: "1.5px solid #F0E6D0", flexShrink: 0 }}>←</button>
+        <button onClick={() => onNavigate("dashboard")} style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, border: "1.5px solid #F0E6D0", flexShrink: 0 }}>←</button>
         <div>
-          <h1 style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Dashboard</h1>
-          <p style={{ color: "#33333480", fontSize: 9, marginTop: 1 }}>FRED + BEA + BLS economic data & regime analysis</p>
+          <h1 style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Dashboard</h1>
+          <p style={{ color: "#33333480", fontSize: 14, marginTop: 1 }}>FRED + BEA + BLS economic data & regime analysis</p>
         </div>
       </div>
 
@@ -4866,23 +4912,23 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
           <Icon name={regime.icon} size={14} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Current Macro Regime</div>
-            <div style={{ fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: regime.color }}>{regime.name}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Current Macro Regime</div>
+            <div style={{ fontSize: 21, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: regime.color }}>{regime.name}</div>
           </div>
           <div style={{ background: "#fff", borderRadius: 10, padding: "6px 12px", textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "#33333480", fontWeight: 700 }}>Confidence</div>
-            <div style={{ fontFamily: "JetBrains Mono", fontSize: 13, fontWeight: 800, color: regime.color }}>{regime.confidence}%</div>
+            <div style={{ fontSize: 12, color: "#33333480", fontWeight: 700 }}>Confidence</div>
+            <div style={{ fontFamily: "JetBrains Mono", fontSize: 20, fontWeight: 800, color: regime.color }}>{regime.confidence}%</div>
           </div>
         </div>
-        <div style={{ fontSize: 9, color: "#6B5A2E", lineHeight: 1.5, marginBottom: 8 }}>{regime.desc}</div>
-        <div style={{ fontSize: 9, color: "#8A7040", lineHeight: 1.5, background: "#fff", borderRadius: 10, padding: "7px 10px" }}>
+        <div style={{ fontSize: 14, color: "#6B5A2E", lineHeight: 1.5, marginBottom: 8 }}>{regime.desc}</div>
+        <div style={{ fontSize: 14, color: "#8A7040", lineHeight: 1.5, background: "#fff", borderRadius: 10, padding: "7px 10px" }}>
           <span style={{ fontWeight: 800, color: regime.color }}>Playbook:</span> {regime.playbook}
         </div>
       </div>
 
       {/* ── Key Indicators Grid ── */}
       <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Key Indicators</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Key Indicators</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {macroDashboardData.map(ind => {
             const sc = { bullish: "#5B8C5A", bearish: "#EF5350", neutral: "#A09080" };
@@ -4901,17 +4947,17 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
             return (
               <div key={ind.id} onClick={() => onSelectIndicator && onSelectIndicator(ind.id)} style={{ background: bg[ind.signal], borderRadius: 10, padding: "8px 10px", border: `1px solid ${clr}22`, cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-                  <div style={{ fontSize: 7.5, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, maxWidth: "55%" }}>{ind.name}</div>
-                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: "#333334", lineHeight: 1 }}>{ind.value}{ind.unit}</span>
+                  <div style={{ fontSize: 11.5, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, maxWidth: "55%" }}>{ind.name}</div>
+                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 21, fontWeight: 900, color: "#333334", lineHeight: 1 }}>{ind.value}{ind.unit}</span>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: clr }}>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: clr }}>
                       {delta >= 0 ? "▲" : "▼"}{Math.abs(delta).toFixed(isPercent ? 2 : 1)}
                     </span>
-                    <span style={{ fontSize: 7, fontWeight: 800, color: clr, textTransform: "uppercase" }}>{ind.signal}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: clr, textTransform: "uppercase" }}>{ind.signal}</span>
                   </div>
-                  <span style={{ fontSize: 6, fontWeight: 800, color: srcClr, background: srcClr + "15", padding: "1px 5px", borderRadius: 4 }}>{ind.source}</span>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: srcClr, background: srcClr + "15", padding: "1px 5px", borderRadius: 4 }}>{ind.source}</span>
                 </div>
                 <svg viewBox="0 0 100 30" style={{ width: "100%", height: 28, display: "block" }} preserveAspectRatio="none">
                   <defs><linearGradient id={`spk-${ind.id}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={clr} stopOpacity="0.2"/><stop offset="100%" stopColor={clr} stopOpacity="0"/></linearGradient></defs>
@@ -4920,8 +4966,8 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
                   <circle cx="100" cy={28 - ((pts[n] - spMin) / spRange) * 24} r="2" fill={clr} />
                 </svg>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-                  <span style={{ fontSize: 6.5, color: "#A09080" }}>{ind.freq}</span>
-                  <span style={{ fontSize: 6.5, color: "#A09080" }}>Released: {ind.release}</span>
+                  <span style={{ fontSize: 9.5, color: "#A09080" }}>{ind.freq}</span>
+                  <span style={{ fontSize: 9.5, color: "#A09080" }}>Released: {ind.release}</span>
                 </div>
               </div>
             );
@@ -4931,7 +4977,7 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
 
       {/* ── Regime Cycle ── */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .25s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Regime Cycle</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Regime Cycle</div>
         {[
           { regime: "Goldilocks", duration: 55, maxDays: 90, color: "#5B8C5A", icon: "leaf", label: "Growth + Low Inflation", period: "Nov 20 – Jan 14" },
           { regime: "Reflation", duration: 23, maxDays: 90, color: "#FFA726", icon: "fire", label: "Growth + Rising Prices", period: "Jan 15 – Present", active: true },
@@ -4951,20 +4997,20 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
                     strokeLinecap="round" style={r.active ? { animation: "pulse 2s infinite" } : {}} />
                 </svg>
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, color: r.color, lineHeight: 1 }}>{r.duration}</span>
-                  <span style={{ fontSize: 6, fontWeight: 700, color: "#33333480", marginTop: 1 }}>days</span>
+                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: r.color, lineHeight: 1 }}>{r.duration}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: "#33333480", marginTop: 1 }}>days</span>
                 </div>
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
                   <Icon name={r.icon} size={11} color={r.color} />
-                  <span style={{ fontSize: 11, fontWeight: 800, color: r.color, fontFamily: "'Instrument Serif', serif" }}>{r.regime}</span>
-                  {r.active && <span style={{ fontSize: 6, background: r.color, color: "#fff", padding: "1px 5px", borderRadius: 3, fontWeight: 800, letterSpacing: 0.5 }}>ACTIVE</span>}
+                  <span style={{ fontSize: 17, fontWeight: 800, color: r.color, fontFamily: "'Instrument Serif', serif" }}>{r.regime}</span>
+                  {r.active && <span style={{ fontSize: 9, background: r.color, color: "#fff", padding: "1px 5px", borderRadius: 3, fontWeight: 800, letterSpacing: 0.5 }}>ACTIVE</span>}
                 </div>
-                <div style={{ fontSize: 8, color: "#33333480" }}>{r.label}</div>
-                <div style={{ fontSize: 7, color: "#A09080", marginTop: 1 }}>{r.period}</div>
+                <div style={{ fontSize: 12, color: "#33333480" }}>{r.label}</div>
+                <div style={{ fontSize: 11, color: "#A09080", marginTop: 1 }}>{r.period}</div>
               </div>
-              {i < 3 && <div style={{ position: "absolute", right: 16, marginTop: 38, color: "#D0C8B8", fontSize: 10 }}></div>}
+              {i < 3 && <div style={{ position: "absolute", right: 16, marginTop: 38, color: "#D0C8B8", fontSize: 15 }}></div>}
             </div>
           );
         })}
@@ -4972,7 +5018,7 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
 
       {/* ── What This Means For You ── */}
       <div style={{ background: regime.bg, border: `1.5px solid ${regime.color}33`, borderRadius: 12, padding: 10, marginBottom: 8, animation: "fadeUp .4s ease .3s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: regime.color, marginBottom: 6 }}>Portfolio Impact</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: regime.color, marginBottom: 6 }}>Portfolio Impact</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
           {[
             { label: "Favors", items: "Energy, Gold, Value, Commodities", clr: "#5B8C5A" },
@@ -4981,8 +5027,8 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
             { label: "Watch For", items: "CPI prints, Fed minutes, Oil supply", clr: "#FFA726" },
           ].map((item, i) => (
             <div key={i} style={{ background: "#fff", borderRadius: 8, padding: "6px 8px" }}>
-              <div style={{ fontSize: 8, fontWeight: 800, color: item.clr, textTransform: "uppercase", marginBottom: 2 }}>{item.label}</div>
-              <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.3 }}>{item.items}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: item.clr, textTransform: "uppercase", marginBottom: 2 }}>{item.label}</div>
+              <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3 }}>{item.items}</div>
             </div>
           ))}
         </div>
@@ -4990,12 +5036,12 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
 
       {/* ── Macro Alerts ── */}
       {alerts.length > 0 && <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .35s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Macro Alerts</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Macro Alerts</div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
           {[{ k: "all", l: "All", n: alerts.length, c: "#5C4A1E", bg: "#fff" }, { k: "critical", l: "Critical", n: alerts.filter(a => a.severity === "critical").length, c: "#EF5350", bg: "#FFEBEE" }, { k: "warning", l: "Warning", n: alerts.filter(a => a.severity === "warning").length, c: "#FFA726", bg: "#FFF3E0" }, { k: "info", l: "Info", n: alerts.filter(a => a.severity === "info").length, c: "#42A5F5", bg: "#E3F2FD" }].map(f => (
             <button key={f.k} onClick={() => setAlertFilter(f.k)} style={{ flex: "1 1 60px", padding: "8px 10px", borderRadius: 12, border: "1.5px solid " + (alertFilter === f.k ? f.c : "transparent"), background: f.bg, cursor: "pointer", textAlign: "left" }}>
-              <div style={{ fontSize: 9, fontWeight: 800, color: f.c }}>{f.l}</div>
-              <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: f.c }}>{f.n}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: f.c }}>{f.l}</div>
+              <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: f.c }}>{f.n}</div>
             </button>
           ))}
         </div>
@@ -5003,16 +5049,16 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
           <div key={a.id} style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", marginBottom: 8, borderLeft: "4px solid " + sCol[a.severity], animation: "fadeUp .4s ease " + (i * .05) + "s both" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
               <Icon name={a.icon} size={11} />
-              <div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 10, fontFamily: "'Instrument Serif', serif" }}>{a.title}</div></div>
-              <span style={{ fontSize: 7, fontWeight: 800, background: sBg[a.severity], color: sCol[a.severity], padding: "2px 8px", borderRadius: 8 }}>{a.severity.toUpperCase()}</span>
-              <span style={{ fontSize: 9, color: "#33333480" }}>{a.time} ago</span>
+              <div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif" }}>{a.title}</div></div>
+              <span style={{ fontSize: 11, fontWeight: 800, background: sBg[a.severity], color: sCol[a.severity], padding: "2px 8px", borderRadius: 8 }}>{a.severity.toUpperCase()}</span>
+              <span style={{ fontSize: 14, color: "#33333480" }}>{a.time} ago</span>
             </div>
-            <div style={{ fontSize: 9, color: "#8A7040", lineHeight: 1.5 }}>{a.summary}</div>
+            <div style={{ fontSize: 14, color: "#8A7040", lineHeight: 1.5 }}>{a.summary}</div>
           </div>
         ))}
       </div>}
 
-      <button onClick={onGoRiskLab} style={{ width: "100%", padding: 11, background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 12, fontSize: 10, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Open Risk Lab →</button>
+      <button onClick={onGoRiskLab} style={{ width: "100%", padding: 11, background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Open Risk Lab →</button>
     </div>
   );
 }
@@ -5024,8 +5070,8 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
   return (
     <div>
       <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Risk Lab</h1>
-        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Stress testing, hedging & portfolio risk analysis</p>
+        <h1 style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Risk Lab</h1>
+        <p style={{ color: "#33333480", fontSize: 15, marginTop: 3 }}>Stress testing, hedging & portfolio risk analysis</p>
       </div>
 
       {/* ── 1. Regime Banner (compact, clickable) ── */}
@@ -5035,18 +5081,18 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <Icon name={regime.icon} size={11} />
             <div>
-              <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .8 }}>Regime</div>
-              <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: regime.color }}>{regime.name} <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, opacity: .7 }}>{regime.confidence}%</span></div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .8 }}>Regime</div>
+              <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: regime.color }}>{regime.name} <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, opacity: .7 }}>{regime.confidence}%</span></div>
             </div>
           </div>
-          <span style={{ fontSize: 9, color: regime.color, fontWeight: 800 }}>Details →</span>
+          <span style={{ fontSize: 14, color: regime.color, fontWeight: 800 }}>Details →</span>
         </div>
       </div>
 
       {/* ── 2. Hedge Recommendations ── */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .1s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Hedge Recommendations</div>
-        {filteredHedges.length === 0 && <div style={{ textAlign: "center", padding: "20px 0", color: "#33333480", fontSize: 9 }}>All hedges executed or expired ✓</div>}
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Hedge Recommendations</div>
+        {filteredHedges.length === 0 && <div style={{ textAlign: "center", padding: "20px 0", color: "#33333480", fontSize: 14 }}>All hedges executed or expired ✓</div>}
         {filteredHedges.map((h, i) => {
           const aCol = { BUY: "#C48830", SELL: "#EF5350", ADD: "#C48830", REDUCE: "#EF5350", ROTATE: "#42A5F5" };
           const expPct = h.totalDuration > 0 ? ((h.totalDuration - (h.expiresIn * (h.expiresUnit === "hrs" ? 1 : 24))) / h.totalDuration) * 100 : 0;
@@ -5063,26 +5109,26 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
                       strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
                   </svg>
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 900, color: "#5C4A1E", lineHeight: 1 }}>{h.expiresIn}</div>
-                    <div style={{ fontSize: 6, fontWeight: 700, color: "#33333480", lineHeight: 1 }}>{h.expiresUnit}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: "#5C4A1E", lineHeight: 1 }}>{h.expiresIn}</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", lineHeight: 1 }}>{h.expiresUnit}</div>
                   </div>
                 </div>
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 3, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 8, fontWeight: 900, padding: "1px 6px", borderRadius: 4, background: aCol[h.action] || "#A09080", color: "#fff" }}>{h.action}</span>
-                    <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>{h.instrument}</span>
+                    <span style={{ fontSize: 12, fontWeight: 900, padding: "1px 6px", borderRadius: 4, background: aCol[h.action] || "#A09080", color: "#fff" }}>{h.action}</span>
+                    <span style={{ fontWeight: 800, fontSize: 14, fontFamily: "'Instrument Serif', serif" }}>{h.instrument}</span>
                   </div>
-                  <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.3, marginBottom: 4 }}>{h.desc}</div>
-                  <div style={{ display: "flex", gap: 4, fontSize: 8, color: "#33333480", flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3, marginBottom: 4 }}>{h.desc}</div>
+                  <div style={{ display: "flex", gap: 4, fontSize: 12, color: "#33333480", flexWrap: "wrap" }}>
                     <span>{h.cost}</span>
                     <span>{h.impact}</span>
                   </div>
                 </div>
                 {/* Action buttons */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
-                  <button style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 8, fontWeight: 800, cursor: "pointer" }}>Execute</button>
-                  <button onClick={() => setDismissedHedges(prev => [...prev, h.id])} style={{ background: "#F0E6D0", color: "#33333480", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 7, fontWeight: 800, cursor: "pointer" }}>Dismiss</button>
+                  <button style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Execute</button>
+                  <button onClick={() => setDismissedHedges(prev => [...prev, h.id])} style={{ background: "#F0E6D0", color: "#33333480", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>Dismiss</button>
                 </div>
               </div>
             </div>
@@ -5092,7 +5138,7 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
 
       {/* ── 3. Portfolio Risk Metrics ── */}
       <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .2s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
           {[
             { label: "Sharpe", value: portfolioRisk.sharpe.toFixed(2), good: portfolioRisk.sharpe > 1 },
@@ -5103,47 +5149,47 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
             { label: "Calmar", value: portfolioRisk.calmar.toFixed(2), good: portfolioRisk.calmar > 1 },
           ].map((m, i) => (
             <div key={i} style={{ background: "#fff", borderRadius: 8, padding: "6px 8px", border: "1px solid #F0E6D0" }}>
-              <div style={{ fontSize: 8, fontWeight: 700, color: "#33333480" }}>{m.label}</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.value}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#33333480" }}>{m.label}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.value}</div>
             </div>
           ))}
         </div>
         <div style={{ marginTop: 8, padding: "6px 8px", background: "#fff", borderRadius: 8, border: "1px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div><div style={{ fontSize: 8, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div></div>
-          <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
+          <div><div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div><div style={{ fontSize: 12, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div></div>
+          <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
         </div>
       </div>
 
       {/* ── 4. Basket Correlations ── */}
       <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease .3s both" }}>
-        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Basket Correlations</div>
-        <div className="correlation-scroll mobile-scroll-x" style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 9 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Basket Correlations</div>
+        <div className="correlation-scroll mobile-scroll-x" style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 14 }}>
           <div />
-          {myBaskets.map(b => <div key={b.id} style={{ textAlign: "center", fontWeight: 800, padding: 4, fontSize: 8 }}><Icon name={b.icon} size={8} /> {b.name.split(" ")[0]}</div>)}
+          {myBaskets.map(b => <div key={b.id} style={{ textAlign: "center", fontWeight: 800, padding: 4, fontSize: 12 }}><Icon name={b.icon} size={8} /> {b.name.split(" ")[0]}</div>)}
           {myBaskets.map((b, ri) => (
             <React.Fragment key={b.id}>
-              <div style={{ fontWeight: 800, display: "flex", alignItems: "center", gap: 3, padding: "3px 0" }}><Icon name={b.icon} size={10} /><span style={{ fontSize: 8 }}>{b.name.split(" ")[0]}</span></div>
+              <div style={{ fontWeight: 800, display: "flex", alignItems: "center", gap: 3, padding: "3px 0" }}><Icon name={b.icon} size={10} /><span style={{ fontSize: 12 }}>{b.name.split(" ")[0]}</span></div>
               {basketCorrelations[ri] && basketCorrelations[ri].map((c, ci) => {
                 const abs = Math.abs(c);
                 const bg = ri === ci ? "#FFF5E6" : c > 0.5 ? "rgba(232,116,97," + (abs * 0.4) + ")" : c < -0.05 ? "rgba(91,155,213," + (abs * 0.6) + ")" : "rgba(107,155,110," + (abs * 0.3) + ")";
-                return <div key={ci} style={{ textAlign: "center", padding: "8px 2px", borderRadius: 6, background: bg, fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 10, color: ri === ci ? "#A09080" : "#5C4A1E" }}>{c.toFixed(2)}</div>;
+                return <div key={ci} style={{ textAlign: "center", padding: "8px 2px", borderRadius: 6, background: bg, fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 15, color: ri === ci ? "#A09080" : "#5C4A1E" }}>{c.toFixed(2)}</div>;
               })}
             </React.Fragment>
           ))}
         </div>
-        <div style={{ marginTop: 8, fontSize: 9, color: "#8A7040", lineHeight: 1.5 }}>
+        <div style={{ marginTop: 8, fontSize: 14, color: "#8A7040", lineHeight: 1.5 }}>
           <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "rgba(232,116,97,0.35)", marginRight: 3, verticalAlign: "middle" }} /> High correlation
           <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "rgba(91,155,213,0.35)", marginRight: 3, marginLeft: 8, verticalAlign: "middle" }} /> Negative (hedge)
         </div>
 
         {/* Factor Exposure */}
         <div style={{ marginTop: 12, borderTop: "1px solid #33333420", paddingTop: 10 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Factor Exposure</div>
+          <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Factor Exposure</div>
           {factorExposures.map((f, i) => (
             <div key={i} style={{ marginBottom: 6 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                <span style={{ fontSize: 8, fontWeight: 700 }}>{f.factor}</span>
-                <span style={{ fontSize: 8, fontFamily: "JetBrains Mono", color: "#C48830" }}>{(f.exposure * 100).toFixed(0)}% vs {(f.benchmark * 100).toFixed(0)}%</span>
+                <span style={{ fontSize: 12, fontWeight: 700 }}>{f.factor}</span>
+                <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", color: "#C48830" }}>{(f.exposure * 100).toFixed(0)}% vs {(f.benchmark * 100).toFixed(0)}%</span>
               </div>
               <div style={{ height: 4, background: "#FFF5E6", borderRadius: 2, position: "relative" }}>
                 <div style={{ position: "absolute", height: "100%", width: (f.exposure * 100) + "%", background: "#C48830", borderRadius: 2 }} />
@@ -5246,15 +5292,15 @@ function StressTestPage() {
   return (
     <div>
       <div style={{ marginBottom: 8, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Portfolio Stress Testing</h1>
-        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Institutional-grade scenario analysis, Monte Carlo simulation & risk analytics</p>
+        <h1 style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Portfolio Stress Testing</h1>
+        <p style={{ color: "#33333480", fontSize: 15, marginTop: 3 }}>Institutional-grade scenario analysis, Monte Carlo simulation & risk analytics</p>
       </div>
 
       {/* ── Tool Selector ── */}
       <div className="no-scrollbar" style={{ display: "flex", gap: 3, marginBottom: 8, overflowX: "auto" }}>
         {views.map(v => (
           <button key={v.id} onClick={() => setView(v.id)}
-            style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 8px", borderRadius: 8, border: `1.5px solid ${view === v.id ? "#C48830" : "#F0E6D0"}`, background: view === v.id ? "#C48830" : "#fff", color: view === v.id ? "#fff" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap", transition: "all .2s" }}>
+            style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 8px", borderRadius: 8, border: `1.5px solid ${view === v.id ? "#C48830" : "#F0E6D0"}`, background: view === v.id ? "#C48830" : "#fff", color: view === v.id ? "#fff" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap", transition: "all .2s" }}>
             <Icon name={v.icon} size={8} color={view === v.id ? "#fff" : "#A09080"} />{v.label}
           </button>
         ))}
@@ -5267,9 +5313,9 @@ function StressTestPage() {
             <button key={r.id} onClick={() => setStressId(stressId === r.id ? null : r.id)}
               style={{ background: stressId === r.id ? r.color + "15" : "#fff", border: `1.5px solid ${stressId === r.id ? r.color : "#F0E6D0"}`, borderRadius: 12, padding: "8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
               <Icon name={r.icon} size={12} color={stressId === r.id ? r.color : "#A09080"} />
-              <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginTop: 4, lineHeight: 1.2 }}>{r.name.split(" ").slice(0,2).join(" ")}</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#EF5350", marginTop: 3 }}>{r.shocks.spx > 0 ? "+" : ""}{r.shocks.spx}%</div>
-              <div style={{ fontSize: 7, color: "#33333480" }}>S&P 500</div>
+              <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginTop: 4, lineHeight: 1.2 }}>{r.name.split(" ").slice(0,2).join(" ")}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#EF5350", marginTop: 3 }}>{r.shocks.spx > 0 ? "+" : ""}{r.shocks.spx}%</div>
+              <div style={{ fontSize: 11, color: "#33333480" }}>S&P 500</div>
             </button>
           ))}
         </div>
@@ -5281,14 +5327,14 @@ function StressTestPage() {
                 <Icon name={activeReplay.icon} size={14} color={activeReplay.color} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{activeReplay.name}</div>
-                <div style={{ fontSize: 8, color: "#33333480" }}>{activeReplay.period} · {activeReplay.duration}</div>
+                <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{activeReplay.name}</div>
+                <div style={{ fontSize: 12, color: "#33333480" }}>{activeReplay.period} · {activeReplay.duration}</div>
               </div>
             </div>
-            <div style={{ fontSize: 9, color: "#4A4030", lineHeight: 1.6, marginBottom: 10, fontFamily: "Quicksand" }}>{activeReplay.desc}</div>
+            <div style={{ fontSize: 14, color: "#4A4030", lineHeight: 1.6, marginBottom: 10, fontFamily: "Quicksand" }}>{activeReplay.desc}</div>
 
             {/* Asset Class Impact Grid */}
-            <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Asset Class Impacts</div>
+            <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Asset Class Impacts</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(85px,1fr))", gap: 4, marginBottom: 10 }}>
               {[
                 { key: "spx", label: "S&P 500", icon: "chart-bar" }, { key: "nasdaq", label: "Nasdaq", icon: "laptop" },
@@ -5304,8 +5350,8 @@ function StressTestPage() {
                 return (
                   <div key={a.key} style={{ background: col + "0A", border: `1px solid ${col}22`, borderRadius: 10, padding: "6px 8px", textAlign: "center" }}>
                     <Icon name={a.icon} size={10} color={col} />
-                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", marginTop: 2 }}>{a.label}</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: col, marginTop: 2 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", marginTop: 2 }}>{a.label}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: col, marginTop: 2 }}>
                       {isVix ? v.toFixed(1) : (v >= 0 ? "+" : "") + v.toFixed(1) + "%"}
                     </div>
                   </div>
@@ -5314,7 +5360,7 @@ function StressTestPage() {
             </div>
 
             {/* Portfolio Impact */}
-            <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Your Portfolio Under This Scenario</div>
+            <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Your Portfolio Under This Scenario</div>
             {myBaskets.map(b => {
               const impact = stressScenarios.find(s => s.id === (stressId === "gfc08" ? "recession" : stressId === "covid20" ? "recession" : stressId === "rate22" ? "rate_hike" : stressId === "dotcom" ? "tech_crash" : stressId === "fed26" ? "recession" : "recession"))?.impacts[b.id] || -5.0;
               const scaledImpact = impact * (Math.abs(activeReplay.shocks.spx) / 30);
@@ -5323,18 +5369,18 @@ function StressTestPage() {
                 <div key={b.id} style={{ background: scaledImpact >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 10, padding: "6px 10px", border: `1px solid ${scaledImpact >= 0 ? "#5B8C5A" : "#EF5350"}22`, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                     <Icon name={b.icon} size={10} />
-                    <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>{b.name}</span>
+                    <span style={{ fontWeight: 800, fontSize: 14, fontFamily: "'Instrument Serif', serif" }}>{b.name}</span>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: scaledImpact >= 0 ? "#5B8C5A" : "#EF5350" }}>{scaledImpact >= 0 ? "+" : ""}{scaledImpact.toFixed(1)}%</span>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImpact)}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: scaledImpact >= 0 ? "#5B8C5A" : "#EF5350" }}>{scaledImpact >= 0 ? "+" : ""}{scaledImpact.toFixed(1)}%</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImpact)}</span>
                   </div>
                 </div>
               );
             })}
             <div style={{ marginTop: 4, padding: "8px 10px", background: "#FFEBEE", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 800, fontSize: 9, fontFamily: "'Instrument Serif', serif" }}>Total Portfolio Impact</span>
-              <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: "#EF5350" }}>
+              <span style={{ fontWeight: 800, fontSize: 14, fontFamily: "'Instrument Serif', serif" }}>Total Portfolio Impact</span>
+              <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: "#EF5350" }}>
                 {((activeReplay.shocks.spx * 0.4 + (activeReplay.shocks.bonds || 0) * 0.15 + (activeReplay.shocks.gold || 0) * 0.1 + (activeReplay.shocks.oil || 0) * 0.08) ).toFixed(1)}% ({fmtS(Math.round(totalValue * (activeReplay.shocks.spx * 0.4 + (activeReplay.shocks.bonds || 0) * 0.15 + (activeReplay.shocks.gold || 0) * 0.1) / 100))})
               </span>
             </div>
@@ -5347,11 +5393,11 @@ function StressTestPage() {
         <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #F0E6D0" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Monte Carlo Simulation</div>
-              <div style={{ fontSize: 8, color: "#33333480", marginTop: 2 }}>{mcResults.simulations.toLocaleString()} paths · {mcResults.horizon} horizon · {mcResults.confidence}% CI</div>
+              <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Monte Carlo Simulation</div>
+              <div style={{ fontSize: 12, color: "#33333480", marginTop: 2 }}>{mcResults.simulations.toLocaleString()} paths · {mcResults.horizon} horizon · {mcResults.confidence}% CI</div>
             </div>
             <button onClick={() => setMonteCarloRun(!monteCarloRun)}
-              style={{ padding: "6px 14px", borderRadius: 10, border: "none", background: monteCarloRun ? "#5B8C5A" : "#C48830", color: "#fff", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>
+              style={{ padding: "6px 14px", borderRadius: 10, border: "none", background: monteCarloRun ? "#5B8C5A" : "#C48830", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>
               {monteCarloRun ? "Re-run" : "Run Simulation"}
             </button>
           </div>
@@ -5387,9 +5433,9 @@ function StressTestPage() {
               const dollarVal = Math.round(totalValue * p.val / 100);
               return (
                 <div key={i} style={{ background: p.val >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 8, padding: "5px 6px", textAlign: "center", border: `1px solid ${p.color}18` }}>
-                  <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480" }}>{p.p}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: p.color }}>{p.val >= 0 ? "+" : ""}{p.val}%</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 7, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarVal)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480" }}>{p.p}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: p.color }}>{p.val >= 0 ? "+" : ""}{p.val}%</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarVal)}</div>
                 </div>
               );
             })}
@@ -5404,8 +5450,8 @@ function StressTestPage() {
               { label: "P(Gain >20%)", val: mcResults.probGain20 + "%", color: "#42A5F5" },
             ].map((s, i) => (
               <div key={i} style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 6px", textAlign: "center" }}>
-                <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{s.label}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: s.color, marginTop: 2 }}>{s.val}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{s.label}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: s.color, marginTop: 2 }}>{s.val}</div>
               </div>
             ))}
           </div>
@@ -5415,14 +5461,14 @@ function StressTestPage() {
       {/* ════════ SENSITIVITY ANALYSIS (Factor Shock Grid) ════════ */}
       {view === "sensitivity" && <div style={{ animation: "fadeUp .3s ease both" }}>
         <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid #F0E6D0" }}>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Factor Sensitivity Analysis</div>
-          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 10 }}>How your portfolio responds to individual factor shocks</div>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Factor Sensitivity Analysis</div>
+          <div style={{ fontSize: 12, color: "#33333480", marginBottom: 10 }}>How your portfolio responds to individual factor shocks</div>
 
           {/* Factor Selector */}
           <div className="no-scrollbar" style={{ display: "flex", gap: 4, marginBottom: 10, overflowX: "auto" }}>
             {Object.entries(sensFactors).map(([key, f]) => (
               <button key={key} onClick={() => setSensitivity(key)}
-                style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 8, border: `1.5px solid ${sensitivity === key ? "#C48830" : "#F0E6D0"}`, background: sensitivity === key ? "#FFF8EE" : "#fff", color: sensitivity === key ? "#C48830" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap" }}>
+                style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 8, border: `1.5px solid ${sensitivity === key ? "#C48830" : "#F0E6D0"}`, background: sensitivity === key ? "#FFF8EE" : "#fff", color: sensitivity === key ? "#C48830" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap" }}>
                 <Icon name={f.icon} size={9} color={sensitivity === key ? "#C48830" : "#A09080"} /> {f.label}
               </button>
             ))}
@@ -5459,9 +5505,9 @@ function StressTestPage() {
               const col = imp >= 0 ? "#5B8C5A" : "#EF5350";
               return (
                 <div key={i} style={{ background: col + "0A", borderRadius: 8, padding: "5px 6px", textAlign: "center", border: `1px solid ${col}15` }}>
-                  <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480" }}>{step >= 0 ? "+" : ""}{step}{sensData.unit}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: col }}>{imp >= 0 ? "+" : ""}{imp}%</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 7, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImp)}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480" }}>{step >= 0 ? "+" : ""}{step}{sensData.unit}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: col }}>{imp >= 0 ? "+" : ""}{imp}%</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImp)}</div>
                 </div>
               );
             })}
@@ -5472,8 +5518,8 @@ function StressTestPage() {
       {/* ════════ VaR / CVaR ANALYTICS ════════ */}
       {view === "var" && <div style={{ animation: "fadeUp .3s ease both" }}>
         <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #F0E6D0" }}>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Value at Risk & Expected Shortfall</div>
-          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 10 }}>Parametric VaR using variance-covariance method · CVaR (ES) for tail risk</div>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Value at Risk & Expected Shortfall</div>
+          <div style={{ fontSize: 12, color: "#33333480", marginBottom: 10 }}>Parametric VaR using variance-covariance method · CVaR (ES) for tail risk</div>
 
           {/* Primary VaR Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
@@ -5484,32 +5530,32 @@ function StressTestPage() {
               { label: "VaR 99% (10-Day)", val: varMetrics.var99_10d, dollar: Math.round(totalValue * varMetrics.var99_10d / 100), desc: "1% chance of losing more in 2 trading weeks", color: "#EF5350" },
             ].map((v, i) => (
               <div key={i} style={{ background: v.color + "08", border: `1.5px solid ${v.color}22`, borderRadius: 12, padding: "8px 10px" }}>
-                <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{v.label}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: v.color, marginTop: 3 }}>{v.val}%</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 600, color: "#8A7040", marginTop: 1 }}>{fmtS(v.dollar)}</div>
-                <div style={{ fontSize: 7, color: "#33333480", marginTop: 3, lineHeight: 1.3 }}>{v.desc}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{v.label}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 21, fontWeight: 900, color: v.color, marginTop: 3 }}>{v.val}%</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 600, color: "#8A7040", marginTop: 1 }}>{fmtS(v.dollar)}</div>
+                <div style={{ fontSize: 11, color: "#33333480", marginTop: 3, lineHeight: 1.3 }}>{v.desc}</div>
               </div>
             ))}
           </div>
 
           {/* CVaR / Expected Shortfall */}
-          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Conditional VaR (Expected Shortfall)</div>
+          <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Conditional VaR (Expected Shortfall)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
             {[
               { label: "CVaR 95%", val: varMetrics.cvar95, desc: "Average loss in the worst 5% of scenarios", color: "#FFA726" },
               { label: "CVaR 99%", val: varMetrics.cvar99, desc: "Average loss in the worst 1% of scenarios", color: "#EF5350" },
             ].map((v, i) => (
               <div key={i} style={{ background: "#F9F6F0", borderRadius: 10, padding: "8px 10px", border: `1px solid ${v.color}18` }}>
-                <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{v.label}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 900, color: v.color, marginTop: 2 }}>{v.val}%</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 600, color: "#8A7040" }}>{fmtS(Math.round(totalValue * v.val / 100))}</div>
-                <div style={{ fontSize: 7, color: "#33333480", marginTop: 2 }}>{v.desc}</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{v.label}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 900, color: v.color, marginTop: 2 }}>{v.val}%</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 600, color: "#8A7040" }}>{fmtS(Math.round(totalValue * v.val / 100))}</div>
+                <div style={{ fontSize: 11, color: "#33333480", marginTop: 2 }}>{v.desc}</div>
               </div>
             ))}
           </div>
 
           {/* Risk Characteristics */}
-          <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Risk Characteristics</div>
+          <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Risk Characteristics</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(80px,1fr))", gap: 4 }}>
             {[
               { label: "Annualized Vol", val: varMetrics.portfolioVol + "%", color: "#FFA726" },
@@ -5522,8 +5568,8 @@ function StressTestPage() {
               { label: "Kurtosis", val: varMetrics.kurtosis.toFixed(2), color: varMetrics.kurtosis > 3 ? "#FFA726" : "#5B8C5A" },
             ].map((m, i) => (
               <div key={i} style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 6px", textAlign: "center" }}>
-                <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: m.color, marginTop: 2 }}>{m.val}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: m.color, marginTop: 2 }}>{m.val}</div>
               </div>
             ))}
           </div>
@@ -5532,8 +5578,8 @@ function StressTestPage() {
           {varMetrics.kurtosis > 3 && <div style={{ marginTop: 8, padding: "8px 10px", background: "#FFF3E0", borderRadius: 10, border: "1px solid #FFA72622", display: "flex", alignItems: "center", gap: 8 }}>
             <Icon name="warning" size={14} color="#FFA726" />
             <div>
-              <div style={{ fontSize: 8, fontWeight: 800, color: "#FFA726" }}>Fat Tails Detected (Kurtosis: {varMetrics.kurtosis.toFixed(2)})</div>
-              <div style={{ fontSize: 8, color: "#8A7040", marginTop: 2 }}>Your portfolio has excess kurtosis &gt; 3, meaning extreme events are more likely than a normal distribution predicts. Parametric VaR may understate true tail risk — consider using Monte Carlo or Historical VaR for more accurate estimates.</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#FFA726" }}>Fat Tails Detected (Kurtosis: {varMetrics.kurtosis.toFixed(2)})</div>
+              <div style={{ fontSize: 12, color: "#8A7040", marginTop: 2 }}>Your portfolio has excess kurtosis &gt; 3, meaning extreme events are more likely than a normal distribution predicts. Parametric VaR may understate true tail risk — consider using Monte Carlo or Historical VaR for more accurate estimates.</div>
             </div>
           </div>}
         </div>
@@ -5542,8 +5588,8 @@ function StressTestPage() {
       {/* ════════ CUSTOM SCENARIO BUILDER ════════ */}
       {view === "custom" && <div style={{ animation: "fadeUp .3s ease both" }}>
         <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid #F0E6D0" }}>
-          <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Custom Scenario Builder</div>
-          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 10 }}>Define your own macro shocks and see the estimated portfolio impact</div>
+          <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Custom Scenario Builder</div>
+          <div style={{ fontSize: 12, color: "#33333480", marginBottom: 10 }}>Define your own macro shocks and see the estimated portfolio impact</div>
 
           {/* Shock Sliders */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
@@ -5562,9 +5608,9 @@ function StressTestPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                       <Icon name={s.icon} size={9} color={col} />
-                      <span style={{ fontSize: 8, fontWeight: 800, color: "#5C4A1E" }}>{s.label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: "#5C4A1E" }}>{s.label}</span>
                     </div>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: col }}>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: col }}>
                       {val >= 0 ? "+" : ""}{val}{s.unit}
                     </span>
                   </div>
@@ -5580,12 +5626,12 @@ function StressTestPage() {
           <div style={{ padding: "10px 12px", background: customPortfolioImpact >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 12, border: `1.5px solid ${customPortfolioImpact >= 0 ? "#5B8C5A" : "#EF5350"}22`, marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Estimated Portfolio Impact</div>
-                <div style={{ fontSize: 7, color: "#8A7040", marginTop: 2 }}>Based on factor loadings and historical betas</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Estimated Portfolio Impact</div>
+                <div style={{ fontSize: 11, color: "#8A7040", marginTop: 2 }}>Based on factor loadings and historical betas</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 16, fontWeight: 900, color: customPortfolioImpact >= 0 ? "#5B8C5A" : "#EF5350" }}>{customPortfolioImpact >= 0 ? "+" : ""}{customPortfolioImpact.toFixed(1)}%</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 600, color: "#8A7040" }}>{fmtS(Math.round(totalValue * customPortfolioImpact / 100))}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 24, fontWeight: 900, color: customPortfolioImpact >= 0 ? "#5B8C5A" : "#EF5350" }}>{customPortfolioImpact >= 0 ? "+" : ""}{customPortfolioImpact.toFixed(1)}%</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 600, color: "#8A7040" }}>{fmtS(Math.round(totalValue * customPortfolioImpact / 100))}</div>
               </div>
             </div>
           </div>
@@ -5593,15 +5639,15 @@ function StressTestPage() {
           {/* Reset & Preset Buttons */}
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             <button onClick={() => setCustomShocks({ spx: 0, rates: 0, vix: 0, oil: 0, dxy: 0, gold: 0 })}
-              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #F0E6D0", background: "#fff", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#A09080" }}>Reset All</button>
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #F0E6D0", background: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", color: "#A09080" }}>Reset All</button>
             <button onClick={() => setCustomShocks({ spx: -30, rates: -100, vix: 40, oil: -40, dxy: 5, gold: 15 })}
-              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #EF535044", background: "#FFEBEE", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#EF5350" }}>Recession</button>
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #EF535044", background: "#FFEBEE", fontSize: 12, fontWeight: 800, cursor: "pointer", color: "#EF5350" }}>Recession</button>
             <button onClick={() => setCustomShocks({ spx: -15, rates: 200, vix: 25, oil: 50, dxy: 10, gold: 20 })}
-              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #FFA72644", background: "#FFF3E0", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#FFA726" }}>Stagflation</button>
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #FFA72644", background: "#FFF3E0", fontSize: 12, fontWeight: 800, cursor: "pointer", color: "#FFA726" }}>Stagflation</button>
             <button onClick={() => setCustomShocks({ spx: 20, rates: -50, vix: -10, oil: 15, dxy: -8, gold: 5 })}
-              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #5B8C5A44", background: "#EDF5ED", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#5B8C5A" }}>Goldilocks</button>
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #5B8C5A44", background: "#EDF5ED", fontSize: 12, fontWeight: 800, cursor: "pointer", color: "#5B8C5A" }}>Goldilocks</button>
             <button onClick={() => setCustomShocks({ spx: -8, rates: 100, vix: 15, oil: -20, dxy: 12, gold: -5 })}
-              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #42A5F544", background: "#E3F2FD", fontSize: 8, fontWeight: 800, cursor: "pointer", color: "#42A5F5" }}>Rate Hike</button>
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #42A5F544", background: "#E3F2FD", fontSize: 12, fontWeight: 800, cursor: "pointer", color: "#42A5F5" }}>Rate Hike</button>
           </div>
         </div>
       </div>}
@@ -5638,13 +5684,13 @@ function HistoricalPatternsPage() {
   return (
     <div>
       <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Historical Patterns</h1>
-        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Compare current market conditions to historical periods & detect rhyming patterns</p>
+        <h1 style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Historical Patterns</h1>
+        <p style={{ color: "#33333480", fontSize: 15, marginTop: 3 }}>Compare current market conditions to historical periods & detect rhyming patterns</p>
       </div>
 
       <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
         {[{ id: "comparison", l: "Compare" }, { id: "patterns", l: "Patterns" }, { id: "indicators", l: "Indicators" }].map(t => (
-          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#C48830" : "#F0E6D0"}`, background: view === t.id ? "#C48830" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#C48830" : "#F0E6D0"}`, background: view === t.id ? "#C48830" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
         ))}
       </div>
 
@@ -5653,9 +5699,9 @@ function HistoricalPatternsPage() {
           {historicalPeriods.map(p => (
             <button key={p.id} onClick={() => setSelectedPeriod(p.id)} style={{ background: selectedPeriod === p.id ? p.color + "15" : "#fff", border: `1.5px solid ${selectedPeriod === p.id ? p.color : "#F0E6D0"}`, borderRadius: 12, padding: "8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
               <Icon name={p.icon} size={12} color={selectedPeriod === p.id ? p.color : "#A09080"} />
-              <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginTop: 4 }}>{p.label}</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: p.color, marginTop: 2 }}>{p.similarity}%</div>
-              <div style={{ fontSize: 7, color: "#33333480" }}>similarity</div>
+              <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginTop: 4 }}>{p.label}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: p.color, marginTop: 2 }}>{p.similarity}%</div>
+              <div style={{ fontSize: 11, color: "#33333480" }}>similarity</div>
             </button>
           ))}
         </div>
@@ -5667,12 +5713,12 @@ function HistoricalPatternsPage() {
                 <Icon name={period.icon} size={16} color={period.color} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{period.label}</div>
-                <div style={{ fontSize: 8, color: "#33333480" }}>{period.desc}</div>
+                <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{period.label}</div>
+                <div style={{ fontSize: 12, color: "#33333480" }}>{period.desc}</div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 8, fontWeight: 700, color: "#33333480" }}>Match</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: period.color }}>{period.similarity}%</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#33333480" }}>Match</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 21, fontWeight: 900, color: period.color }}>{period.similarity}%</div>
               </div>
             </div>
 
@@ -5683,22 +5729,22 @@ function HistoricalPatternsPage() {
                 { label: "Recovery", value: period.recovery, color: "#5B8C5A" },
               ].map((s, i) => (
                 <div key={i} style={{ background: "#F9F6F0", borderRadius: 8, padding: "6px 8px", textAlign: "center" }}>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{s.label}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: s.color, marginTop: 2 }}>{s.value}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{s.label}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: s.color, marginTop: 2 }}>{s.value}</div>
                 </div>
               ))}
             </div>
 
             <div style={{ padding: "6px 10px", background: period.color + "10", borderRadius: 8, border: `1px solid ${period.color}22`, marginBottom: 8 }}>
-              <div style={{ fontSize: 8, fontWeight: 800, color: period.color, textTransform: "uppercase" }}>Trigger</div>
-              <div style={{ fontSize: 9, color: "#5C4A1E", marginTop: 2 }}>{period.trigger}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: period.color, textTransform: "uppercase" }}>Trigger</div>
+              <div style={{ fontSize: 14, color: "#5C4A1E", marginTop: 2 }}>{period.trigger}</div>
             </div>
 
-            <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Then vs Now</div>
+            <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Then vs Now</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
-              <div style={{ fontSize: 7, fontWeight: 800, color: "#33333480" }}>METRIC</div>
-              <div style={{ fontSize: 7, fontWeight: 800, color: period.color, textAlign: "center" }}>{period.label.toUpperCase()}</div>
-              <div style={{ fontSize: 7, fontWeight: 800, color: "#C48830", textAlign: "center" }}>NOW</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480" }}>METRIC</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: period.color, textAlign: "center" }}>{period.label.toUpperCase()}</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#C48830", textAlign: "center" }}>NOW</div>
               {[
                 { label: "Unemployment", key: "unemployment", unit: "%" },
                 { label: "GDP Growth", key: "gdpGrowth", unit: "%" },
@@ -5707,9 +5753,9 @@ function HistoricalPatternsPage() {
                 { label: "VIX", key: "vix", unit: "" },
               ].map((m, i) => (
                 <React.Fragment key={i}>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: "#5C4A1E", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{m.label}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: period.color, textAlign: "center", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{period.indicators[m.key] !== null ? period.indicators[m.key] + m.unit : "N/A"}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#C48830", textAlign: "center", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{currentIndicators[m.key]}{m.unit}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#5C4A1E", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{m.label}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: period.color, textAlign: "center", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{period.indicators[m.key] !== null ? period.indicators[m.key] + m.unit : "N/A"}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#C48830", textAlign: "center", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{currentIndicators[m.key]}{m.unit}</div>
                 </React.Fragment>
               ))}
             </div>
@@ -5719,24 +5765,24 @@ function HistoricalPatternsPage() {
 
       {view === "patterns" && (
         <div style={{ animation: "fadeUp .3s ease both" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Pattern Recognition</div>
+          <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Pattern Recognition</div>
           {patternMatches.map((p, i) => (
             <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <Icon name={p.icon} size={11} color={p.color} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{p.pattern}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{p.pattern}</div>
                 </div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, color: p.color }}>{p.confidence}%</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: p.color }}>{p.confidence}%</div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <div style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 8px" }}>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Current</div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{p.current}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Current</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{p.current}</div>
                 </div>
                 <div style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 8px" }}>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Historical</div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{p.historical}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Historical</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{p.historical}</div>
                 </div>
               </div>
               <div style={{ marginTop: 6, height: 4, background: "#F0E6D0", borderRadius: 2 }}>
@@ -5749,7 +5795,7 @@ function HistoricalPatternsPage() {
 
       {view === "indicators" && (
         <div style={{ animation: "fadeUp .3s ease both" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Macro Indicators Timeline</div>
+          <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Macro Indicators Timeline</div>
           <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid #F0E6D0" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 8 }}>
               {[
@@ -5763,11 +5809,11 @@ function HistoricalPatternsPage() {
                 <div key={i} style={{ background: "#F9F6F0", borderRadius: 8, padding: "6px 8px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
                     <Icon name={ind.icon} size={9} color="#A09080" />
-                    <span style={{ fontSize: 8, fontWeight: 700, color: "#33333480" }}>{ind.label}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#33333480" }}>{ind.label}</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 800, color: "#5C4A1E" }}>{ind.value}</span>
-                    <span style={{ fontSize: 8, color: ind.trend === "up" ? "#5B8C5A" : ind.trend === "down" ? "#EF5350" : "#FFA726", fontWeight: 700 }}>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: "#5C4A1E" }}>{ind.value}</span>
+                    <span style={{ fontSize: 12, color: ind.trend === "up" ? "#5B8C5A" : ind.trend === "down" ? "#EF5350" : "#FFA726", fontWeight: 700 }}>
                       {ind.trend === "up" ? "▲" : ind.trend === "down" ? "▼" : "—"}
                     </span>
                   </div>
@@ -5777,10 +5823,10 @@ function HistoricalPatternsPage() {
             <div style={{ padding: "8px 10px", background: "#FFEBEE", borderRadius: 10, border: "1px solid #EF535022" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 800, color: "#EF5350", textTransform: "uppercase" }}>Recession Probability (12mo)</div>
-                  <div style={{ fontSize: 8, color: "#8A7040", marginTop: 2 }}>Based on yield curve, PMI, and leading indicators</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#EF5350", textTransform: "uppercase" }}>Recession Probability (12mo)</div>
+                  <div style={{ fontSize: 12, color: "#8A7040", marginTop: 2 }}>Based on yield curve, PMI, and leading indicators</div>
                 </div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 16, fontWeight: 900, color: "#EF5350" }}>32%</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 24, fontWeight: 900, color: "#EF5350" }}>32%</div>
               </div>
             </div>
           </div>
@@ -5835,31 +5881,31 @@ function ContrarianSignalsPage() {
   return (
     <div>
       <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
-        <h1 style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Contrarian Signals</h1>
-        <p style={{ color: "#33333480", fontSize: 10, marginTop: 3 }}>Go against the crowd — find what's overloved, underloved & mispriced</p>
+        <h1 style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Contrarian Signals</h1>
+        <p style={{ color: "#33333480", fontSize: 15, marginTop: 3 }}>Go against the crowd — find what's overloved, underloved & mispriced</p>
       </div>
 
       <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
         {[{ id: "flows", l: "Flows" }, { id: "underloved", l: "Underloved" }, { id: "crowded", l: "Crowded" }, { id: "commodities", l: "Commodities" }].map(t => (
-          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#C48830" : "#F0E6D0"}`, background: view === t.id ? "#C48830" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#C48830" : "#F0E6D0"}`, background: view === t.id ? "#C48830" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
         ))}
       </div>
 
       {view === "flows" && (
         <div style={{ animation: "fadeUp .3s ease both" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Trade Flow Analysis</div>
-          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 8 }}>Volume vs average — when the crowd piles in, contrarians step back.</div>
+          <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Trade Flow Analysis</div>
+          <div style={{ fontSize: 12, color: "#33333480", marginBottom: 8 }}>Volume vs average — when the crowd piles in, contrarians step back.</div>
           {tradeFlows.map((t, i) => (
             <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <Icon name={t.icon} size={12} />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800 }}>{t.ticker}</span>
-                    <span style={{ fontSize: 8, color: "#33333480" }}>{t.name}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800 }}>{t.ticker}</span>
+                    <span style={{ fontSize: 12, color: "#33333480" }}>{t.name}</span>
                   </div>
                 </div>
-                <span style={{ fontSize: 7, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: t.color + "15", color: t.color }}>{t.contrarianSignal}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: t.color + "15", color: t.color }}>{t.contrarianSignal}</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4 }}>
                 {[
@@ -5869,8 +5915,8 @@ function ContrarianSignalsPage() {
                   { label: "Sentiment", value: t.sentiment },
                 ].map((s, j) => (
                   <div key={j} style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>{s.label}</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{s.value}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>{s.label}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{s.value}</div>
                   </div>
                 ))}
               </div>
@@ -5878,7 +5924,7 @@ function ContrarianSignalsPage() {
                 <div style={{ height: "100%", width: Math.min(t.ratio / 3 * 100, 100) + "%", background: t.color, borderRadius: 2 }} />
                 <div style={{ position: "absolute", left: "33.3%", top: -1, width: 2, height: 6, background: "#5C4A1E", borderRadius: 1 }} />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 7, color: "#33333480", marginTop: 2 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#33333480", marginTop: 2 }}>
                 <span>Normal</span><span style={{ fontWeight: 700, color: "#5C4A1E" }}>1x avg</span><span>3x+ (crowded)</span>
               </div>
             </div>
@@ -5888,39 +5934,39 @@ function ContrarianSignalsPage() {
 
       {view === "underloved" && (
         <div style={{ animation: "fadeUp .3s ease both" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Underloved & Overlooked</div>
-          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 8 }}>Stocks the market has abandoned. High neglect = potential contrarian opportunity.</div>
+          <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Underloved & Overlooked</div>
+          <div style={{ fontSize: 12, color: "#33333480", marginBottom: 8 }}>Stocks the market has abandoned. High neglect = potential contrarian opportunity.</div>
           {underloved.map((s, i) => (
             <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <Icon name={s.icon} size={12} />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800 }}>{s.ticker}</span>
-                    <span style={{ fontSize: 8, color: "#33333480" }}>{s.name}</span>
-                    <span style={{ fontSize: 7, fontWeight: 700, color: "#A09080" }}>{s.sector}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800 }}>{s.ticker}</span>
+                    <span style={{ fontSize: 12, color: "#33333480" }}>{s.name}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#A09080" }}>{s.sector}</span>
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>Neglect</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 900, color: "#C48830" }}>{s.neglectScore}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>Neglect</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: "#C48830" }}>{s.neglectScore}</div>
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 6 }}>
                 <div style={{ background: "#FFEBEE", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#EF5350" }}>YTD</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#EF5350" }}>{s.ytd}%</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#EF5350" }}>YTD</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#EF5350" }}>{s.ytd}%</div>
                 </div>
                 <div style={{ background: "#EDF5ED", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#5B8C5A" }}>P/E</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5B8C5A" }}>{s.pe}x</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#5B8C5A" }}>P/E</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5B8C5A" }}>{s.pe}x</div>
                 </div>
                 <div style={{ background: "#FFF8EE", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#C48830" }}>Div %</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#C48830" }}>{s.div}%</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#C48830" }}>Div %</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#C48830" }}>{s.div}%</div>
                 </div>
               </div>
-              <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.4 }}>{s.reason}</div>
+              <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.4 }}>{s.reason}</div>
             </div>
           ))}
         </div>
@@ -5928,18 +5974,18 @@ function ContrarianSignalsPage() {
 
       {view === "crowded" && (
         <div style={{ animation: "fadeUp .3s ease both" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Overly Crowded Trades</div>
-          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 8 }}>When everyone is on one side of the trade, the exit gets narrow.</div>
+          <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Overly Crowded Trades</div>
+          <div style={{ fontSize: 12, color: "#33333480", marginBottom: 8 }}>When everyone is on one side of the trade, the exit gets narrow.</div>
           {overtraded.map((s, i) => (
             <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800 }}>{s.ticker}</span>
-                    <span style={{ fontSize: 8, color: "#33333480" }}>{s.name}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800 }}>{s.ticker}</span>
+                    <span style={{ fontSize: 12, color: "#33333480" }}>{s.name}</span>
                   </div>
                 </div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 900, color: s.color }}>{s.crowding}%</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 900, color: s.color }}>{s.crowding}%</div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 6 }}>
                 {[
@@ -5948,41 +5994,41 @@ function ContrarianSignalsPage() {
                   { label: "RSI", value: s.rsi },
                 ].map((m, j) => (
                   <div key={j} style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>{m.label}</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{m.value}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>{m.label}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{m.value}</div>
                   </div>
                 ))}
               </div>
               <div style={{ height: 4, background: "#F0E6D0", borderRadius: 2, marginBottom: 4 }}>
                 <div style={{ height: "100%", width: s.crowding + "%", background: s.color, borderRadius: 2 }} />
               </div>
-              <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.4 }}>{s.risk}</div>
+              <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.4 }}>{s.risk}</div>
             </div>
           ))}
 
           <div style={{ marginTop: 8, animation: "fadeUp .3s ease .25s both" }}>
-            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Futures Positioning</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Futures Positioning</div>
             {futuresSignals.map((f, i) => (
               <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                   <Icon name={f.icon} size={12} color={f.color} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 9, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{f.name}</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 700, color: "#33333480" }}>{f.ticker} · {f.price}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{f.name}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: "#33333480" }}>{f.ticker} · {f.price}</div>
                   </div>
-                  <span style={{ fontSize: 7, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: f.color + "15", color: f.color }}>{f.signal}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: f.color + "15", color: f.color }}>{f.signal}</span>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 4 }}>
                   <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
-                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>OPEN INTEREST</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{f.openInterest}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>OPEN INTEREST</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{f.openInterest}</div>
                   </div>
                   <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
-                    <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>NET SPEC</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{f.netSpec}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>NET SPEC</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{f.netSpec}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.4 }}>{f.note}</div>
+                <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.4 }}>{f.note}</div>
               </div>
             ))}
           </div>
@@ -5991,29 +6037,29 @@ function ContrarianSignalsPage() {
 
       {view === "commodities" && (
         <div style={{ animation: "fadeUp .3s ease both" }}>
-          <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Commodity Contrarian Signals</div>
-          <div style={{ fontSize: 8, color: "#33333480", marginBottom: 8 }}>COT positioning data reveals when speculators are offside.</div>
+          <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Commodity Contrarian Signals</div>
+          <div style={{ fontSize: 12, color: "#33333480", marginBottom: 8 }}>COT positioning data reveals when speculators are offside.</div>
           {commoditySignals.map((c, i) => (
             <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <Icon name={c.icon} size={12} color={c.color} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{c.name}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, color: "#5C4A1E" }}>{c.price}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{c.name}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{c.price}</div>
                 </div>
-                <span style={{ fontSize: 8, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: c.color + "15", color: c.color }}>{c.signal}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: c.color + "15", color: c.color }}>{c.signal}</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 6 }}>
                 <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>POSITIONING</div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{c.positioning}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>POSITIONING</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{c.positioning}</div>
                 </div>
                 <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
-                  <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480" }}>COT NET</div>
-                  <div style={{ fontSize: 8, fontWeight: 700, fontFamily: "JetBrains Mono", color: "#5C4A1E", marginTop: 1 }}>{c.cot}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>COT NET</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "JetBrains Mono", color: "#5C4A1E", marginTop: 1 }}>{c.cot}</div>
                 </div>
               </div>
-              <div style={{ fontSize: 8, color: "#6B5A2E", lineHeight: 1.4 }}>{c.contrarianView}</div>
+              <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.4 }}>{c.contrarianView}</div>
             </div>
           ))}
         </div>
@@ -6027,11 +6073,11 @@ function CheckoutModal({ cart, onClose, onExecute }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(45,32,22,.4)", backdropFilter: "blur(12px)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "18vh", zIndex: 1000 }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 16, width: "calc(100% - 24px)", maxWidth: 360, maxHeight: "65vh", overflow: "auto", animation: "popIn .4s ease" }} onClick={e => e.stopPropagation()}>
-        <div style={{ padding: "18px 24px", borderBottom: "2px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 12 }}>🧺</span><span style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{step === "review" ? "Checkout" : step === "executing" ? "Processing..." : "Done!"}</span></div><button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 11, color: "#33333480" }}>✕</button></div>
+        <div style={{ padding: "18px 24px", borderBottom: "2px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 18 }}>🧺</span><span style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{step === "review" ? "Checkout" : step === "executing" ? "Processing..." : "Done!"}</span></div><button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 17, color: "#33333480" }}>✕</button></div>
         <div style={{ padding: "18px 24px" }}>
-          {step === "review" && <div>{cart.map((b, i) => <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < cart.length - 1 ? "1px solid #F0E6D0" : "none" }}><div style={{ display: "flex", gap: 6, alignItems: "center" }}><Icon name={b.icon} size={11} /><div><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{b.name}</div><div style={{ fontSize: 10, color: "#33333480" }}>{b.stocks.length} stocks</div></div></div><div style={{ fontFamily: "JetBrains Mono", fontWeight: 700 }}>{fmt(b.price)}</div></div>)}<div style={{ display: "flex", justifyContent: "space-between", paddingTop: 14, borderTop: "2px solid #F0E6D0", marginTop: 6 }}><span style={{ fontWeight: 800 }}>Total</span><span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 12, fontWeight: 900, color: "#C48830" }}>{fmt(total)}</span></div><button onClick={() => { setStep("executing"); setTimeout(() => setStep("done"), 2200); }} style={{ width: "100%", marginTop: 16, padding: 13, background: "linear-gradient(135deg,#C48830,#EF5350)", color: "#fff", border: "none", borderRadius: 16, fontSize: 11, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Execute</button></div>}
-          {step === "executing" && <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 48, animation: "wiggle .5s ease infinite", marginBottom: 8 }}>🚀</div><div style={{ width: 40, height: 40, borderRadius: "50%", border: "4px solid #F0E6D0", borderTopColor: "#C48830", margin: "0 auto 18px", animation: "spin .8s linear infinite" }} /><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Filling your Hatch...</div></div>}
-          {step === "done" && <div style={{ textAlign: "center", padding: "36px 0" }}><div style={{ fontSize: 52, animation: "popIn .5s ease" }}>🎉</div><div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", margin: "10px 0" }}>Complete!</div><button onClick={() => { onExecute(); onClose(); }} style={{ marginTop: 14, padding: "10px 28px", background: "#C48830", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer" }}>Dashboard</button></div>}
+          {step === "review" && <div>{cart.map((b, i) => <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < cart.length - 1 ? "1px solid #F0E6D0" : "none" }}><div style={{ display: "flex", gap: 6, alignItems: "center" }}><Icon name={b.icon} size={11} /><div><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{b.name}</div><div style={{ fontSize: 15, color: "#33333480" }}>{b.stocks.length} stocks</div></div></div><div style={{ fontFamily: "JetBrains Mono", fontWeight: 700 }}>{fmt(b.price)}</div></div>)}<div style={{ display: "flex", justifyContent: "space-between", paddingTop: 14, borderTop: "2px solid #F0E6D0", marginTop: 6 }}><span style={{ fontWeight: 800 }}>Total</span><span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 18, fontWeight: 900, color: "#C48830" }}>{fmt(total)}</span></div><button onClick={() => { setStep("executing"); setTimeout(() => setStep("done"), 2200); }} style={{ width: "100%", marginTop: 16, padding: 13, background: "linear-gradient(135deg,#C48830,#EF5350)", color: "#fff", border: "none", borderRadius: 16, fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Execute</button></div>}
+          {step === "executing" && <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 72, animation: "wiggle .5s ease infinite", marginBottom: 8 }}>🚀</div><div style={{ width: 40, height: 40, borderRadius: "50%", border: "4px solid #F0E6D0", borderTopColor: "#C48830", margin: "0 auto 18px", animation: "spin .8s linear infinite" }} /><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Filling your Hatch...</div></div>}
+          {step === "done" && <div style={{ textAlign: "center", padding: "36px 0" }}><div style={{ fontSize: 78, animation: "popIn .5s ease" }}>🎉</div><div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", margin: "10px 0" }}>Complete!</div><button onClick={() => { onExecute(); onClose(); }} style={{ marginTop: 14, padding: "10px 28px", background: "#C48830", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer" }}>Dashboard</button></div>}
         </div>
       </div>
     </div>
@@ -6077,6 +6123,14 @@ export default function App() {
   const { isLive, prices: livePrices, explorerPrices: liveExplorerPrices, lastUpdate: priceLastUpdate, status: priceStatus } = useStockPrices();
   const explorerStockPrices = isLive ? liveExplorerPrices : INITIAL_EXPLORER_PRICES;
 
+  // Live news from Finnhub
+  const { news: liveNews, status: newsStatus, isLive: newsIsLive } = useNewsStream();
+
+  // Inject live news into PortfolioService for agents
+  React.useEffect(() => {
+    PortfolioService.setLiveNews(liveNews);
+  }, [liveNews]);
+
   // Use agent data with fallbacks
   const displaySignals = hasAIData ? agentState.signals : tradeSignals;
   const displayHedges = hasAIData ? agentState.hedges : hedgeRecommendations;
@@ -6103,8 +6157,8 @@ export default function App() {
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFEF9", fontFamily: "'Quicksand',sans-serif" }}>
         <style>{STYLES}</style>
         <div style={{ textAlign: "center", animation: "fadeUp 0.4s ease both" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🥚</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#33333480" }}>Loading...</div>
+          <div style={{ fontSize: 60, marginBottom: 12 }}>🥚</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#33333480" }}>Loading...</div>
         </div>
       </div>
     );
@@ -6139,13 +6193,12 @@ export default function App() {
   ];
 
   return (
-    <div style={{ fontFamily: "'Quicksand',sans-serif", background: "#FFFDF5", height: "100%", width: "100%", position: "relative", display: "flex", flexDirection: "column", overflowX: "hidden", overflow: "hidden" }}>
+    <div style={{ fontFamily: "'Quicksand',sans-serif", background: "#FFFDF5", height: "100%", width: "100%", position: "relative", display: "flex", flexDirection: "column", overflowX: "hidden", overflow: "hidden", paddingTop: "env(safe-area-inset-top, 0px)" }}>
       <style>{STYLES}</style>
 
         {/* ── Top Header Bar (Dashboard/Home only, collapses on scroll) ── */}
         {page === "dashboard" && <div style={{
           background: "#fff", borderBottom: "1.5px solid #F0E6D0", flexShrink: 0, zIndex: 200,
-          paddingTop: "env(safe-area-inset-top, 12px)",
           maxHeight: headerCollapsed ? 0 : 110,
           overflow: "hidden",
           transition: "max-height .3s ease",
@@ -6179,30 +6232,30 @@ export default function App() {
                 <ellipse cx="38" cy="21" rx="2" ry="3" fill="#fff" opacity="0.45"/>
               </svg>
               <div>
-                <span style={{ fontWeight: 900, fontSize: 15, fontFamily: "'Instrument Serif', serif", background: "linear-gradient(135deg,#C48830,#D4A03C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", display: "block", lineHeight: 1.1 }}>Hatch</span>
-                <span style={{ fontSize: 7, fontWeight: 700, color: "#C8B898", letterSpacing: 1.5, textTransform: "uppercase" }}>Smart Trading</span>
+                <span style={{ fontWeight: 900, fontSize: 23, fontFamily: "'Instrument Serif', serif", background: "linear-gradient(135deg,#C48830,#D4A03C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", display: "block", lineHeight: 1.1 }}>Hatch</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#C8B898", letterSpacing: 1.5, textTransform: "uppercase" }}>Smart Trading</span>
                 {isLive && <span style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 1 }}>
                   <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#5B8C5A", animation: "pulse 2s infinite" }} />
-                  <span style={{ fontSize: 6, fontWeight: 700, color: "#5B8C5A", letterSpacing: 1, textTransform: "uppercase" }}>Live</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: "#5B8C5A", letterSpacing: 1, textTransform: "uppercase" }}>Live</span>
                 </span>}
               </div>
             </div>
             {/* Calendar + Account */}
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <button onClick={() => { setPage("calendar"); setSelectedBasket(null); }}
-                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "calendar" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "calendar" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
+                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "calendar" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "calendar" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 23 }}>
                 <Icon name="calendar" size={12} />
-                {todayEvents > 0 && <span style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#FFA726", color: "#fff", fontSize: 7, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{todayEvents}</span>}
+                {todayEvents > 0 && <span style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#FFA726", color: "#fff", fontSize: 11, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{todayEvents}</span>}
               </button>
               <button onClick={() => { setPage("account"); setSelectedBasket(null); }}
-                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "account" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "account" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
+                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "account" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "account" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 23 }}>
                 <Icon name="person" size={12} />
               </button>
             </div>
           </div>
         </div>}
 
-        {notification && <div style={{ position: "absolute", top: 58, left: "50%", transform: "translateX(-50%)", zIndex: 350, background: "#fff", color: "#C48830", padding: "7px 16px", borderRadius: 12, fontSize: 11, fontWeight: 800, animation: "popIn .3s ease", boxShadow: "0 6px 20px rgba(0,0,0,.1)", border: "1px solid #33333440", whiteSpace: "nowrap" }}>{notification}</div>}
+        {notification && <div style={{ position: "absolute", top: 58, left: "50%", transform: "translateX(-50%)", zIndex: 350, background: "#fff", color: "#C48830", padding: "7px 16px", borderRadius: 12, fontSize: 17, fontWeight: 800, animation: "popIn .3s ease", boxShadow: "0 6px 20px rgba(0,0,0,.1)", border: "1px solid #33333440", whiteSpace: "nowrap" }}>{notification}</div>}
 
         {/* ── Scrollable Content ── */}
         <div ref={scrollRef} onScroll={(e) => {
@@ -6233,26 +6286,26 @@ export default function App() {
             <div style={{ animation: "slideRight .4s ease both" }}>
               {/* Header */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <button onClick={() => setPortfolioView(false)} style={{ width: 30, height: 30, borderRadius: 10, border: "1px solid #33333440", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#C48830" }}>←</button>
+                <button onClick={() => setPortfolioView(false)} style={{ width: 30, height: 30, borderRadius: 10, border: "1px solid #33333440", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: "#C48830" }}>←</button>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Portfolio Overview</div>
-                  <div style={{ fontSize: 9, color: "#33333480" }}>{myBaskets.length} baskets · {allStks.length} holdings</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Portfolio Overview</div>
+                  <div style={{ fontSize: 14, color: "#33333480" }}>{myBaskets.length} baskets · {allStks.length} holdings</div>
                 </div>
               </div>
 
               {/* Portfolio Value Hero */}
               <div style={{ background: "#fff", borderRadius: 16, padding: 14, marginBottom: 8 }}>
-                <div style={{ fontSize: 8, fontWeight: 700, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>Total Portfolio Value</div>
-                <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", letterSpacing: "-1px" }}>{fmt(tv)}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>Total Portfolio Value</div>
+                <div style={{ fontSize: 36, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", letterSpacing: "-1px" }}>{fmt(tv)}</div>
                 <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: tp >= 0 ? "#5B8C5A" : "#EF5350" }}>{tp >= 0 ? "+" : ""}{fmtS(Math.round(tp))} total</span>
-                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: dp >= 0 ? "#5B8C5A" : "#EF5350", background: dp >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "2px 6px", borderRadius: 5 }}>{dp >= 0 ? "+" : ""}{fmtS(Math.round(dp))} today</span>
+                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: tp >= 0 ? "#5B8C5A" : "#EF5350" }}>{tp >= 0 ? "+" : ""}{fmtS(Math.round(tp))} total</span>
+                  <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: dp >= 0 ? "#5B8C5A" : "#EF5350", background: dp >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "2px 6px", borderRadius: 5 }}>{dp >= 0 ? "+" : ""}{fmtS(Math.round(dp))} today</span>
                 </div>
               </div>
 
               {/* Basket Breakdown */}
               <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Basket Breakdown</div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Basket Breakdown</div>
                 {myBaskets.map((b, i) => {
                   const c = CL[b.color] || CL.terracotta;
                   const pct = tv > 0 ? (b.value / tv * 100).toFixed(1) : 0;
@@ -6261,14 +6314,14 @@ export default function App() {
                       style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none", cursor: "pointer" }}>
                       <Icon name={b.icon} size={16} />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{b.name}</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{b.name}</div>
                         <div style={{ height: 4, background: "#F5F0E8", borderRadius: 2, marginTop: 3 }}>
                           <div style={{ height: "100%", width: pct + "%", background: c.a, borderRadius: 2 }} />
                         </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700 }}>{fmt(b.value)}</div>
-                        <div style={{ fontSize: 8, color: "#33333480" }}>{pct}%</div>
+                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700 }}>{fmt(b.value)}</div>
+                        <div style={{ fontSize: 12, color: "#33333480" }}>{pct}%</div>
                       </div>
                     </div>
                   );
@@ -6278,8 +6331,8 @@ export default function App() {
               {/* All Holdings (sparkline rows) */}
               <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", marginBottom: 8 }}>
                 <div style={{ padding: "8px 12px", borderBottom: "1.5px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>All Holdings</span>
-                  <span style={{ fontSize: 8, color: "#33333480", fontWeight: 600 }}>{allStks.length} instruments</span>
+                  <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>All Holdings</span>
+                  <span style={{ fontSize: 12, color: "#33333480", fontWeight: 600 }}>{allStks.length} instruments</span>
                 </div>
                 {allStks.map((st, i) => {
                   const pl = (st.current - st.avgCost) * st.shares * ((st.dir || "long") === "short" ? -1 : 1);
@@ -6292,25 +6345,25 @@ export default function App() {
                       style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderBottom: i < allStks.length - 1 ? "1px solid #F0E6D0" : "none", transition: "background .15s", cursor: "pointer" }}
                       onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.name || st.ticker}</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.name || st.ticker}</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 1 }}>
-                          <span style={{ fontSize: 7, fontFamily: "JetBrains Mono", color: "#33333480", fontWeight: 600 }}>{st.ticker}</span>
-                          <span style={{ fontSize: 7, color: "#33333480" }}>·</span>
-                          <span style={{ fontSize: 7, fontWeight: 700, color: c2.a, background: c2.l, padding: "0px 4px", borderRadius: 3, display: "inline-flex", alignItems: "center", gap: 2 }}><Icon name={st.basketIcon} size={7} color={c2.a} />{st.basket.split(" ")[0]}</span>
+                          <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", color: "#33333480", fontWeight: 600 }}>{st.ticker}</span>
+                          <span style={{ fontSize: 11, color: "#33333480" }}>·</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: c2.a, background: c2.l, padding: "0px 4px", borderRadius: 3, display: "inline-flex", alignItems: "center", gap: 2 }}><Icon name={st.basketIcon} size={7} color={c2.a} />{st.basket.split(" ")[0]}</span>
                         </div>
                       </div>
                       <div style={{ width: 54, flexShrink: 0 }}>
                         <SparkSVG data={sparkData} color={sparkColor} w={54} h={18} />
                       </div>
                       <div style={{ textAlign: "right", minWidth: 64, flexShrink: 0 }}>
-                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: "#333334" }}>
+                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: "#333334" }}>
                           ${st.current >= 1000 ? st.current.toLocaleString() : st.current.toFixed(2)}
                         </div>
                         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 2, marginTop: 1 }}>
-                          <span style={{ fontSize: 7, fontFamily: "JetBrains Mono", fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>
+                          <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>
                             {pl >= 0 ? "+" : ""}{Math.abs(pl) >= 1000 ? (pl / 1000).toFixed(1) + "k" : Math.round(pl)}
                           </span>
-                          <span style={{ fontSize: 6, fontWeight: 800, padding: "1px 3px", borderRadius: 3, background: (plPct >= 0 ? "#5B8C5A" : "#EF5350") + "14", color: plPct >= 0 ? "#5B8C5A" : "#EF5350" }}>
+                          <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 3px", borderRadius: 3, background: (plPct >= 0 ? "#5B8C5A" : "#EF5350") + "14", color: plPct >= 0 ? "#5B8C5A" : "#EF5350" }}>
                             {plPct >= 0 ? "+" : ""}{plPct.toFixed(1)}%
                           </span>
                         </div>
@@ -6322,7 +6375,7 @@ export default function App() {
 
               {/* Portfolio Risk Metrics */}
               <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 8 }}>
                   {[
                     { label: "Sharpe", val: portfolioRisk.sharpe.toFixed(2), good: portfolioRisk.sharpe > 1, icon: "ruler" },
@@ -6334,54 +6387,54 @@ export default function App() {
                   ].map((m, mi) => (
                     <div key={mi} style={{ background: m.good ? "#EDF5ED" : "#FFEBEE", borderRadius: 8, padding: "6px 6px", textAlign: "center" }}>
                       <div style={{ marginBottom: 1 }}><Icon name={m.icon} size={11} /></div>
-                      <div style={{ fontSize: 7, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
-                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</div>
                     </div>
                   ))}
                 </div>
                 <div style={{ padding: "6px 8px", background: portfolioRisk.sectorConcentration > 40 ? "#FFEBEE" : "#FFF8EE", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontSize: 8, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div>
-                    <div style={{ fontSize: 7, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div>
+                    <div style={{ fontSize: 11, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div>
                   </div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
                 </div>
               </div>
 
               {/* Per-Hatch Metrics */}
               <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Per-Hatch Metrics</div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Per-Hatch Metrics</div>
                 <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #F0E6D0" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
                     <div>Basket</div><div>Sharpe</div><div>Beta</div><div>Alpha</div>
                   </div>
                   {myBaskets.map((b, mi) => { const brm = basketRiskMetrics[b.id]; if (!brm) return null; return (
-                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", borderBottom: mi < myBaskets.length - 1 ? "1px solid #F0E6D0" : "none", fontSize: 10, alignItems: "center" }}>
-                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}><Icon name={b.icon} size={9} /><span style={{ fontWeight: 700, fontFamily: "'Instrument Serif', serif", fontSize: 8 }}>{b.name}</span></div>
-                      <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 9, color: brm.sharpe > 1 ? "#C48830" : "#FFA726" }}>{brm.sharpe.toFixed(2)}</div>
-                      <div style={{ fontFamily: "JetBrains Mono", fontWeight: 600, fontSize: 9, color: brm.beta < 1.3 ? "#5B8C5A" : "#EF5350" }}>{brm.beta.toFixed(2)}</div>
-                      <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 9, color: brm.alpha > 0 ? "#5B8C5A" : "#EF5350" }}>{brm.alpha > 0 ? "+" : ""}{brm.alpha.toFixed(1)}%</div>
+                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", borderBottom: mi < myBaskets.length - 1 ? "1px solid #F0E6D0" : "none", fontSize: 15, alignItems: "center" }}>
+                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}><Icon name={b.icon} size={9} /><span style={{ fontWeight: 700, fontFamily: "'Instrument Serif', serif", fontSize: 12 }}>{b.name}</span></div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.sharpe > 1 ? "#C48830" : "#FFA726" }}>{brm.sharpe.toFixed(2)}</div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontWeight: 600, fontSize: 14, color: brm.beta < 1.3 ? "#5B8C5A" : "#EF5350" }}>{brm.beta.toFixed(2)}</div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.alpha > 0 ? "#5B8C5A" : "#EF5350" }}>{brm.alpha > 0 ? "+" : ""}{brm.alpha.toFixed(1)}%</div>
                     </div>); })}
                 </div>
               </div>
 
               {/* Factor Exposures */}
               <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Factor Exposures</div>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Factor Exposures</div>
                 {factorExposures.map((f, fi) => {
                   const overweight = f.exposure > f.benchmark;
                   return (
                     <div key={fi} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderTop: fi > 0 ? "1px solid #F0E6D020" : "none" }}>
-                      <span style={{ fontSize: 8, fontWeight: 700, color: "#333334", width: 55 }}>{f.factor}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#333334", width: 55 }}>{f.factor}</span>
                       <div style={{ flex: 1, position: "relative", height: 8, background: "#F5F0E8", borderRadius: 4 }}>
                         <div style={{ position: "absolute", left: (f.benchmark * 100) + "%", top: 0, bottom: 0, width: 1.5, background: "#A0908066", zIndex: 1 }} />
                         <div style={{ height: "100%", width: (f.exposure * 100) + "%", background: overweight ? "#C48830" : "#5B8C5A", borderRadius: 4 }} />
                       </div>
-                      <span style={{ fontSize: 8, fontFamily: "JetBrains Mono", fontWeight: 800, color: overweight ? "#C48830" : "#5B8C5A", minWidth: 24, textAlign: "right" }}>{(f.exposure * 100).toFixed(0)}%</span>
+                      <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 800, color: overweight ? "#C48830" : "#5B8C5A", minWidth: 24, textAlign: "right" }}>{(f.exposure * 100).toFixed(0)}%</span>
                     </div>
                   );
                 })}
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, fontSize: 7, color: "#33333480" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, fontSize: 11, color: "#33333480" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 2, background: "#A0908066", borderRadius: 1 }} /><span>Benchmark</span></div>
                   <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "#C48830", borderRadius: 1 }} /><span>Overweight</span></div>
                   <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "#5B8C5A", borderRadius: 1 }} /><span>Underweight</span></div>
@@ -6390,17 +6443,17 @@ export default function App() {
 
               {/* Basket Correlations */}
               <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Basket Correlations</div>
-                <div className="correlation-scroll mobile-scroll-x" style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 9 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Basket Correlations</div>
+                <div className="correlation-scroll mobile-scroll-x" style={{ display: "grid", gridTemplateColumns: "80px repeat(" + myBaskets.length + ", 1fr)", gap: 4, fontSize: 14 }}>
                   <div />
-                  {myBaskets.map(b => <div key={b.id} style={{ textAlign: "center", fontWeight: 800, padding: 4, fontSize: 8 }}><Icon name={b.icon} size={8} /> {b.name.split(" ")[0]}</div>)}
+                  {myBaskets.map(b => <div key={b.id} style={{ textAlign: "center", fontWeight: 800, padding: 4, fontSize: 12 }}><Icon name={b.icon} size={8} /> {b.name.split(" ")[0]}</div>)}
                   {myBaskets.map((b, ri) => (
                     <React.Fragment key={b.id}>
-                      <div style={{ fontWeight: 800, display: "flex", alignItems: "center", gap: 3, padding: "3px 0" }}><Icon name={b.icon} size={10} /><span style={{ fontSize: 8 }}>{b.name.split(" ")[0]}</span></div>
+                      <div style={{ fontWeight: 800, display: "flex", alignItems: "center", gap: 3, padding: "3px 0" }}><Icon name={b.icon} size={10} /><span style={{ fontSize: 12 }}>{b.name.split(" ")[0]}</span></div>
                       {basketCorrelations[ri] && basketCorrelations[ri].map((cv, ci) => {
                         const abs = Math.abs(cv);
                         const bg = ri === ci ? "#FFF5E6" : cv > 0.5 ? "rgba(232,116,97," + (abs * 0.4) + ")" : cv < -0.05 ? "rgba(91,155,213," + (abs * 0.6) + ")" : "rgba(107,155,110," + (abs * 0.3) + ")";
-                        return <div key={ci} style={{ textAlign: "center", padding: "8px 2px", borderRadius: 6, background: bg, fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 10, color: ri === ci ? "#A09080" : "#5C4A1E" }}>{cv.toFixed(2)}</div>;
+                        return <div key={ci} style={{ textAlign: "center", padding: "8px 2px", borderRadius: 6, background: bg, fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 15, color: ri === ci ? "#A09080" : "#5C4A1E" }}>{cv.toFixed(2)}</div>;
                       })}
                     </React.Fragment>
                   ))}
@@ -6420,18 +6473,18 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Icon name={currentRegime.icon} size={11} />
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .8 }}>Macro Regime</div>
-                  <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: currentRegime.color }}>{currentRegime.name} <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 700, opacity: .7 }}>{currentRegime.confidence}%</span></div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .8 }}>Macro Regime</div>
+                  <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: currentRegime.color }}>{currentRegime.name} <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, opacity: .7 }}>{currentRegime.confidence}%</span></div>
                 </div>
               </div>
-              <span style={{ fontSize: 9, color: currentRegime.color, fontWeight: 800 }}>Details →</span>
+              <span style={{ fontSize: 14, color: currentRegime.color, fontWeight: 800 }}>Details →</span>
             </div>
           </div>
 
           {/* ── Portfolio Hero ── */}
           <div style={{ background: "#fff", borderRadius: 18, padding: "18px 16px 14px", marginBottom: 7, animation: "fadeUp .4s ease .05s both", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 8, right: 50, fontSize: 11, opacity: 0.12, animation: "float 4s ease-in-out infinite" }}></div>
-            <div style={{ position: "absolute", top: 30, right: 16, fontSize: 12, opacity: 0.08, animation: "float 3.5s ease-in-out .5s infinite" }}></div>
+            <div style={{ position: "absolute", top: 8, right: 50, fontSize: 17, opacity: 0.12, animation: "float 4s ease-in-out infinite" }}></div>
+            <div style={{ position: "absolute", top: 30, right: 16, fontSize: 18, opacity: 0.08, animation: "float 3.5s ease-in-out .5s infinite" }}></div>
             <div style={{ position: "relative", zIndex: 1 }}>
               {(() => {
                 const currentVal = 41240;
@@ -6443,16 +6496,16 @@ export default function App() {
                 const isPositive = changeDollar >= 0;
                 const changeColor = isPositive ? "#5B8C5A" : "#EF5350";
                 return (<>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#8B6914", marginBottom: 3 }}>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: "#8B6914", marginBottom: 3 }}>
                     {chartHover ? <span style={{ transition: "all .15s" }}>{displayLabel}</span> : "Good morning, John"}
                   </div>
-                  <div style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Instrument Serif', serif", letterSpacing: "-1px", lineHeight: 1.1, color: "#333334", transition: "all .15s" }}>
+                  <div style={{ fontSize: 39, fontWeight: 900, fontFamily: "'Instrument Serif', serif", letterSpacing: "-1px", lineHeight: 1.1, color: "#333334", transition: "all .15s" }}>
                     ${displayVal >= 1000 ? displayVal.toLocaleString() : displayVal}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 5 }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: changeColor, transition: "all .15s" }}>{isPositive ? "+" : ""}{fmt(Math.abs(changeDollar))}</span>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: changeColor, background: isPositive ? "#EDF5ED" : "#FFEBEE", padding: "2px 8px", borderRadius: 8, transition: "all .15s" }}>{isPositive ? "+" : ""}{changePct.toFixed(2)}%</span>
-                    <span style={{ fontSize: 10, color: "#8A7A68", fontWeight: 600 }}>{chartHover ? "from Jan" : "Today"}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: changeColor, transition: "all .15s" }}>{isPositive ? "+" : ""}{fmt(Math.abs(changeDollar))}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: changeColor, background: isPositive ? "#EDF5ED" : "#FFEBEE", padding: "2px 8px", borderRadius: 8, transition: "all .15s" }}>{isPositive ? "+" : ""}{changePct.toFixed(2)}%</span>
+                    <span style={{ fontSize: 15, color: "#8A7A68", fontWeight: 600 }}>{chartHover ? "from Jan" : "Today"}</span>
                   </div>
                 </>);
               })()}
@@ -6461,7 +6514,7 @@ export default function App() {
               <MiniChart data={portfolioHistory} color="#C48830" chartId="main" onHover={setChartHover} />
             </div>
             <div style={{ display: "flex", gap: 1, background: "#FFFDF5", borderRadius: 8, padding: 2, width: "fit-content" }}>
-              {["1D","1W","1M","3M","1Y","ALL"].map(t => <button key={t} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: t === "1Y" ? "#fff" : "transparent", color: t === "1Y" ? "#C48830" : "#A09080", fontSize: 9, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", boxShadow: t === "1Y" ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>)}
+              {["1D","1W","1M","3M","1Y","ALL"].map(t => <button key={t} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: t === "1Y" ? "#fff" : "transparent", color: t === "1Y" ? "#C48830" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", boxShadow: t === "1Y" ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>)}
             </div>
           </div>
 
@@ -6474,11 +6527,11 @@ export default function App() {
           <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .15s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11 }}></span>
-                <span style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Trade Signals</span>
-                <span style={{ fontSize: 10, fontWeight: 800, background: "#FFF8EE", color: "#C48830", padding: "2px 8px", borderRadius: 10 }}>{displaySignals.filter(s => s.status === "pending").length} pending</span>
+                <span style={{ fontSize: 17 }}></span>
+                <span style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Trade Signals</span>
+                <span style={{ fontSize: 15, fontWeight: 800, background: "#FFF8EE", color: "#C48830", padding: "2px 8px", borderRadius: 10 }}>{displaySignals.filter(s => s.status === "pending").length} pending</span>
               </div>
-              <button onClick={() => setPage("risklab")} style={{ background: "none", border: "none", color: "#C48830", fontWeight: 800, fontSize: 11, cursor: "pointer" }}>View All →</button>
+              <button onClick={() => setPage("risklab")} style={{ background: "none", border: "none", color: "#C48830", fontWeight: 800, fontSize: 17, cursor: "pointer" }}>View All →</button>
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {displaySignals.slice(0, 4).map(s => {
@@ -6487,18 +6540,18 @@ export default function App() {
                 return (
                   <div key={s.id} onClick={() => goToStock(s.ticker)} style={{ flex: "1 1 calc(50% - 4px)", minWidth: 0, background: "#fff", border: "1px solid #33333420", borderRadius: 12, padding: "7px 10px", cursor: "pointer" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
-                      <span style={{ fontSize: 8, fontWeight: 900, padding: "1px 5px", borderRadius: 4, background: sigBg[s.signal], color: sigCol[s.signal] }}>{s.signal}</span>
-                      <span style={{ fontSize: 8, color: "#33333480" }}>{s.time}</span>
+                      <span style={{ fontSize: 12, fontWeight: 900, padding: "1px 5px", borderRadius: 4, background: sigBg[s.signal], color: sigCol[s.signal] }}>{s.signal}</span>
+                      <span style={{ fontSize: 12, color: "#33333480" }}>{s.time}</span>
                     </div>
                     <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
-                      <span style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800 }}>{s.ticker}</span>
+                      <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800 }}>{s.ticker}</span>
                     </div>
-                    <div style={{ fontSize: 8, color: "#8A7040", lineHeight: 1.3, marginTop: 2 }}>{s.reason.slice(0, 50)}...</div>
+                    <div style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.3, marginTop: 2 }}>{s.reason.slice(0, 50)}...</div>
                     <div style={{ marginTop: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ height: 3, flex: 1, background: "#FFF5E6", borderRadius: 2, marginRight: 6 }}>
                         <div style={{ height: "100%", width: s.strength + "%", background: sigCol[s.signal], borderRadius: 2 }} />
                       </div>
-                      <span style={{ fontSize: 8, fontFamily: "JetBrains Mono", fontWeight: 700, color: sigCol[s.signal] }}>{s.strength}%</span>
+                      <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 700, color: sigCol[s.signal] }}>{s.strength}%</span>
                     </div>
                   </div>
                 );
@@ -6510,13 +6563,13 @@ export default function App() {
           <div style={{ marginBottom: 8, animation: "fadeUp .5s ease .3s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>My Baskets</div>
-                <button onClick={() => setShowCreate(true)} style={{ background: "#C48830", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 8, fontSize: 9, fontWeight: 800, cursor: "pointer" }}>+ New</button>
+                <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>My Baskets</div>
+                <button onClick={() => setShowCreate(true)} style={{ background: "#C48830", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 8, fontSize: 14, fontWeight: 800, cursor: "pointer" }}>+ New</button>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span onClick={() => setBasketView("baskets")} style={{ cursor: "pointer", transition: "color .2s" }}>⊞</span>
                 <span onClick={() => setBasketView("stocks")} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><Icon name="list" size={15} color={basketView === "stocks" ? "#C48830" : "#D0C8B8"} /></span>
-                <span onClick={() => setPortfolioView(true)} style={{ fontSize: 10, fontWeight: 800, color: "#C48830", cursor: "pointer", fontFamily: "Quicksand" }}>View →</span>
+                <span onClick={() => setPortfolioView(true)} style={{ fontSize: 15, fontWeight: 800, color: "#C48830", cursor: "pointer", fontFamily: "Quicksand" }}>View →</span>
               </div>
             </div>
 
@@ -6525,7 +6578,7 @@ export default function App() {
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#C48830"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#FFA726"; }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <div style={{ width: 44, height: 44, borderRadius: 14, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="egg" size={24} color="#C48830" /></div>
-                <div style={{ flex: 1 }}><div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Create Your Own Hatch</div><div style={{ fontSize: 11, color: "#8A7040", marginTop: 1 }}>Mix stocks, options, futures & crypto</div></div>
+                <div style={{ flex: 1 }}><div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Create Your Own Hatch</div><div style={{ fontSize: 17, color: "#8A7040", marginTop: 1 }}>Mix stocks, options, futures & crypto</div></div>
                 <div style={{ display: "flex", gap: 4 }}>{["chart-up","chart-bar","hourglass","bitcoin"].map(t => <span key={t} style={{ background: "#fff", width: 28, height: 28, borderRadius: 8, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Icon name={t} size={14} color="#C48830" /></span>)}</div>
               </div>
             </div>
@@ -6537,20 +6590,20 @@ export default function App() {
                   onMouseEnter={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA520" : c.a; e.currentTarget.style.transform = "translateY(-2px)"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA52066" : isBad ? health.clr + "44" : "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
                   <div style={{ background: isHighestReturn ? "linear-gradient(135deg, #FFF8E1, #FFF3CD)" : c.l, padding: "10px 16px 8px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{isHighestReturn ? <Icon name="egg" size={14} color="#DAA520" /> : <Icon name={b.icon} size={12} />}<div><div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: isHighestReturn ? "#B8860B" : undefined }}>{b.name}</div><div style={{ fontSize: 9, color: isHighestReturn ? "#DAA520" : c.a, fontWeight: 700, textTransform: "uppercase" }}>{b.strategy}</div></div></div>
-                      <div style={{ textAlign: "right" }}><div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: isHighestReturn ? "#DAA520" : undefined }}>{b.value > 0 ? fmt(b.value) : "—"}</div>{b.change !== 0 && <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end" }}>{isTrendiest && !isHighestReturn && <Icon name="fire" size={12} color="#FF6B35" />}<span style={{ fontSize: 10, fontWeight: 700, color: isHighestReturn ? "#DAA520" : b.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{b.change >= 0 ? "+" : ""}{b.change}%</span></div>}</div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{isHighestReturn ? <Icon name="egg" size={14} color="#DAA520" /> : <Icon name={b.icon} size={12} />}<div><div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: isHighestReturn ? "#B8860B" : undefined }}>{b.name}</div><div style={{ fontSize: 14, color: isHighestReturn ? "#DAA520" : c.a, fontWeight: 700, textTransform: "uppercase" }}>{b.strategy}</div></div></div>
+                      <div style={{ textAlign: "right" }}><div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: isHighestReturn ? "#DAA520" : undefined }}>{b.value > 0 ? fmt(b.value) : "—"}</div>{b.change !== 0 && <div style={{ display: "flex", alignItems: "center", gap: 3, justifyContent: "flex-end" }}>{isTrendiest && !isHighestReturn && <Icon name="fire" size={12} color="#FF6B35" />}<span style={{ fontSize: 15, fontWeight: 700, color: isHighestReturn ? "#DAA520" : b.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{b.change >= 0 ? "+" : ""}{b.change}%</span></div>}</div>
                     </div>
                   </div>
                   <div style={{ padding: "8px 16px 12px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, padding: "5px 8px", background: health.bg, borderRadius: 8, border: isBad ? `1px solid ${health.clr}33` : "1px solid transparent" }}>
-                      {isBad ? <span style={{ width: 18, height: 18, borderRadius: "50%", background: health.clr, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 900, flexShrink: 0, animation: health.status === "critical" ? "pulse 2s ease infinite" : "none" }}>!</span> : <Icon name={health.icon} size={10} />}
+                      {isBad ? <span style={{ width: 18, height: 18, borderRadius: "50%", background: health.clr, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff", fontWeight: 900, flexShrink: 0, animation: health.status === "critical" ? "pulse 2s ease infinite" : "none" }}>!</span> : <Icon name={health.icon} size={10} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, color: health.clr, fontFamily: "'Instrument Serif', serif" }}>{health.label}</div>
-                        <div style={{ fontSize: 8, color: "#8A7040", lineHeight: 1.3, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{health.tip}</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: health.clr, fontFamily: "'Instrument Serif', serif" }}>{health.label}</div>
+                        <div style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.3, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{health.tip}</div>
                       </div>
                     </div>
-                    {b.totalPL !== 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontSize: 10, color: "#33333480", fontWeight: 700 }}>P&L</span><span style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 700, color: b.totalPL >= 0 ? "#5B8C5A" : "#EF5350" }}>{fmtS(b.totalPL)}</span></div>}
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>{b.stocks.slice(0, 5).map(s => <span key={s} onClick={(e) => { e.stopPropagation(); goToStock(s); }} style={{ fontSize: 9, fontFamily: "JetBrains Mono", fontWeight: 600, background: c.l, color: c.a, padding: "2px 6px", borderRadius: 6, cursor: "pointer" }}>{s}</span>)}{b.stocks.length > 5 && <span style={{ fontSize: 9, color: "#33333480" }}>+{b.stocks.length - 5}</span>}</div>
+                    {b.totalPL !== 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontSize: 15, color: "#33333480", fontWeight: 700 }}>P&L</span><span style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: b.totalPL >= 0 ? "#5B8C5A" : "#EF5350" }}>{fmtS(b.totalPL)}</span></div>}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>{b.stocks.slice(0, 5).map(s => <span key={s} onClick={(e) => { e.stopPropagation(); goToStock(s); }} style={{ fontSize: 14, fontFamily: "JetBrains Mono", fontWeight: 600, background: c.l, color: c.a, padding: "2px 6px", borderRadius: 6, cursor: "pointer" }}>{s}</span>)}{b.stocks.length > 5 && <span style={{ fontSize: 14, color: "#33333480" }}>+{b.stocks.length - 5}</span>}</div>
                   </div>
                 </div>); })}
             </div>; })()}
@@ -6558,8 +6611,8 @@ export default function App() {
             {/* ── Stocks List View (sparkline rows) ── */}
             {basketView === "stocks" && <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #F0E6D0", background: "#fff" }}>
               <div style={{ padding: "8px 12px", borderBottom: "1.5px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>All Holdings</span>
-                <span style={{ fontSize: 8, color: "#33333480", fontWeight: 600 }}>sorted by P&L</span>
+                <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>All Holdings</span>
+                <span style={{ fontSize: 12, color: "#33333480", fontWeight: 600 }}>sorted by P&L</span>
               </div>
               {(() => {
                 const allStks = [];
@@ -6584,11 +6637,11 @@ export default function App() {
                       onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
                       {/* Left: name + ticker + basket */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.name || st.ticker}</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.name || st.ticker}</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 1 }}>
-                          <span style={{ fontSize: 7, fontFamily: "JetBrains Mono", color: "#33333480", fontWeight: 600 }}>{st.ticker.length > 10 ? st.ticker.slice(0, 10) + ".." : st.ticker}</span>
-                          <span style={{ fontSize: 7, color: "#33333480" }}>·</span>
-                          <span style={{ fontSize: 7, fontWeight: 700, color: c2.a, background: c2.l, padding: "0px 4px", borderRadius: 3, display: "inline-flex", alignItems: "center", gap: 2 }}><Icon name={st.basketIcon} size={7} color={c2.a} />{st.basket.split(" ")[0]}</span>
+                          <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", color: "#33333480", fontWeight: 600 }}>{st.ticker.length > 10 ? st.ticker.slice(0, 10) + ".." : st.ticker}</span>
+                          <span style={{ fontSize: 11, color: "#33333480" }}>·</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: c2.a, background: c2.l, padding: "0px 4px", borderRadius: 3, display: "inline-flex", alignItems: "center", gap: 2 }}><Icon name={st.basketIcon} size={7} color={c2.a} />{st.basket.split(" ")[0]}</span>
                         </div>
                       </div>
                       {/* Center: sparkline */}
@@ -6597,19 +6650,19 @@ export default function App() {
                       </div>
                       {/* Right: price + P&L */}
                       <div style={{ textAlign: "right", minWidth: 64, flexShrink: 0 }}>
-                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: "#333334" }}>
+                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: "#333334" }}>
                           ${st.current >= 1000 ? st.current.toLocaleString() : st.current.toFixed(2)}
                         </div>
                         <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 2, marginTop: 1 }}>
-                          <span style={{ fontSize: 7, fontFamily: "JetBrains Mono", fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>
+                          <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>
                             {pl >= 0 ? "+" : ""}{Math.abs(pl) >= 1000 ? (pl / 1000).toFixed(1) + "k" : Math.round(pl)}
                           </span>
-                          <span style={{ fontSize: 6, fontWeight: 800, padding: "1px 3px", borderRadius: 3, background: (plPct >= 0 ? "#5B8C5A" : "#EF5350") + "14", color: plPct >= 0 ? "#5B8C5A" : "#EF5350" }}>
+                          <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 3px", borderRadius: 3, background: (plPct >= 0 ? "#5B8C5A" : "#EF5350") + "14", color: plPct >= 0 ? "#5B8C5A" : "#EF5350" }}>
                             {plPct >= 0 ? "+" : ""}{plPct.toFixed(1)}%
                           </span>
                         </div>
                       </div>
-                      <span style={{ fontSize: 9, color: "#D0C8B8" }}>›</span>
+                      <span style={{ fontSize: 14, color: "#D0C8B8" }}>›</span>
                     </div>
                   );
                 });
@@ -6620,8 +6673,8 @@ export default function App() {
           {/* ── Realized P&L (closed trades only) ── */}
           <div style={{ animation: "fadeUp .5s ease .5s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Realized P&L</div>
-              <span style={{ fontSize: 8, color: "#33333480", fontWeight: 600 }}>Closed trades only</span>
+              <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Realized P&L</div>
+              <span style={{ fontSize: 12, color: "#33333480", fontWeight: 600 }}>Closed trades only</span>
             </div>
             {(() => {
               const totalRealized = realizedTrades.reduce((s, t) => s + t.pl, 0);
@@ -6630,16 +6683,16 @@ export default function App() {
               return <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 8 }}>
                   <div style={{ background: totalRealized >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 10, padding: "8px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: 7, color: "#33333480", fontWeight: 700, textTransform: "uppercase" }}>Net Realized</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, color: totalRealized >= 0 ? "#5B8C5A" : "#EF5350" }}>{fmtS(Math.round(totalRealized))}</div>
+                    <div style={{ fontSize: 11, color: "#33333480", fontWeight: 700, textTransform: "uppercase" }}>Net Realized</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 800, color: totalRealized >= 0 ? "#5B8C5A" : "#EF5350" }}>{fmtS(Math.round(totalRealized))}</div>
                   </div>
                   <div style={{ background: "#EDF5ED", borderRadius: 10, padding: "8px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: 7, color: "#33333480", fontWeight: 700, textTransform: "uppercase" }}>Wins ({wins.length})</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, color: "#5B8C5A" }}>{fmtS(Math.round(wins.reduce((s, t) => s + t.pl, 0)))}</div>
+                    <div style={{ fontSize: 11, color: "#33333480", fontWeight: 700, textTransform: "uppercase" }}>Wins ({wins.length})</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 800, color: "#5B8C5A" }}>{fmtS(Math.round(wins.reduce((s, t) => s + t.pl, 0)))}</div>
                   </div>
                   <div style={{ background: "#FFEBEE", borderRadius: 10, padding: "8px 8px", textAlign: "center" }}>
-                    <div style={{ fontSize: 7, color: "#33333480", fontWeight: 700, textTransform: "uppercase" }}>Losses ({losses.length})</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, color: "#EF5350" }}>{fmtS(Math.round(losses.reduce((s, t) => s + t.pl, 0)))}</div>
+                    <div style={{ fontSize: 11, color: "#33333480", fontWeight: 700, textTransform: "uppercase" }}>Losses ({losses.length})</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 800, color: "#EF5350" }}>{fmtS(Math.round(losses.reduce((s, t) => s + t.pl, 0)))}</div>
                   </div>
                 </div>
                 <div style={{ background: "#fff", borderRadius: 12, padding: "4px 10px", overflow: "hidden" }}>
@@ -6647,12 +6700,12 @@ export default function App() {
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
                     <Icon name={t.icon} size={14} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{t.ticker} <span style={{ fontWeight: 600, color: "#33333480" }}>· {t.shares} shares</span></div>
-                      <div style={{ fontSize: 8, color: "#33333480" }}>${t.buyPrice.toFixed(2)} → ${t.sellPrice.toFixed(2)} · {t.date}</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{t.ticker} <span style={{ fontWeight: 600, color: "#33333480" }}>· {t.shares} shares</span></div>
+                      <div style={{ fontSize: 12, color: "#33333480" }}>${t.buyPrice.toFixed(2)} → ${t.sellPrice.toFixed(2)} · {t.date}</div>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: t.pl >= 0 ? "#5B8C5A" : "#EF5350" }}>{t.pl >= 0 ? "+" : ""}{fmtS(Math.round(t.pl))}</div>
-                      <div style={{ fontSize: 7, fontWeight: 700, color: t.pl >= 0 ? "#5B8C5A" : "#EF5350" }}>{t.pl >= 0 ? "+" : ""}{(((t.sellPrice - t.buyPrice) / t.buyPrice) * 100).toFixed(1)}%</div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: t.pl >= 0 ? "#5B8C5A" : "#EF5350" }}>{t.pl >= 0 ? "+" : ""}{fmtS(Math.round(t.pl))}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: t.pl >= 0 ? "#5B8C5A" : "#EF5350" }}>{t.pl >= 0 ? "+" : ""}{(((t.sellPrice - t.buyPrice) / t.buyPrice) * 100).toFixed(1)}%</div>
                     </div>
                   </div>
                 ))}
@@ -6678,26 +6731,26 @@ export default function App() {
               <div style={{ position: "absolute", inset: 0, background: "rgba(45,32,22,.5)", backdropFilter: "blur(14px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setSelectedShopBasket(null)}>
                 <div style={{ background: "#FFFDF8", borderRadius: 22, width: "calc(100% - 24px)", maxHeight: 700, overflow: "auto", animation: "popIn .35s ease both" }} onClick={e => e.stopPropagation()}>
                   <div style={{ background: `linear-gradient(135deg, ${clr.a}12, ${clr.a}06)`, padding: "18px 16px 14px", textAlign: "center", position: "relative" }}>
-                    <button onClick={() => setSelectedShopBasket(null)} style={{ position: "absolute", top: 12, right: 14, width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(255,255,255,.8)", cursor: "pointer", fontSize: 12, color: "#33333480" }}>✕</button>
+                    <button onClick={() => setSelectedShopBasket(null)} style={{ position: "absolute", top: 12, right: 14, width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(255,255,255,.8)", cursor: "pointer", fontSize: 18, color: "#33333480" }}>✕</button>
                     {isLive && <div style={{ position: "absolute", top: 12, left: 14, display: "flex", alignItems: "center", gap: 4 }}>
                       <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#5B8C5A", animation: "pulse 2s infinite" }} />
-                      <span style={{ fontSize: 7, fontWeight: 700, color: "#5B8C5A", textTransform: "uppercase", letterSpacing: .5 }}>Live</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#5B8C5A", textTransform: "uppercase", letterSpacing: .5 }}>Live</span>
                     </div>}
                     <div style={{ position: "relative", width: 80, height: 80, margin: "0 auto 6px" }}>
-                      <div style={{ fontSize: 46, lineHeight: 1 }}>🧺</div>
+                      <div style={{ fontSize: 69, lineHeight: 1 }}>🧺</div>
                       {b.stocks.slice(0, 4).map((t, i) => {
                         const positions = [{ top: -6, left: -8 }, { top: -8, right: -8 }, { top: 22, left: -14 }, { top: 20, right: -14 }];
-                        return <span key={t} style={{ position: "absolute", ...positions[i], fontSize: 15, animation: `float ${3 + i * .5}s ease-in-out ${i * .2}s infinite` }}>{tickerEmojis[t] || "📈"}</span>;
+                        return <span key={t} style={{ position: "absolute", ...positions[i], fontSize: 23, animation: `float ${3 + i * .5}s ease-in-out ${i * .2}s infinite` }}>{tickerEmojis[t] || "📈"}</span>;
                       })}
                     </div>
-                    <div style={{ fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Icon name={b.icon} size={16} />{b.name}</span></div>
+                    <div style={{ fontSize: 21, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Icon name={b.icon} size={16} />{b.name}</span></div>
                     <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 4 }}>
-                      <span style={{ fontSize: 8, fontWeight: 800, padding: "2px 7px", borderRadius: 5, background: clr.a + "18", color: clr.a }}>{b.strategy}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, padding: "2px 7px", borderRadius: 5, background: clr.a + "18", color: clr.a }}>{b.strategy}</span>
                     </div>
-                    <p style={{ fontSize: 8, color: "#8A7040", lineHeight: 1.4, marginTop: 6, maxWidth: 280, margin: "6px auto 0" }}>{b.desc}</p>
+                    <p style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.4, marginTop: 6, maxWidth: 280, margin: "6px auto 0" }}>{b.desc}</p>
                   </div>
                   <div style={{ padding: "0 12px 12px" }}>
-                    <div className="trading-table-header" style={{ display: "grid", gridTemplateColumns: "auto 1fr 58px 36px 40px 52px", padding: "8px 4px 5px", fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
+                    <div className="trading-table-header" style={{ display: "grid", gridTemplateColumns: "auto 1fr 58px 36px 40px 52px", padding: "8px 4px 5px", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
                       <div style={{ width: 24 }}></div><div>Item</div><div style={{ textAlign: "right" }}>Price</div><div style={{ textAlign: "right" }}>Chg</div><div style={{ textAlign: "center" }}>Qty</div><div></div>
                     </div>
                     {b.stocks.map((ticker, ti) => {
@@ -6711,27 +6764,27 @@ export default function App() {
                           <div style={{ width: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <StockLogo ticker={ticker} size={20} />
                           </div>
-                          <div onClick={() => goToStock(ticker)} style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 10, cursor: "pointer", color: "#C48830" }}>{ticker}</div>
-                          <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 9, color: "#6B5A2E" }}>${price >= 1000 ? (price / 1000).toFixed(1) + "k" : price.toFixed(0)}</div>
-                          <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 8, fontWeight: 700, color: chgColor }}>{chgPct >= 0 ? "+" : ""}{chgPct.toFixed(1)}%</div>
-                          <div style={{ textAlign: "center", fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800 }}>{shares}</div>
+                          <div onClick={() => goToStock(ticker)} style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 15, cursor: "pointer", color: "#C48830" }}>{ticker}</div>
+                          <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 14, color: "#6B5A2E" }}>${price >= 1000 ? (price / 1000).toFixed(1) + "k" : price.toFixed(0)}</div>
+                          <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: chgColor }}>{chgPct >= 0 ? "+" : ""}{chgPct.toFixed(1)}%</div>
+                          <div style={{ textAlign: "center", fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800 }}>{shares}</div>
                           <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
-                            <button onClick={() => setShareCount(ticker, -1)} style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 10, color: "#EF5350", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
-                            <button onClick={() => setShareCount(ticker, 1)} style={{ width: 20, height: 20, borderRadius: "50%", border: "1.5px solid " + clr.a + "44", background: clr.a + "08", cursor: "pointer", fontSize: 10, color: clr.a, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                            <button onClick={() => setShareCount(ticker, -1)} style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid #33333440", background: "#fff", cursor: "pointer", fontSize: 15, color: "#EF5350", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                            <button onClick={() => setShareCount(ticker, 1)} style={{ width: 20, height: 20, borderRadius: "50%", border: "1.5px solid " + clr.a + "44", background: clr.a + "08", cursor: "pointer", fontSize: 15, color: clr.a, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                           </div>
                         </div>
                       );
                     })}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 4px 4px", borderTop: "2px solid #F0E6D0", marginTop: 4 }}>
                       <div>
-                        <div style={{ fontSize: 7, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Basket Total</div>
-                        <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 15, fontWeight: 900, color: "#333334" }}>${totalCost >= 1000 ? (totalCost / 1000).toFixed(1) + "k" : totalCost.toFixed(0)}</div>
+                        <div style={{ fontSize: 11, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Basket Total</div>
+                        <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 23, fontWeight: 900, color: "#333334" }}>${totalCost >= 1000 ? (totalCost / 1000).toFixed(1) + "k" : totalCost.toFixed(0)}</div>
                       </div>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                         <button onClick={() => addToCart(b)} style={{ width: 34, height: 34, borderRadius: 10, border: inCart ? "2px solid #5B8C5A" : "1.5px solid #F0E6D0", background: inCart ? "#E8F5E9" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          {inCart ? <span style={{ fontSize: 14 }}>✅</span> : <Icon name="cart" size={14} />}
+                          {inCart ? <span style={{ fontSize: 21 }}>✅</span> : <Icon name="cart" size={14} />}
                         </button>
-                        <button onClick={() => { addToCart(b); setShowCheckout(true); setSelectedShopBasket(null); }} style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 12, padding: "9px 18px", fontSize: 10, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy Now</button>
+                        <button onClick={() => { addToCart(b); setShowCheckout(true); setSelectedShopBasket(null); }} style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 12, padding: "9px 18px", fontSize: 15, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy Now</button>
                       </div>
                     </div>
                   </div>
@@ -6743,27 +6796,27 @@ export default function App() {
           {/* ── Market Header + Cart ── */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div>
-              <h1 style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Market</h1>
-              <p style={{ color: "#33333480", fontSize: 8, marginTop: 1 }}>Search stocks or browse baskets</p>
+              <h1 style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Market</h1>
+              <p style={{ color: "#33333480", fontSize: 12, marginTop: 1 }}>Search stocks or browse baskets</p>
             </div>
-            <button onClick={() => setShowCheckout(true)} style={{ position: "relative", display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 10, background: cart.length > 0 ? "linear-gradient(135deg,#C48830,#D4A03C)" : "#fff", color: cart.length > 0 ? "#fff" : "#A09080", border: cart.length > 0 ? "none" : "1.5px solid #F0E6D0", cursor: "pointer", fontSize: 10, fontWeight: 800 }}>
+            <button onClick={() => setShowCheckout(true)} style={{ position: "relative", display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 10, background: cart.length > 0 ? "linear-gradient(135deg,#C48830,#D4A03C)" : "#fff", color: cart.length > 0 ? "#fff" : "#A09080", border: cart.length > 0 ? "none" : "1.5px solid #F0E6D0", cursor: "pointer", fontSize: 15, fontWeight: 800 }}>
               <Icon name="cart" size={12} /> {cart.length > 0 ? cart.length : ""}
-              {cart.length > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: "#FF7043", color: "#fff", fontSize: 7, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #fff" }}>{cart.length}</span>}
+              {cart.length > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: "#FF7043", color: "#fff", fontSize: 11, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #fff" }}>{cart.length}</span>}
             </button>
           </div>
 
           {/* ── Stock Search Bar ── */}
           <div style={{ background: "#fff", borderRadius: 12, padding: "8px 12px", marginBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 14, color: "#33333480" }}></span>
+              <span style={{ fontSize: 21, color: "#33333480" }}></span>
               <input
                 type="text"
                 placeholder="Search stocks by ticker or name..."
                 value={stockSearch}
                 onChange={e => setStockSearch(e.target.value)}
-                style={{ flex: 1, border: "none", outline: "none", fontSize: 10, fontFamily: "Quicksand", fontWeight: 600, color: "#333334", background: "transparent" }}
+                style={{ flex: 1, border: "none", outline: "none", fontSize: 15, fontFamily: "Quicksand", fontWeight: 600, color: "#333334", background: "transparent" }}
               />
-              {stockSearch && <button onClick={() => setStockSearch("")} style={{ border: "none", background: "#F0E6D0", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: 9, color: "#33333480", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>}
+              {stockSearch && <button onClick={() => setStockSearch("")} style={{ border: "none", background: "#F0E6D0", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: 14, color: "#33333480", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>}
             </div>
           </div>
 
@@ -6778,27 +6831,27 @@ export default function App() {
             }).slice(0, 8);
             if (allStocks.length === 0) return (
               <div style={{ background: "#fff", borderRadius: 12, padding: "16px", marginBottom: 10, textAlign: "center" }}>
-                <div style={{ fontSize: 24, marginBottom: 4 }}></div>
-                <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480" }}>No stocks found for "{stockSearch}"</div>
+                <div style={{ fontSize: 36, marginBottom: 4 }}></div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#33333480" }}>No stocks found for "{stockSearch}"</div>
               </div>
             );
             return (
               <div style={{ background: "#fff", borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
                 <div style={{ padding: "6px 12px", background: "#FFFDF5", borderBottom: "1px solid #33333420" }}>
-                  <span style={{ fontSize: 8, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Individual Stocks</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Individual Stocks</span>
                 </div>
                 {allStocks.map(([ticker, price], i) => (
                   <div key={ticker} onClick={() => goToStock(ticker)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderBottom: i < allStocks.length - 1 ? "1px solid #FFF5E6" : "none", cursor: "pointer" }}>
                     <StockLogo ticker={ticker} size={24} />
-                    <span style={{ fontSize: 16, display: "none" }}>{tickerIcons[ticker] || "chart-up"}</span>
+                    <span style={{ fontSize: 24, display: "none" }}>{tickerIcons[ticker] || "chart-up"}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 800, color: "#333334" }}>{ticker}</div>
-                      <div style={{ fontSize: 8, color: "#33333480", fontWeight: 600 }}>{stockNames[ticker] || ticker}</div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: "#333334" }}>{ticker}</div>
+                      <div style={{ fontSize: 12, color: "#33333480", fontWeight: 600 }}>{stockNames[ticker] || ticker}</div>
                     </div>
                     <div style={{ textAlign: "right", marginRight: 6 }}>
-                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 10, fontWeight: 700, color: "#333334" }}>${price >= 1000 ? (price / 1000).toFixed(2) + "k" : price.toFixed(2)}</div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: "#333334" }}>${price >= 1000 ? (price / 1000).toFixed(2) + "k" : price.toFixed(2)}</div>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); notify("" + ticker + " added!"); }} style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 8, fontWeight: 800, cursor: "pointer" }}>Buy</button>
+                    <button onClick={(e) => { e.stopPropagation(); notify("" + ticker + " added!"); }} style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Buy</button>
                   </div>
                 ))}
               </div>
@@ -6807,12 +6860,12 @@ export default function App() {
 
           {/* ── Baskets Section Label ── */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Baskets</div>
+            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Baskets</div>
             <div style={{ flex: 1, height: 1, background: "#F0E6D0" }} />
             <div style={{ display: "flex", gap: 3 }}>
-              <button onClick={() => setActiveScenario(null)} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid " + (!activeScenario ? "#C48830" : "#F0E6D0"), background: !activeScenario ? "#FFF8EE" : "#fff", color: !activeScenario ? "#C48830" : "#A09080", fontSize: 7, fontWeight: 800, cursor: "pointer" }}>All</button>
+              <button onClick={() => setActiveScenario(null)} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid " + (!activeScenario ? "#C48830" : "#F0E6D0"), background: !activeScenario ? "#FFF8EE" : "#fff", color: !activeScenario ? "#C48830" : "#A09080", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>All</button>
               {macroScenarios.slice(0, 4).map(s => (
-                <button key={s.id} onClick={() => setActiveScenario(activeScenario === s.id ? null : s.id)} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid " + (activeScenario === s.id ? "#C48830" : "#F0E6D0"), background: activeScenario === s.id ? "#FFF8EE" : "#fff", color: activeScenario === s.id ? "#C48830" : "#A09080", fontSize: 7, fontWeight: 800, cursor: "pointer" }}>{s.name}</button>
+                <button key={s.id} onClick={() => setActiveScenario(activeScenario === s.id ? null : s.id)} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid " + (activeScenario === s.id ? "#C48830" : "#F0E6D0"), background: activeScenario === s.id ? "#FFF8EE" : "#fff", color: activeScenario === s.id ? "#C48830" : "#A09080", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>{s.name}</button>
               ))}
             </div>
           </div>
@@ -6853,13 +6906,13 @@ export default function App() {
 
                       {/* Top row: YoY return badge + chart flip icon on far right */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, position: "relative", zIndex: 1 }}>
-                        <div style={{ fontSize: 10, fontWeight: 900, fontFamily: "JetBrains Mono", color: isTopPerformer ? "#8B6914" : retColor, background: isTopPerformer ? "#DAA52025" : retColor + "12", padding: "2px 6px", borderRadius: 5 }}>
-                          {isTopPerformer && <span style={{ fontSize: 9, marginRight: 2 }}>👑</span>}
-                          {basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}% <span style={{ fontSize: 6, fontWeight: 700, opacity: .8 }}>YoY</span>
+                        <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "JetBrains Mono", color: isTopPerformer ? "#8B6914" : retColor, background: isTopPerformer ? "#DAA52025" : retColor + "12", padding: "2px 6px", borderRadius: 5 }}>
+                          {isTopPerformer && <span style={{ fontSize: 14, marginRight: 2 }}>👑</span>}
+                          {basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}% <span style={{ fontSize: 9, fontWeight: 700, opacity: .8 }}>YoY</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          {inCart && <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#5B8C5A", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#fff", fontSize: 8, fontWeight: 900 }}>✓</span></div>}
-                          {relevance >= 70 && !inCart && <div style={{ background: displayRegime.color, borderRadius: 4, padding: "1px 5px" }}><span style={{ color: "#fff", fontSize: 6, fontWeight: 900 }}>FIT</span></div>}
+                          {inCart && <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#5B8C5A", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#fff", fontSize: 12, fontWeight: 900 }}>✓</span></div>}
+                          {relevance >= 70 && !inCart && <div style={{ background: displayRegime.color, borderRadius: 4, padding: "1px 5px" }}><span style={{ color: "#fff", fontSize: 9, fontWeight: 900 }}>FIT</span></div>}
                           <button onClick={(e) => { e.stopPropagation(); setFlippedCards(f => ({ ...f, [b.id]: !f[b.id] })); }}
                             style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center", justifyContent: "center" }}
                             title="View metrics"><Icon name="chart-bar" size={13} color="#A09080" /></button>
@@ -6868,9 +6921,9 @@ export default function App() {
 
                       {/* Big emoji + bold name */}
                       <div style={{ textAlign: "center", marginBottom: 4, position: "relative", zIndex: 1 }} onClick={() => setSelectedShopBasket({ ...b, relevance })}>
-                        <div style={{ lineHeight: 1, marginBottom: 3, fontSize: 32 }}>{b.emoji}</div>
-                        <div style={{ fontSize: 11, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.15 }}>{b.name}</div>
-                        <div style={{ fontSize: 7, color: "#33333480", fontWeight: 700, marginTop: 2 }}>{b.strategy} · {b.risk}</div>
+                        <div style={{ lineHeight: 1, marginBottom: 3, fontSize: 48 }}>{b.emoji}</div>
+                        <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.15 }}>{b.name}</div>
+                        <div style={{ fontSize: 11, color: "#33333480", fontWeight: 700, marginTop: 2 }}>{b.strategy} · {b.risk}</div>
                       </div>
 
                       {/* Ticker list — max 5 + overflow */}
@@ -6881,7 +6934,7 @@ export default function App() {
                           return (
                             <div key={t} onClick={(e) => { e.stopPropagation(); goToStock(t); }} style={{
                               display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
-                              fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 800, color: "#333334",
+                              fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: "#333334",
                               background: isTopPerformer ? "rgba(255,255,255,0.5)" : "#33333406", padding: "4px 8px", borderRadius: 6,
                               border: "1px solid " + (isTopPerformer ? "rgba(218,165,32,0.15)" : "#33333410"), cursor: "pointer",
                             }}>
@@ -6889,12 +6942,12 @@ export default function App() {
                                 <StockLogo ticker={t} size={16} />
                                 <span>{t}</span>
                               </div>
-                              <span style={{ fontSize: 8, fontWeight: 800, color: yoyC }}>{yoy >= 0 ? "+" : ""}{yoy.toFixed(1)}%</span>
+                              <span style={{ fontSize: 12, fontWeight: 800, color: yoyC }}>{yoy >= 0 ? "+" : ""}{yoy.toFixed(1)}%</span>
                             </div>
                           );
                         })}
                         {b.stocks.length > 5 && (
-                          <div style={{ textAlign: "center", fontSize: 8, fontWeight: 800, color: "#33333480", padding: "2px 0" }}>+{b.stocks.length - 5} more</div>
+                          <div style={{ textAlign: "center", fontSize: 12, fontWeight: 800, color: "#33333480", padding: "2px 0" }}>+{b.stocks.length - 5} more</div>
                         )}
                       </div>
 
@@ -6917,15 +6970,15 @@ export default function App() {
                       <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6, position: "relative", zIndex: 1 }}>
                         <Icon name={b.icon} size={12} color={clr.a} />
                         <div>
-                          <div style={{ fontSize: 9, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{b.name}</div>
-                          <div style={{ fontSize: 7, color: clr.a, fontWeight: 800 }}>Risk & Performance</div>
+                          <div style={{ fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{b.name}</div>
+                          <div style={{ fontSize: 11, color: clr.a, fontWeight: 800 }}>Risk & Performance</div>
                         </div>
                       </div>
 
                       {/* Basket YoY Return */}
                       <div style={{ background: isTopPerformer ? "#DAA52018" : retColor + "0C", borderRadius: 8, padding: "6px 6px", textAlign: "center", marginBottom: 6, position: "relative", zIndex: 1 }}>
-                        <div style={{ fontSize: 6, color: "#33333480", fontWeight: 700, textTransform: "uppercase", marginBottom: 1 }}>Basket YoY Return</div>
-                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 16, fontWeight: 900, color: isTopPerformer ? "#8B6914" : retColor }}>{isTopPerformer && "👑 "}{basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}%</div>
+                        <div style={{ fontSize: 9, color: "#33333480", fontWeight: 700, textTransform: "uppercase", marginBottom: 1 }}>Basket YoY Return</div>
+                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 24, fontWeight: 900, color: isTopPerformer ? "#8B6914" : retColor }}>{isTopPerformer && "👑 "}{basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}%</div>
                       </div>
 
                       {/* Risk Metrics */}
@@ -6940,17 +6993,17 @@ export default function App() {
                           <div key={mi} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 6px", background: m.good ? "#EDF5ED" : "#FFF5F5", borderRadius: 6 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                               <Icon name={m.icon} size={9} color={m.good ? "#5B8C5A" : "#EF5350"} />
-                              <span style={{ fontSize: 8, fontWeight: 700, color: "#333334" }}>{m.label}</span>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#333334" }}>{m.label}</span>
                             </div>
-                            <span style={{ fontFamily: "JetBrains Mono", fontSize: 9, fontWeight: 900, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</span>
+                            <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</span>
                           </div>
                         ))}
                       </div>}
 
                       {/* Risk level bar */}
                       <div style={{ marginTop: 4, padding: "4px 8px", background: "#33333408", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", zIndex: 1 }}>
-                        <span style={{ fontSize: 7, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Risk Level</span>
-                        <span style={{ fontSize: 9, fontWeight: 900, color: b.risk === "Low" ? "#5B8C5A" : b.risk === "Medium" ? "#FFA726" : "#EF5350" }}>{b.risk}</span>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Risk Level</span>
+                        <span style={{ fontSize: 14, fontWeight: 900, color: b.risk === "Low" ? "#5B8C5A" : b.risk === "Medium" ? "#FFA726" : "#EF5350" }}>{b.risk}</span>
                       </div>
                     </div>
 
@@ -6967,14 +7020,14 @@ export default function App() {
         {page === "macro" && !selectedBasket && <MacroDashboardPage onGoRiskLab={() => { setPage("risklab"); setRiskLabTab("risklab"); }} onNavigate={setPage} regime={displayRegime} alerts={macroAlerts} onSelectIndicator={(id) => { setViewIndicatorId(id); setPage("indicator"); }} />}
 
         {/* ══ INDICATOR DETAIL ══ */}
-        {page === "indicator" && viewIndicatorId && !selectedBasket && <IndicatorDetailPage indicatorId={viewIndicatorId} onBack={() => { setViewIndicatorId(null); setPage("macro"); }} onSelectIndicator={(id) => { setViewIndicatorId(id); }} />}
+        {page === "indicator" && viewIndicatorId && !selectedBasket && <IndicatorDetailPage indicatorId={viewIndicatorId} onBack={() => { setViewIndicatorId(null); setPage("macro"); }} onSelectIndicator={(id) => { setViewIndicatorId(id); }} liveNews={liveNews} />}
 
         {/* ══ RISK LAB ══ */}
         {page === "risklab" && !selectedBasket && <div>
           <div style={{ display: "flex", gap: 2, background: "#fff", borderRadius: 10, padding: 2, marginBottom: 10, flexWrap: "wrap" }}>
             {[{ id: "risklab", label: "Risk", icon: "flask" }, { id: "hedge", label: "Hedge", icon: "shield" }, { id: "stresstest", label: "Stress", icon: "explosion" }, { id: "historical", label: "History", icon: "scroll" }, { id: "contrarian", label: "Contrarian", icon: "compass" }, { id: "tides", label: "Tides", icon: "wave" }, { id: "weather", label: "Weather", icon: "cloud-sun" }, { id: "horoscope", label: "Horoscope", icon: "sparkle" }].map(t => (
               <button key={t.id} onClick={() => setRiskLabTab(t.id)}
-                style={{ flex: "1 1 auto", padding: "6px 6px", borderRadius: 7, border: "none", background: riskLabTab === t.id ? "#C48830" : "transparent", color: riskLabTab === t.id ? "#fff" : "#A09080", fontSize: 8, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", transition: "all .2s", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}><Icon name={t.icon} size={9} color={riskLabTab === t.id ? "#fff" : "#A09080"} />{t.label}</button>
+                style={{ flex: "1 1 auto", padding: "6px 6px", borderRadius: 7, border: "none", background: riskLabTab === t.id ? "#C48830" : "transparent", color: riskLabTab === t.id ? "#fff" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", transition: "all .2s", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}><Icon name={t.icon} size={9} color={riskLabTab === t.id ? "#fff" : "#A09080"} />{t.label}</button>
             ))}
           </div>
           {riskLabTab === "risklab" && <RiskLabPage onOpenMacro={() => setPage("macro")} hedges={displayHedges} regime={displayRegime} />}
@@ -6991,7 +7044,7 @@ export default function App() {
         {page === "account" && !selectedBasket && <MyAccountPage onNavigate={setPage} onSignOut={logout} user={user} />}
 
         {/* ══ NEWS ══ */}
-        {page === "news" && !selectedBasket && <NewsPage />}
+        {page === "news" && !selectedBasket && <NewsPage liveNews={liveNews} newsStatus={newsStatus} />}
 
         {/* ══ STOCK DETAIL (standalone) ══ */}
         {page === "stock" && viewStockTicker && !selectedBasket && (
@@ -7004,7 +7057,7 @@ export default function App() {
         </div>
 
         {/* ── Bottom Tab Bar with Center Egg ── */}
-        <div style={{ flexShrink: 0, background: "#fff", borderTop: "1px solid #33333420", padding: "4px 0 calc(env(safe-area-inset-bottom, 6px) + 2px)", display: "flex", justifyContent: "space-around", alignItems: "flex-end", zIndex: 200, position: "relative" }}>
+        <div style={{ flexShrink: 0, background: "#fff", borderTop: "1px solid #33333420", padding: "8px 0 calc(env(safe-area-inset-bottom, 8px) + 6px)", display: "flex", justifyContent: "space-around", alignItems: "flex-end", zIndex: 200, position: "relative" }}>
           {/* Hide nav borderTop behind the oval so oval border connects to nav border */}
           <div style={{ position: "absolute", top: -1, left: "50%", marginLeft: -22, width: 44, height: 3, background: "#fff", zIndex: 1 }} />
           {navItemsLeft.map(p => {
@@ -7013,7 +7066,7 @@ export default function App() {
               <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); setViewIndicatorId(null); }}
                 style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 8px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s", flex: 1 }}>
                 <Icon name={p.icon} size={19} color={isActive ? "#C48830" : "#A09080"} />
-                <span style={{ fontSize: 8, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>
+                <span style={{ fontSize: 12, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>
                 {isActive && <div style={{ position: "absolute", top: -3, width: 4, height: 4, borderRadius: "50%", background: "#C48830" }} />}
               </button>
             );
@@ -7026,7 +7079,7 @@ export default function App() {
               <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); setViewIndicatorId(null); }}
                 style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 8px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s", flex: 1 }}>
                 <Icon name={p.icon} size={19} color={isActive ? "#C48830" : "#A09080"} />
-                <span style={{ fontSize: 8, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>
+                <span style={{ fontSize: 12, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>
                 {isActive && <div style={{ position: "absolute", top: -3, width: 4, height: 4, borderRadius: "50%", background: "#C48830" }} />}
               </button>
             );
@@ -7036,7 +7089,7 @@ export default function App() {
         {/* ── Modals ── */}
         {showCreate && <CreateBasketModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
         {showCheckout && cart.length > 0 && <CheckoutModal cart={cart} onClose={() => setShowCheckout(false)} onExecute={() => setCart([])} />}
-        {showCheckout && cart.length === 0 && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowCheckout(false)}><div style={{ background: "#fff", borderRadius: 16, padding: "36px 28px", textAlign: "center", animation: "popIn .4s ease", margin: 20 }} onClick={e => e.stopPropagation()}><div style={{ fontSize: 42, marginBottom: 8 }}>🧺</div><div style={{ fontSize: 12, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#8B6914" }}>Your cart is empty!</div><div style={{ fontSize: 12, color: "#33333480", marginBottom: 12 }}>Browse our fresh Hatches and add some eggs</div><button onClick={() => { setShowCheckout(false); setPage("explorer"); }} style={{ padding: "10px 24px", background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer", fontSize: 10, fontFamily: "Quicksand" }}>Start Shopping</button></div></div>}
+        {showCheckout && cart.length === 0 && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowCheckout(false)}><div style={{ background: "#fff", borderRadius: 16, padding: "36px 28px", textAlign: "center", animation: "popIn .4s ease", margin: 20 }} onClick={e => e.stopPropagation()}><div style={{ fontSize: 63, marginBottom: 8 }}>🧺</div><div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#8B6914" }}>Your cart is empty!</div><div style={{ fontSize: 18, color: "#33333480", marginBottom: 12 }}>Browse our fresh Hatches and add some eggs</div><button onClick={() => { setShowCheckout(false); setPage("explorer"); }} style={{ padding: "10px 24px", background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer", fontSize: 15, fontFamily: "Quicksand" }}>Start Shopping</button></div></div>}
         <AIAgent onNotify={notify} onNavigate={setPage} agentInsights={agentState} />
     </div>
   );
