@@ -233,14 +233,14 @@ const LANDING_STYLES = `
 }
 .lp-hero-btn-secondary:hover { border-color: #FFE082; background: rgba(255,224,130,.1); }
 
-/* Big image showcase slide */
+/* Golden goose emblem — peeks from below the hero */
 .lp-emblem-slide {
-  min-height: 80vh; display: flex; align-items: center; justify-content: center;
-  padding: 80px 40px; text-align: center;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 0 40px 80px; text-align: center;
   background: #FFFEF9;
 }
 .lp-emblem-slide img {
-  max-height: 680px; width: auto; max-width: 90%;
+  max-height: 680px; width: auto; max-width: 80%;
   object-fit: contain;
   filter: drop-shadow(0 20px 60px rgba(196,136,48,.2));
 }
@@ -255,12 +255,12 @@ const LANDING_STYLES = `
   position: relative; overflow: hidden;
 }
 .lp-fable-quote {
-  font-size: 28px; font-family: 'Instrument Serif', serif;
+  font-size: 34px; font-family: 'Instrument Serif', serif;
   color: #1A1A1A; line-height: 1.6; max-width: 700px;
   margin: 0 auto 12px; font-style: italic;
 }
 .lp-fable-attr {
-  font-size: 14px; font-weight: 700; color: #8B6914;
+  font-size: 16px; font-weight: 700; color: #8B6914;
   letter-spacing: 2px; text-transform: uppercase;
 }
 
@@ -280,7 +280,7 @@ const LANDING_STYLES = `
   color: #1A1A2E; margin-bottom: 16px; line-height: 1.15;
 }
 .lp-section-sub {
-  font-size: 18px; color: #6B5A2E; font-weight: 600;
+  font-size: 20px; color: #6B5A2E; font-weight: 600;
   line-height: 1.7; max-width: 540px; margin-bottom: 48px;
 }
 .lp-features-grid {
@@ -303,11 +303,11 @@ const LANDING_STYLES = `
   margin-bottom: 20px; font-size: 28px;
 }
 .lp-feature-title {
-  font-size: 20px; font-weight: 900; color: #1A1A2E;
+  font-size: 24px; font-weight: 900; color: #1A1A2E;
   font-family: 'Instrument Serif', serif; margin-bottom: 8px;
 }
 .lp-feature-desc {
-  font-size: 15px; color: #6B5A2E; font-weight: 600; line-height: 1.65;
+  font-size: 17px; color: #6B5A2E; font-weight: 600; line-height: 1.65;
 }
 
 /* How it works */
@@ -333,11 +333,11 @@ const LANDING_STYLES = `
 }
 .lp-step-icon { margin-bottom: 16px; }
 .lp-step-title {
-  font-size: 22px; font-weight: 900; font-family: 'Instrument Serif', serif;
+  font-size: 26px; font-weight: 900; font-family: 'Instrument Serif', serif;
   color: #1A1A2E; margin-bottom: 8px;
 }
 .lp-step-desc {
-  font-size: 15px; color: #6B5A2E; font-weight: 600; line-height: 1.65;
+  font-size: 17px; color: #6B5A2E; font-weight: 600; line-height: 1.65;
 }
 .lp-step-connector {
   position: absolute; top: 56px; right: -20px; width: 40px;
@@ -361,7 +361,7 @@ const LANDING_STYLES = `
   margin-bottom: 4px;
 }
 .lp-stat-label {
-  font-size: 14px; font-weight: 700; color: #5A4A20;
+  font-size: 16px; font-weight: 700; color: #5A4A20;
   letter-spacing: 1px; text-transform: uppercase;
 }
 
@@ -379,11 +379,11 @@ const LANDING_STYLES = `
 }
 .lp-trust-card-icon { margin-bottom: 16px; }
 .lp-trust-card-title {
-  font-size: 16px; font-weight: 900; color: #1A1A2E;
+  font-size: 22px; font-weight: 900; color: #1A1A2E;
   font-family: 'Instrument Serif', serif; margin-bottom: 6px;
 }
 .lp-trust-card-desc {
-  font-size: 13px; color: #8A7040; font-weight: 600; line-height: 1.6;
+  font-size: 16px; color: #8A7040; font-weight: 600; line-height: 1.6;
 }
 
 /* CTA */
@@ -410,7 +410,7 @@ const LANDING_STYLES = `
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
 .lp-cta-sub {
-  font-size: 18px; color: rgba(255,248,225,.7); font-weight: 600;
+  font-size: 20px; color: rgba(255,248,225,.7); font-weight: 600;
   line-height: 1.7; max-width: 480px; margin: 0 auto 36px;
   position: relative; z-index: 2;
 }
@@ -454,11 +454,40 @@ const LANDING_STYLES = `
   font-size: 12px; color: #8A704080; font-weight: 600; line-height: 1.8;
 }
 
+/* Features header with illustration */
+.lp-features-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 48px; margin-bottom: 48px;
+}
+.lp-features-header-text { flex: 1; }
+.lp-features-header-text .lp-section-sub { margin-bottom: 0; }
+.lp-features-header-illustration {
+  flex-shrink: 0;
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Peek-a-boo egg section */
+.lp-peekaboo {
+  height: 33vh;
+  display: flex; align-items: center; justify-content: center;
+  background: #FFFEF9; overflow: hidden;
+}
+.lp-peekaboo-img {
+  transform: scale(0.3);
+  will-change: transform;
+}
+.lp-peekaboo-img img {
+  max-height: 28vh; width: auto;
+  object-fit: contain;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .lp-hero-h1 { font-size: 48px; }
   .lp-hero-sub { max-width: 100%; }
   .lp-features-grid { grid-template-columns: 1fr; }
+  .lp-features-header { flex-direction: column; }
+  .lp-features-header-illustration { display: none; }
   .lp-steps { flex-direction: column; align-items: center; }
   .lp-step-connector { display: none; }
   .lp-stats-inner { flex-wrap: wrap; gap: 32px; }
@@ -469,12 +498,13 @@ const LANDING_STYLES = `
 @media (max-width: 600px) {
   .lp-hero { padding: 90px 24px 60px; }
   .lp-hero-h1 { font-size: 38px; }
-  .lp-emblem-slide { min-height: 50vh; padding: 60px 24px; }
+  .lp-emblem-slide { padding: 0 24px 60px; }
   .lp-emblem-slide img { max-height: 420px; }
   .lp-hero-ctas { flex-direction: column; width: 100%; }
   .lp-hero-btn-primary, .lp-hero-btn-secondary { width: 100%; text-align: center; }
   .lp-section-h2 { font-size: 32px; }
   .lp-cta-h2 { font-size: 32px; }
+  .lp-peekaboo-img img { max-height: 20vh; }
   .lp-trust-grid { grid-template-columns: 1fr; }
   .lp-features, .lp-how, .lp-trust, .lp-cta { padding: 60px 24px; }
 }
@@ -571,11 +601,21 @@ const TRUST_ITEMS = [
 export default function LandingPage({ onGetStarted, onLogin }) {
   const [scrolled, setScrolled] = useState(false);
   const rootRef = useRef(null);
+  const gooseRef = useRef(null);
 
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
-    const handleScroll = () => setScrolled(el.scrollTop > 20);
+    const handleScroll = () => {
+      setScrolled(el.scrollTop > 20);
+
+      if (gooseRef.current) {
+        const rect = gooseRef.current.getBoundingClientRect();
+        const viewH = el.clientHeight;
+        const progress = Math.max(0, Math.min(1, (viewH - rect.top) / viewH));
+        gooseRef.current.style.transform = `scale(${0.3 + progress * 0.7})`;
+      }
+    };
     el.addEventListener('scroll', handleScroll);
     return () => el.removeEventListener('scroll', handleScroll);
   }, []);
@@ -642,14 +682,21 @@ export default function LandingPage({ onGetStarted, onLogin }) {
 
       {/* ── Features ── */}
       <section className="lp-features" id="lp-features">
-        <div className="lp-section-tag">
-          <GoldenEgg size={12} id="ft" /> Golden Features
+        <div className="lp-features-header">
+          <div className="lp-features-header-text">
+            <div className="lp-section-tag">
+              <GoldenEgg size={12} id="ft" /> Golden Features
+            </div>
+            <h2 className="lp-section-h2">Everything you need to<br />grow your nest egg</h2>
+            <p className="lp-section-sub">
+              Powerful tools wrapped in simplicity. From basket investing to AI-driven
+              risk management — Hatch gives you an unfair advantage.
+            </p>
+          </div>
+          <div className="lp-features-header-illustration">
+            <img src="/basket-nest-egg.jpeg" alt="Basket of eggs" style={{ width: 260, height: 'auto', borderRadius: 20, objectFit: 'cover' }} />
+          </div>
         </div>
-        <h2 className="lp-section-h2">Everything you need to<br />grow your nest egg</h2>
-        <p className="lp-section-sub">
-          Powerful tools wrapped in simplicity. From basket investing to AI-driven
-          risk management — Hatch gives you an unfair advantage.
-        </p>
         <div className="lp-features-grid">
           {FEATURES.map((f, i) => (
             <div className="lp-feature-card" key={i}>
@@ -661,11 +708,6 @@ export default function LandingPage({ onGetStarted, onLogin }) {
             </div>
           ))}
         </div>
-      </section>
-
-      {/* ── Golden Goose Emblem Slide ── */}
-      <section className="lp-emblem-slide">
-        <img src="/golden-goose-emblem.jpg" alt="The Golden Goose" />
       </section>
 
       {/* ── How It Works ── */}
@@ -731,6 +773,13 @@ export default function LandingPage({ onGetStarted, onLogin }) {
               <div className="lp-trust-card-desc">{t.desc}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ── Peek-a-boo Egg ── */}
+      <section className="lp-peekaboo">
+        <div ref={gooseRef} className="lp-peekaboo-img">
+          <img src="/golden-egg-ribbon.jpg" alt="Golden Goose" />
         </div>
       </section>
 
