@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from './contexts/AuthContext';
+import { useSubscription } from './contexts/SubscriptionContext';
 import AuthPage from './components/AuthPage';
+import TierSelectionPage from './components/TierSelectionPage';
+import OptionsPage from './tier2/OptionsPage';
 import { useAgentSystem } from './hooks/useAgentSystem';
 import { Icon, EIcon, EMOJI_TO_ICON } from './components/Icons';
 import { useStockPrices } from './hooks/useStockPrices';
@@ -40,12 +43,23 @@ import {
   explorerRiskMetrics
 } from './data/mockData';
 
+// ── Theme palettes ──
+const GOLD_THEME = {
+  accent: '#C48830', accentDark: '#8B6914', accentLight: '#D4A03C',
+  accentBg: '#FFF8EE', accentBorder: '#F0E6D0', borderLight: '#E8DCC8',
+  textAccentDark: '#5C4A1E', textAccent: '#6B5A2E', textMuted: '#A09080',
+  pageBg: '#FFFDF5', surfaceLight: '#F5F0E8', bodyBg: '#E8E0D8',
+  subtleText: '#C8B898', rootBg: '#FFFEF9', gradText1: '#C48830', gradText2: '#D4A03C',
+  warmText: '#8A7040',
+};
 const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:wght@400;600&family=Quicksand:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;transition:all 200ms ease}
-html{height:100%;background:#FFFEF9}
-body{font-family:'Quicksand',sans-serif;background:#FFFEF9;color:#333334;margin:0;padding:0;width:100%;height:100%;overflow:hidden}
-#root{position:fixed;top:0;left:0;right:0;bottom:0;overflow:hidden}
+html{height:100%;background:var(--body-bg,#E8E0D8)}
+body{font-family:'Quicksand',sans-serif;background:var(--body-bg,#E8E0D8);color:#333334;margin:0;padding:0;width:100%;height:100%;overflow:hidden;display:flex;justify-content:center;align-items:center}
+#root{position:relative;width:100%;max-width:430px;height:100%;max-height:932px;overflow:hidden;background:var(--root-bg,#FFFEF9);box-shadow:0 0 40px rgba(0,0,0,0.15);border-radius:0}
+@media(max-width:430px){#root{max-width:100%;max-height:100%;box-shadow:none;border-radius:0}}
+@media(min-width:431px){#root{border-radius:40px;margin:10px 0}}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#333334;border-radius:3px;opacity:0.3}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @keyframes popIn{0%{opacity:0;transform:scale(0.9)}70%{transform:scale(1.03)}100%{opacity:1;transform:scale(1)}}
@@ -242,10 +256,10 @@ function getBasketHealth(b) {
   if (b.totalPL < -1000) return { status: "critical", label: "Underperforming", icon: "warning", clr: "#EF5350", bg: "#FFEBEE", tip: "Significantly below cost basis — consider rebalancing or cutting losses." };
   if (b.totalPL < 0) return { status: "warning", label: "Below Cost", icon: "warning", clr: "#FFA726", bg: "#FFF3E0", tip: "Below cost basis — monitor closely for recovery signals." };
   if (b.change < -2) return { status: "warning", label: "Down Today", icon: "warning", clr: "#FFA726", bg: "#FFF3E0", tip: "Sharp drop today — watch for continued weakness." };
-  if (b.change > 4) return { status: "hot", label: "Strong Rally", icon: "fire", clr: "#C48830", bg: "#FFF8EE", tip: "Hot streak — consider locking in partial profits." };
-  if (b.change > 0 && b.totalPL > 2000) return { status: "great", label: "Outperforming", icon: "rocket", clr: "#C48830", bg: "#FFF8EE", tip: "Strong performance — Hatch is firing on all cylinders." };
-  if (b.change > 0 && b.totalPL > 0) return { status: "good", label: "On Track", icon: "check-circle", clr: "#C48830", bg: "#FFF8EE", tip: "Performing well — holding steady gains." };
-  return { status: "neutral", label: "Stable", icon: "minus-circle", clr: "#A09080", bg: "#fff", tip: "Holding steady — no major signals." };
+  if (b.change > 4) return { status: "hot", label: "Strong Rally", icon: "fire", clr: "var(--accent)", bg: "var(--accent-bg)", tip: "Hot streak — consider locking in partial profits." };
+  if (b.change > 0 && b.totalPL > 2000) return { status: "great", label: "Outperforming", icon: "rocket", clr: "var(--accent)", bg: "var(--accent-bg)", tip: "Strong performance — Hatch is firing on all cylinders." };
+  if (b.change > 0 && b.totalPL > 0) return { status: "good", label: "On Track", icon: "check-circle", clr: "var(--accent)", bg: "var(--accent-bg)", tip: "Performing well — holding steady gains." };
+  return { status: "neutral", label: "Stable", icon: "minus-circle", clr: "var(--text-muted)", bg: "#fff", tip: "Holding steady — no major signals." };
 }
 
 // ═══════════════════════════ DATA ═══════════════════════════
@@ -318,10 +332,10 @@ function MiniChart({ data, color, chartId, onHover }) {
         onMouseLeave={handleLeave}
         onTouchEnd={handleLeave}>
         <defs><linearGradient id={"g_" + chartId} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity="0.15" /><stop offset="100%" stopColor={color} stopOpacity="0" /></linearGradient></defs>
-        {[0, .25, .5, .75, 1].map((p, i) => { const yy = PY + p * (H - PY * 2); const val = mx - p * (mx - mn); const label = val >= 1000 ? "$" + (val / 1000).toFixed(1) + "k" : "$" + val.toFixed(val < 10 ? 2 : 0); return <g key={i}><line x1={PX} y1={yy} x2={W - PX} y2={yy} stroke="#F0E6D0" strokeWidth=".8" /><text x={PX - 6} y={yy + 4} textAnchor="end" fill="#A09080" fontSize="9" fontFamily="JetBrains Mono">{label}</text></g>; })}
+        {[0, .25, .5, .75, 1].map((p, i) => { const yy = PY + p * (H - PY * 2); const val = mx - p * (mx - mn); const label = val >= 1000 ? "$" + (val / 1000).toFixed(1) + "k" : "$" + val.toFixed(val < 10 ? 2 : 0); return <g key={i}><line x1={PX} y1={yy} x2={W - PX} y2={yy} stroke="var(--accent-border)" strokeWidth=".8" /><text x={PX - 6} y={yy + 4} textAnchor="end" fill="var(--text-muted)" fontSize="9" fontFamily="JetBrains Mono">{label}</text></g>; })}
         <path d={area} fill={"url(#g_" + chartId + ")"} /><path d={line} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />
         {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="#fff" stroke={color} strokeWidth="2" />)}
-        {pts.map((p, i) => <text key={"t" + i} x={p.x} y={H - 1} textAnchor="middle" fill="#A09080" fontSize="9" fontFamily="Quicksand" fontWeight="600">{p.l}</text>)}
+        {pts.map((p, i) => <text key={"t" + i} x={p.x} y={H - 1} textAnchor="middle" fill="var(--text-muted)" fontSize="9" fontFamily="Quicksand" fontWeight="600">{p.l}</text>)}
         {tip && <g><line x1={tip.x} y1={PY} x2={tip.x} y2={H - PY} stroke={color} strokeWidth="1" strokeDasharray="4,4" opacity=".4" /><circle cx={tip.x} cy={tip.y} r="6" fill={color} stroke="#fff" strokeWidth="3" /></g>}
       </svg>
       {tip && <div style={{ position: "absolute", top: 6, right: 6, background: "#fff", borderRadius: 12, padding: "6px 12px", fontFamily: "JetBrains Mono", fontSize: 18 }}><span style={{ color: "#33333480" }}>{tip.l}</span><span style={{ marginLeft: 8, color, fontWeight: 700 }}>{fmt(tip.v)}</span></div>}
@@ -339,7 +353,7 @@ function StatCard({ label, value, sub, icon, color = "terracotta", delay = 0 }) 
         <Icon name={icon} size={11} color={c.a} />
       </div>
       <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: c.a }}>{value}</div>
-      {sub && <div style={{ fontSize: 14, color: "#8A7040", marginTop: 1, fontWeight: 500 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 14, color: "var(--warm-text)", marginTop: 1, fontWeight: 500 }}>{sub}</div>}
     </div>
   );
 }
@@ -378,8 +392,8 @@ function CalendarPage({ onNavigate }) {
   const selectedEvents = selectedDate ? getEventsForDate(selectedDate) : [];
 
   // Impact colors
-  const impactColor = { high: "#EF5350", medium: "#FFA726", low: "#C48830" };
-  const impactBg = { high: "#FFEBEE", medium: "#FFF3E0", low: "#FFF8EE" };
+  const impactColor = { high: "#EF5350", medium: "#FFA726", low: "var(--accent)" };
+  const impactBg = { high: "#FFEBEE", medium: "#FFF3E0", low: "var(--accent-bg)" };
 
   // Upcoming from today
   const upcoming = calendarEvents.filter(e => e.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 8);
@@ -415,12 +429,12 @@ function CalendarPage({ onNavigate }) {
         </div>
         <div style={{ display: "flex", gap: 6 }}>
           {[{ k: "all", l: "All" }, { k: "earnings", l: "Earnings" }, { k: "event", l: "Events" }].map(f => (
-            <button key={f.k} onClick={() => setTypeFilter(f.k)} style={{ padding: "7px 14px", borderRadius: 12, border: "1.5px solid " + (typeFilter === f.k ? "#C48830" : "#F0E6D0"), background: typeFilter === f.k ? "#FFF8EE" : "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: typeFilter === f.k ? "#C48830" : "#A09080" }}>{f.l}</button>
+            <button key={f.k} onClick={() => setTypeFilter(f.k)} style={{ padding: "7px 14px", borderRadius: 12, border: "1.5px solid " + (typeFilter === f.k ? "var(--accent)" : "var(--accent-border)"), background: typeFilter === f.k ? "var(--accent-bg)" : "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: typeFilter === f.k ? "var(--accent)" : "var(--text-muted)" }}>{f.l}</button>
           ))}
         </div>
         <div style={{ display: "flex", gap: 3, background: "#fff", borderRadius: 10, padding: 3 }}>
           {["calendar", "list"].map(m => (
-            <button key={m} onClick={() => setViewMode(m)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: viewMode === m ? "#fff" : "transparent", fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: viewMode === m ? "#5C4A1E" : "#A09080" }}>{m === "calendar" ? "Grid" : "List"}</button>
+            <button key={m} onClick={() => setViewMode(m)} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: viewMode === m ? "#fff" : "transparent", fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: viewMode === m ? "var(--text-accent-dark)" : "var(--text-muted)" }}>{m === "calendar" ? "Grid" : "List"}</button>
           ))}
         </div>
       </div>
@@ -431,7 +445,7 @@ function CalendarPage({ onNavigate }) {
           {viewMode === "calendar" && (
             <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
               {/* Day headers */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "2px solid var(--accent-border)", background: "#fff" }}>
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
                   <div key={d} style={{ padding: "10px 0", textAlign: "center", fontSize: 17, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>{d}</div>
                 ))}
@@ -439,7 +453,7 @@ function CalendarPage({ onNavigate }) {
               {/* Day cells */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
                 {Array.from({ length: firstDay }).map((_, i) => (
-                  <div key={"e" + i} style={{ minHeight: 90, borderRight: "1px solid #F0E6D0", borderBottom: "1px solid #33333420" }} />
+                  <div key={"e" + i} style={{ minHeight: 90, borderRight: "1px solid var(--accent-border)", borderBottom: "1px solid #33333420" }} />
                 ))}
                 {Array.from({ length: daysInMonth }).map((_, i) => {
                   const day = i + 1;
@@ -450,11 +464,11 @@ function CalendarPage({ onNavigate }) {
                   const isWeekend = (firstDay + i) % 7 === 0 || (firstDay + i) % 7 === 6;
                   return (
                     <div key={day} onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                      style={{ minHeight: 90, padding: "6px 8px", borderRight: "1px solid #F0E6D0", borderBottom: "1px solid #33333420", cursor: "pointer", background: isSelected ? "#FFF8EE" : isToday ? "#fff" : isWeekend ? "#FFFDF5" : "#fff", transition: "background .15s", position: "relative" }}
+                      style={{ minHeight: 90, padding: "6px 8px", borderRight: "1px solid var(--accent-border)", borderBottom: "1px solid #33333420", cursor: "pointer", background: isSelected ? "var(--accent-bg)" : isToday ? "#fff" : isWeekend ? "var(--page-bg)" : "#fff", transition: "background .15s", position: "relative" }}
                       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "#fff"; }}
-                      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isToday ? "#fff" : isWeekend ? "#FFFDF5" : "#fff"; }}>
+                      onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isToday ? "#fff" : isWeekend ? "var(--page-bg)" : "#fff"; }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <span style={{ fontSize: 15, fontWeight: isToday ? 900 : 600, fontFamily: "'Instrument Serif', serif", color: isToday ? "#C48830" : "#5C4A1E", background: isToday ? "#C48830" : "transparent", width: isToday ? 24 : "auto", height: isToday ? 24 : "auto", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", ...(isToday ? { background: "#C48830", color: "#fff", width: 24, height: 24 } : {}) }}>{day}</span>
+                        <span style={{ fontSize: 15, fontWeight: isToday ? 900 : 600, fontFamily: "'Instrument Serif', serif", color: isToday ? "var(--accent)" : "var(--text-accent-dark)", background: isToday ? "var(--accent)" : "transparent", width: isToday ? 24 : "auto", height: isToday ? 24 : "auto", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", ...(isToday ? { background: "var(--accent)", color: "#fff", width: 24, height: 24 } : {}) }}>{day}</span>
                         {evts.length > 0 && (
                           <span style={{ fontSize: 14, fontWeight: 800, background: evts.some(e => e.impact === "high") ? "#FFEBEE" : "#FFF3E0", color: evts.some(e => e.impact === "high") ? "#EF5350" : "#FFA726", padding: "1px 6px", borderRadius: 8 }}>{evts.length}</span>
                         )}
@@ -483,12 +497,12 @@ function CalendarPage({ onNavigate }) {
                 const isToday = ev.date === todayStr;
                 return (
                   <div key={i} onClick={() => setSelectedDate(ev.date)}
-                    style={{ display: "flex", gap: 6, background: "#fff", border: "1.5px solid " + (isToday ? "#C48830" : "#F0E6D0"), borderRadius: 18, padding: "14px 18px", cursor: "pointer", transition: "all .2s", animation: "fadeUp .4s ease " + (i * .03) + "s both" }}
+                    style={{ display: "flex", gap: 6, background: "#fff", border: "1.5px solid " + (isToday ? "var(--accent)" : "var(--accent-border)"), borderRadius: 18, padding: "14px 18px", cursor: "pointer", transition: "all .2s", animation: "fadeUp .4s ease " + (i * .03) + "s both" }}
                     onMouseEnter={e => { e.currentTarget.style.borderColor = ev.type === "earnings" ? "#42A5F5" : "#FFA726"; e.currentTarget.style.transform = "translateX(4px)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? "#C48830" : "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = isToday ? "var(--accent)" : "var(--accent-border)"; e.currentTarget.style.transform = ""; }}>
                     <div style={{ width: 48, textAlign: "center", flexShrink: 0 }}>
                       <div style={{ fontSize: 15, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{dayName}</div>
-                      <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: isToday ? "#C48830" : "#5C4A1E" }}>{dayNum}</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: isToday ? "var(--accent)" : "var(--text-accent-dark)" }}>{dayNum}</div>
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
@@ -552,13 +566,13 @@ function CalendarPage({ onNavigate }) {
                     </div>
                   )}
                   {ev.type === "event" && (
-                    <div style={{ fontSize: 15, color: "#8A7040", lineHeight: 1.6, marginTop: 4 }}>{ev.desc}</div>
+                    <div style={{ fontSize: 15, color: "var(--warm-text)", lineHeight: 1.6, marginTop: 4 }}>{ev.desc}</div>
                   )}
                   <div style={{ fontSize: 15, color: "#33333480", marginTop: 8, fontWeight: 600 }}>Sector: {ev.sector}</div>
                   {/* Strategy hint */}
                   <div style={{ background: "#fff", borderRadius: 12, padding: "7px 10px", marginTop: 10 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#C48830", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Strategy Hint</div>
-                    <div style={{ fontSize: 18, color: "#8A7040", lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Strategy Hint</div>
+                    <div style={{ fontSize: 18, color: "var(--warm-text)", lineHeight: 1.5 }}>
                       {ev.type === "earnings" && ev.impact === "high" && "High-impact earnings — consider straddles or position sizing before the report. Volatility typically spikes 24h prior."}
                       {ev.type === "earnings" && ev.impact === "medium" && "Monitor for sector-wide signals. This report can move peers in the same Hatch."}
                       {ev.type === "event" && ev.impact === "high" && "Major macro catalyst — review your Hatch exposure. Consider hedging or adding to macro-aligned Hatches."}
@@ -582,11 +596,11 @@ function CalendarPage({ onNavigate }) {
             const label = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" });
             const isToday = ev.date === todayStr;
             return (
-              <div key={i} style={{ display: "flex", gap: 6, padding: "8px 10px", borderRadius: 14, background: isToday ? "#FFF8EE" : "#FFFDF5", border: "1.5px solid " + (isToday ? "#C48830" : "#F0E6D0"), transition: "all .2s", animation: "fadeUp .4s ease " + (i * .04) + "s both" }}>
+              <div key={i} style={{ display: "flex", gap: 6, padding: "8px 10px", borderRadius: 14, background: isToday ? "var(--accent-bg)" : "var(--page-bg)", border: "1.5px solid " + (isToday ? "var(--accent)" : "var(--accent-border)"), transition: "all .2s", animation: "fadeUp .4s ease " + (i * .04) + "s both" }}>
                 <div style={{ width: 4, borderRadius: 2, background: ev.type === "earnings" ? "#42A5F5" : "#FFA726", flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: isToday ? "#C48830" : "#A09080" }}>{isToday ? "TODAY" : label}</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: isToday ? "var(--accent)" : "var(--text-muted)" }}>{isToday ? "TODAY" : label}</span>
                     <span style={{ fontSize: 12, fontWeight: 800, padding: "1px 6px", borderRadius: 6, background: impactBg[ev.impact], color: impactColor[ev.impact] }}>{ev.impact}</span>
                   </div>
                   <div style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif", marginTop: 2, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
@@ -617,15 +631,15 @@ function CalendarWidget({ onViewAll }) {
           <span style={{ fontSize: 15 }}></span>
           <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Upcoming</span>
         </div>
-        <button onClick={onViewAll} style={{ background: "none", border: "none", color: "#C48830", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>See All →</button>
+        <button onClick={onViewAll} style={{ background: "none", border: "none", color: "var(--accent)", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>See All →</button>
       </div>
       {upcoming.map((ev, i) => {
         const dateObj = new Date(ev.date + "T12:00:00");
         const label = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         const isToday = ev.date === todayStr;
         return (
-          <div key={i} style={{ display: "flex", gap: 6, padding: "5px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none", alignItems: "center" }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: isToday ? "#FFF8EE" : "#FFFDF5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: isToday ? "#C48830" : "#8A7040", flexShrink: 0, border: isToday ? "1.5px solid #C48830" : "1px solid #F0E6D0" }}>{label.split(" ")[1]}</div>
+          <div key={i} style={{ display: "flex", gap: 6, padding: "5px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none", alignItems: "center" }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, background: isToday ? "var(--accent-bg)" : "var(--page-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: isToday ? "var(--accent)" : "var(--warm-text)", flexShrink: 0, border: isToday ? "1.5px solid var(--accent)" : "1px solid var(--accent-border)" }}>{label.split(" ")[1]}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 14, fontFamily: "'Instrument Serif', serif", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{ev.type === "earnings" ? ev.ticker + " Earnings" : ev.name}</div>
               <div style={{ fontSize: 12, color: "#33333480" }}>{isToday ? "Today" : label}{ev.time ? " · " + ev.time : ""}</div>
@@ -708,7 +722,7 @@ function AlertsPage({ alerts }) {
 
       {/* ── Alert Summary Cards ── */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10, flexWrap: "wrap" }}>
-        {[{ k: "all", l: "All", n: alerts.length, c: "#5C4A1E", bg: "#fff" }, { k: "critical", l: "Critical", n: alerts.filter(a => a.severity === "critical").length, c: "#EF5350", bg: "#FFEBEE" }, { k: "warning", l: "Warning", n: alerts.filter(a => a.severity === "warning").length, c: "#FFA726", bg: "#FFF3E0" }, { k: "info", l: "Info", n: alerts.filter(a => a.severity === "info").length, c: "#42A5F5", bg: "#E3F2FD" }].map(f => (
+        {[{ k: "all", l: "All", n: alerts.length, c: "var(--text-accent-dark)", bg: "#fff" }, { k: "critical", l: "Critical", n: alerts.filter(a => a.severity === "critical").length, c: "#EF5350", bg: "#FFEBEE" }, { k: "warning", l: "Warning", n: alerts.filter(a => a.severity === "warning").length, c: "#FFA726", bg: "#FFF3E0" }, { k: "info", l: "Info", n: alerts.filter(a => a.severity === "info").length, c: "#42A5F5", bg: "#E3F2FD" }].map(f => (
           <button key={f.k} onClick={() => setFilter(f.k)} style={{ flex: "1 1 120px", padding: "12px 16px", borderRadius: 16, border: "1.5px solid " + (filter === f.k ? f.c : "transparent"), background: f.bg, cursor: "pointer", textAlign: "left" }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: f.c }}>{f.l}</div>
             <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: f.c }}>{f.n}</div>
@@ -725,7 +739,7 @@ function AlertsPage({ alerts }) {
             <span style={{ fontSize: 14, fontWeight: 800, background: sBg[a.severity], color: sCol[a.severity], padding: "3px 10px", borderRadius: 10 }}>{a.severity.toUpperCase()}</span>
             <span style={{ fontSize: 17, color: "#33333480" }}>{a.time} ago</span>
           </div>
-          <div style={{ fontSize: 15, color: "#8A7040", lineHeight: 1.6 }}>{a.summary}</div>
+          <div style={{ fontSize: 15, color: "var(--warm-text)", lineHeight: 1.6 }}>{a.summary}</div>
         </div>
       ))}
 
@@ -746,51 +760,51 @@ function CreateBasketModal({ onClose, onCreate }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(45,32,22,.4)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 16, width: "calc(100% - 24px)", maxWidth: 360, maxHeight: "90vh", overflow: "auto", animation: "popIn .4s ease" }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "2px solid #F0E6D0" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "2px solid var(--accent-border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 18 }}></span><div><div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Create Your Own Hatch</div><div style={{ fontSize: 17, color: "#33333480" }}>Step {step}/2</div></div></div>
           <button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 17, color: "#33333480" }}>✕</button>
         </div>
         <div style={{ padding: "18px 24px" }}>
           {step === 1 && (<div>
-            <div style={{ marginBottom: 8 }}><label style={{ fontSize: 15, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. My Growth Picks" style={{ width: "100%", padding: "12px 16px", borderRadius: 14, border: "1px solid #33333440", fontSize: 17, fontWeight: 700, fontFamily: "'Instrument Serif', serif", outline: "none", background: "#FFFDF5" }} onFocus={e => e.target.style.borderColor = "#C48830"} onBlur={e => e.target.style.borderColor = "#F0E6D0"} /></div>
-            <div style={{ marginBottom: 8 }}><label style={{ fontSize: 15, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Icon</label><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{["basket","target","diamond","crystal-ball","eagle","wave","mountain","palette","star","fire","rainbow","clover"].map(e => (<button key={e} onClick={() => setIcon(e)} style={{ width: 40, height: 40, borderRadius: 12, border: "1.5px solid " + (icon === e ? "#C48830" : "#F0E6D0"), background: icon === e ? "#FFF8EE" : "#fff", fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={e} size={16} /></button>))}</div></div>
-            <div style={{ marginBottom: 10 }}><label style={{ fontSize: 15, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Strategy</label><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{["Custom","Growth","Income","Defensive","Momentum","Global Macro","Multi-Asset","Long/Short","Speculative"].map(s => (<button key={s} onClick={() => setStrat(s)} style={{ padding: "6px 14px", borderRadius: 12, border: "1.5px solid " + (strat === s ? "#C48830" : "#F0E6D0"), background: strat === s ? "#FFF8EE" : "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: strat === s ? "#C48830" : "#8A7040" }}>{s}</button>))}</div></div>
-            <button onClick={() => { if (name.trim()) setStep(2); }} disabled={!name.trim()} style={{ width: "100%", padding: 14, background: name.trim() ? "linear-gradient(135deg,#C48830,#EF5350)" : "#F0E6D0", color: name.trim() ? "#fff" : "#A09080", border: "none", borderRadius: 16, fontSize: 17, fontWeight: 900, cursor: name.trim() ? "pointer" : "default", fontFamily: "'Instrument Serif', serif" }}>Next: Add Instruments →</button>
+            <div style={{ marginBottom: 8 }}><label style={{ fontSize: 15, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. My Growth Picks" style={{ width: "100%", padding: "12px 16px", borderRadius: 14, border: "1px solid #33333440", fontSize: 17, fontWeight: 700, fontFamily: "'Instrument Serif', serif", outline: "none", background: "var(--page-bg)" }} onFocus={e => e.target.style.borderColor = "var(--accent)"} onBlur={e => e.target.style.borderColor = "var(--accent-border)"} /></div>
+            <div style={{ marginBottom: 8 }}><label style={{ fontSize: 15, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Icon</label><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{["basket","target","diamond","crystal-ball","eagle","wave","mountain","palette","star","fire","rainbow","clover"].map(e => (<button key={e} onClick={() => setIcon(e)} style={{ width: 40, height: 40, borderRadius: 12, border: "1.5px solid " + (icon === e ? "var(--accent)" : "var(--accent-border)"), background: icon === e ? "var(--accent-bg)" : "#fff", fontSize: 17, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={e} size={16} /></button>))}</div></div>
+            <div style={{ marginBottom: 10 }}><label style={{ fontSize: 15, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>Strategy</label><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{["Custom","Growth","Income","Defensive","Momentum","Global Macro","Multi-Asset","Long/Short","Speculative"].map(s => (<button key={s} onClick={() => setStrat(s)} style={{ padding: "6px 14px", borderRadius: 12, border: "1.5px solid " + (strat === s ? "var(--accent)" : "var(--accent-border)"), background: strat === s ? "var(--accent-bg)" : "#fff", fontSize: 18, fontWeight: 700, cursor: "pointer", fontFamily: "Quicksand", color: strat === s ? "var(--accent)" : "var(--warm-text)" }}>{s}</button>))}</div></div>
+            <button onClick={() => { if (name.trim()) setStep(2); }} disabled={!name.trim()} style={{ width: "100%", padding: 14, background: name.trim() ? "linear-gradient(135deg,var(--accent),#EF5350)" : "var(--accent-border)", color: name.trim() ? "#fff" : "var(--text-muted)", border: "none", borderRadius: 16, fontSize: 17, fontWeight: 900, cursor: name.trim() ? "pointer" : "default", fontFamily: "'Instrument Serif', serif" }}>Next: Add Instruments →</button>
           </div>)}
           {step === 2 && (<div>
             <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "7px 10px", background: "#fff", borderRadius: 14, marginBottom: 7 }}>
-              <Icon name={icon} size={18} color="#C48830" /><div><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{name}</div><div style={{ fontSize: 17, color: "#33333480" }}>{strat} · {selected.length} selected</div></div>
-              <button onClick={() => setStep(1)} style={{ marginLeft: "auto", fontSize: 17, color: "#C48830", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>Edit ←</button>
+              <Icon name={icon} size={18} color="var(--accent)" /><div><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{name}</div><div style={{ fontSize: 17, color: "#33333480" }}>{strat} · {selected.length} selected</div></div>
+              <button onClick={() => setStep(1)} style={{ marginLeft: "auto", fontSize: 17, color: "var(--accent)", fontWeight: 800, background: "none", border: "none", cursor: "pointer" }}>Edit ←</button>
             </div>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stocks, options, futures, crypto..." style={{ width: "100%", padding: "10px 16px 10px 38px", borderRadius: 14, border: "1px solid #33333440", fontSize: 15, fontWeight: 600, fontFamily: "Quicksand", outline: "none", background: "#FFFDF5", marginBottom: 10 }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stocks, options, futures, crypto..." style={{ width: "100%", padding: "10px 16px 10px 38px", borderRadius: 14, border: "1px solid #33333440", fontSize: 15, fontWeight: 600, fontFamily: "Quicksand", outline: "none", background: "var(--page-bg)", marginBottom: 10 }} />
             <div style={{ display: "flex", gap: 5, marginBottom: 12, flexWrap: "wrap" }}>
               {[{ k: "all", l: "All" }, { k: "equity", l: "Stocks" }, { k: "option", l: "Options" }, { k: "future", l: "Futures" }, { k: "bond", l: "Bonds" }, { k: "forex", l: "FX" }, { k: "crypto", l: "Crypto" }].map(f => (
-                <button key={f.k} onClick={() => setTypeF(f.k)} style={{ padding: "5px 12px", borderRadius: 10, border: "1.5px solid " + (typeF === f.k ? "#C48830" : "#F0E6D0"), background: typeF === f.k ? "#FFF8EE" : "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", color: typeF === f.k ? "#C48830" : "#A09080" }}>{f.l}</button>
+                <button key={f.k} onClick={() => setTypeF(f.k)} style={{ padding: "5px 12px", borderRadius: 10, border: "1.5px solid " + (typeF === f.k ? "var(--accent)" : "var(--accent-border)"), background: typeF === f.k ? "var(--accent-bg)" : "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", color: typeF === f.k ? "var(--accent)" : "var(--text-muted)" }}>{f.l}</button>
               ))}
             </div>
-            {selected.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10, padding: "8px 12px", background: "#FFF8EE", borderRadius: 12 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: "#C48830", alignSelf: "center" }}>Selected:</span>
+            {selected.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10, padding: "8px 12px", background: "var(--accent-bg)", borderRadius: 12 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: "var(--accent)", alignSelf: "center" }}>Selected:</span>
               {selected.map(s => { const d = directions[s.ticker] || "long"; return (
                 <div key={s.ticker} style={{ display: "flex", alignItems: "center", gap: 2, padding: "2px 4px 2px 8px", borderRadius: 8, background: "#fff", fontSize: 15, fontWeight: 700, fontFamily: "JetBrains Mono" }}>
-                  <span style={{ color: d === "short" ? "#EF5350" : "#C48830" }}>{s.ticker}</span>
-                  <button onClick={(e) => { e.stopPropagation(); flipDir(s.ticker); }} style={{ padding: "1px 4px", borderRadius: 4, border: "none", background: d === "short" ? "#FFEBEE" : "#FFF8EE", color: d === "short" ? "#EF5350" : "#C48830", fontSize: 12, fontWeight: 900, cursor: "pointer" }}>{d === "short" ? "S" : "L"}</button>
+                  <span style={{ color: d === "short" ? "#EF5350" : "var(--accent)" }}>{s.ticker}</span>
+                  <button onClick={(e) => { e.stopPropagation(); flipDir(s.ticker); }} style={{ padding: "1px 4px", borderRadius: 4, border: "none", background: d === "short" ? "#FFEBEE" : "var(--accent-bg)", color: d === "short" ? "#EF5350" : "var(--accent)", fontSize: 12, fontWeight: 900, cursor: "pointer" }}>{d === "short" ? "S" : "L"}</button>
                   <button onClick={() => toggle(s)} style={{ background: "none", border: "none", fontSize: 15, cursor: "pointer", color: "#33333480", padding: 0 }}>×</button>
                 </div>);
               })}
             </div>}
             <div style={{ maxHeight: 200, overflow: "auto", borderRadius: 14, border: "1px solid #33333440" }}>
-              {filtered.map((inst, i) => { const sel = !!selected.find(s => s.ticker === inst.ticker); const tc = typeColors[inst.type] || "#A09080"; return (
-                <div key={inst.ticker} onClick={() => toggle(inst)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 10px", borderBottom: i < filtered.length - 1 ? "1px solid #F0E6D0" : "none", cursor: "pointer", background: sel ? "#FFF8EE" : "transparent", transition: "background .15s" }}
+              {filtered.map((inst, i) => { const sel = !!selected.find(s => s.ticker === inst.ticker); const tc = typeColors[inst.type] || "var(--text-muted)"; return (
+                <div key={inst.ticker} onClick={() => toggle(inst)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 10px", borderBottom: i < filtered.length - 1 ? "1px solid var(--accent-border)" : "none", cursor: "pointer", background: sel ? "var(--accent-bg)" : "transparent", transition: "background .15s" }}
                   onMouseEnter={e => { if (!sel) e.currentTarget.style.background = "#fff"; }} onMouseLeave={e => { if (!sel) e.currentTarget.style.background = "transparent"; }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", border: "1.5px solid " + (sel ? "#C48830" : "#F0E6D0"), background: sel ? "#C48830" : "transparent" }} />
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", border: "1.5px solid " + (sel ? "var(--accent)" : "var(--accent-border)"), background: sel ? "var(--accent)" : "transparent" }} />
                     <div><div style={{ display: "flex", gap: 6, alignItems: "center" }}><span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 18 }}>{inst.ticker}</span><span style={{ fontSize: 12, fontWeight: 800, background: tc + "22", color: tc, padding: "1px 6px", borderRadius: 6, textTransform: "uppercase" }}>{typeLabels[inst.type]}</span></div><div style={{ fontSize: 17, color: "#33333480" }}>{inst.name}</div></div>
                   </div>
                   <div style={{ textAlign: "right" }}><div style={{ fontFamily: "JetBrains Mono", fontWeight: 600, fontSize: 18 }}>{inst.price > 1000 ? fmt(inst.price) : fmtD(inst.price)}</div><div style={{ fontSize: 15, fontWeight: 700, color: inst.change >= 0 ? "#5B8C5A" : "#EF5350" }}>{inst.change >= 0 ? "+" : ""}{inst.change}%</div></div>
                 </div>); })}
             </div>
             <button onClick={() => { if (selected.length > 0) { onCreate({ name, icon, strategy: strat, instruments: selected }); onClose(); } }} disabled={!selected.length}
-              style={{ width: "100%", marginTop: 14, padding: 14, background: selected.length ? "linear-gradient(135deg,#C48830,#5B9B5E)" : "#F0E6D0", color: selected.length ? "#fff" : "#A09080", border: "none", borderRadius: 16, fontSize: 17, fontWeight: 900, cursor: selected.length ? "pointer" : "default", fontFamily: "'Instrument Serif', serif" }}>
+              style={{ width: "100%", marginTop: 14, padding: 14, background: selected.length ? "linear-gradient(135deg,var(--accent),#5B9B5E)" : "var(--accent-border)", color: selected.length ? "#fff" : "var(--text-muted)", border: "none", borderRadius: 16, fontSize: 17, fontWeight: 900, cursor: selected.length ? "pointer" : "default", fontFamily: "'Instrument Serif', serif" }}>
               Create with {selected.length} Instrument{selected.length !== 1 ? "s" : ""}
             </button>
           </div>)}
@@ -825,7 +839,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
         <button onClick={onBack} style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>←</button>
         <Icon name={basket.icon} size={36} />
         <div style={{ flex: 1 }}><div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{basket.name}</div><div style={{ fontSize: 18, color: "#33333480" }}>{basket.strategy} · {stocks.length} instruments</div></div>
-        {rm && <button onClick={() => setShowMetrics(!showMetrics)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 14, border: "1.5px solid " + (showMetrics ? c.a : "#F0E6D0"), background: showMetrics ? c.l : "#fff", cursor: "pointer", fontSize: 17, fontWeight: 800, fontFamily: "Quicksand", color: showMetrics ? c.a : "#8A7040", transition: "all .2s" }}>
+        {rm && <button onClick={() => setShowMetrics(!showMetrics)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 14, border: "1.5px solid " + (showMetrics ? c.a : "var(--accent-border)"), background: showMetrics ? c.l : "#fff", cursor: "pointer", fontSize: 17, fontWeight: 800, fontFamily: "Quicksand", color: showMetrics ? c.a : "var(--warm-text)", transition: "all .2s" }}>
           {showMetrics ? "Holdings" : "Risk Metrics"}
         </button>}
       </div>
@@ -842,14 +856,14 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
             <div style={{ background: "#fff", borderRadius: 10, padding: 6 }}>
               <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Key Ratios</div>
               {[
-                { label: "Sharpe", val: rm.sharpe.toFixed(2), good: rm.sharpe > 1 },
-                { label: "Sortino", val: rm.sortino.toFixed(2), good: rm.sortino > 1 },
-                { label: "Treynor", val: rm.treynor.toFixed(1), good: rm.treynor > 5 },
-                { label: "Info", val: rm.infoRatio.toFixed(2), good: rm.infoRatio > 0.5 },
-                { label: "Alpha", val: (rm.alpha >= 0 ? "+" : "") + rm.alpha.toFixed(1) + "%", good: rm.alpha > 0 },
-                { label: "Calmar", val: (Math.abs(tp / tc * 100) / Math.abs(rm.maxDD)).toFixed(2), good: true },
+                { label: "Risk-Adj Return", val: rm.sharpe.toFixed(2), good: rm.sharpe > 1 },
+                { label: "Downside Score", val: rm.sortino.toFixed(2), good: rm.sortino > 1 },
+                { label: "Sys. Return", val: rm.treynor.toFixed(1), good: rm.treynor > 5 },
+                { label: "Skill Score", val: rm.infoRatio.toFixed(2), good: rm.infoRatio > 0.5 },
+                { label: "Outperformance", val: (rm.alpha >= 0 ? "+" : "") + rm.alpha.toFixed(1) + "%", good: rm.alpha > 0 },
+                { label: "Recovery Ratio", val: (Math.abs(tp / tc * 100) / Math.abs(rm.maxDD)).toFixed(2), good: true },
               ].map((m, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
                   <div style={{ fontWeight: 700, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{m.label}</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</div>
                 </div>
@@ -859,12 +873,12 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
             <div style={{ background: "#fff", borderRadius: 10, padding: 6 }}>
               <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Risk Profile</div>
               {[
-                { label: "Beta", val: rm.beta.toFixed(2), good: rm.beta < 1.3, bar: rm.beta / 2 },
-                { label: "Vol", val: rm.volatility.toFixed(1) + "%", good: rm.volatility < 20, bar: rm.volatility / 50 },
-                { label: "Max DD", val: rm.maxDD.toFixed(1) + "%", good: rm.maxDD > -15, bar: Math.abs(rm.maxDD) / 50 },
-                { label: "Trk Err", val: rm.trackError.toFixed(1) + "%", good: true, bar: rm.trackError / 25 },
+                { label: "Market Link", val: rm.beta.toFixed(2), good: rm.beta < 1.3, bar: rm.beta / 2 },
+                { label: "Price Swing", val: rm.volatility.toFixed(1) + "%", good: rm.volatility < 20, bar: rm.volatility / 50 },
+                { label: "Worst Drop", val: rm.maxDD.toFixed(1) + "%", good: rm.maxDD > -15, bar: Math.abs(rm.maxDD) / 50 },
+                { label: "Benchmark Gap", val: rm.trackError.toFixed(1) + "%", good: true, bar: rm.trackError / 25 },
               ].map((m, i) => (
-                <div key={i} style={{ padding: "3px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+                <div key={i} style={{ padding: "3px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                     <span style={{ fontWeight: 700, fontSize: 12, fontFamily: "'Instrument Serif', serif" }}>{m.label}</span>
                     <span style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</span>
@@ -875,12 +889,12 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
                 </div>
               ))}
               <div style={{ marginTop: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-                <div style={{ background: rm.upCapture > 100 ? "#FFF8EE" : "#FFF3E0", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Up Cap</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: rm.upCapture > 100 ? "#C48830" : "#FFA726" }}>{rm.upCapture}%</div>
+                <div style={{ background: rm.upCapture > 100 ? "var(--accent-bg)" : "#FFF3E0", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Upside</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: rm.upCapture > 100 ? "var(--accent)" : "#FFA726" }}>{rm.upCapture}%</div>
                 </div>
                 <div style={{ background: rm.downCapture < 100 ? "#EDF5ED" : "#FFEBEE", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Dn Cap</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Downside</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: rm.downCapture < 100 ? "#5B8C5A" : "#EF5350" }}>{rm.downCapture}%</div>
                 </div>
               </div>
@@ -901,20 +915,20 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                   <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Asset Composition</div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFF8EE", color: "#C48830" }}>LONG {longCount}</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "var(--accent-bg)", color: "var(--accent)" }}>LONG {longCount}</span>
                     {shortCount > 0 && <span style={{ fontSize: 14, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFEBEE", color: "#EF5350" }}>SHORT {shortCount}</span>}
                   </div>
                 </div>
                 <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", gap: 1, marginBottom: 8 }}>
                   {Object.entries(assetCounts).map(([type, count]) => (
-                    <div key={type} style={{ flex: count, background: typeColors[type] || "#A09080", transition: "flex .5s" }} />
+                    <div key={type} style={{ flex: count, background: typeColors[type] || "var(--text-muted)", transition: "flex .5s" }} />
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {Object.entries(assetCounts).map(([type, count]) => (
                     <div key={type} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 2, background: typeColors[type] || "#A09080" }} />
-                      <span style={{ fontSize: 15, fontWeight: 700, color: "#8A7040" }}>{typeLabels[type] || type} ({count})</span>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: typeColors[type] || "var(--text-muted)" }} />
+                      <span style={{ fontSize: 15, fontWeight: 700, color: "var(--warm-text)" }}>{typeLabels[type] || type} ({count})</span>
                     </div>
                   ))}
                 </div>
@@ -923,15 +937,15 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
           })()}
 
           <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-            <button onClick={() => setEditMode(editMode === "rebalance" ? null : "rebalance")} style={{ flex: 1, padding: "8px 10px", borderRadius: 14, border: "1.5px solid " + (editMode === "rebalance" ? c.a : "#F0E6D0"), background: editMode === "rebalance" ? c.l : "#fff", cursor: "pointer", fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Rebalance</button>
-            <button onClick={() => setEditMode(editMode === "add" ? null : "add")} style={{ flex: 1, padding: "8px 10px", borderRadius: 14, border: "1.5px solid " + (editMode === "add" ? c.a : "#F0E6D0"), background: editMode === "add" ? c.l : "#fff", cursor: "pointer", fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Add</button>
+            <button onClick={() => setEditMode(editMode === "rebalance" ? null : "rebalance")} style={{ flex: 1, padding: "8px 10px", borderRadius: 14, border: "1.5px solid " + (editMode === "rebalance" ? c.a : "var(--accent-border)"), background: editMode === "rebalance" ? c.l : "#fff", cursor: "pointer", fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Rebalance</button>
+            <button onClick={() => setEditMode(editMode === "add" ? null : "add")} style={{ flex: 1, padding: "8px 10px", borderRadius: 14, border: "1.5px solid " + (editMode === "add" ? c.a : "var(--accent-border)"), background: editMode === "add" ? c.l : "#fff", cursor: "pointer", fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Add</button>
           </div>
           {editMode && <div style={{ background: c.l, border: "1.5px solid " + c.a, borderRadius: 14, padding: "8px 14px", marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", animation: "popIn .3s ease" }}>
             <span style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: c.a, fontSize: 14 }}>Tap a stock below to {editMode}</span>
             <div style={{ display: "flex", gap: 4 }}><button onClick={() => setEditMode(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: "#fff", fontWeight: 800, cursor: "pointer", fontSize: 15 }}>Cancel</button><button onClick={() => setEditMode(null)} style={{ padding: "5px 10px", borderRadius: 8, border: "none", background: c.a, color: "#fff", fontWeight: 800, cursor: "pointer", fontSize: 15 }}>Apply</button></div>
           </div>}
           <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
-            <div style={{ padding: "8px 12px", borderBottom: "1.5px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ padding: "8px 12px", borderBottom: "1.5px solid var(--accent-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Holdings</span>
               <span style={{ fontSize: 12, color: "#33333480", fontWeight: 600 }}>{stocks.length} instruments</span>
             </div>
@@ -943,10 +957,10 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
               return (
               <div key={st.ticker + i} onClick={() => setSelectedStock(st)} style={{
                 display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
-                borderBottom: i < stocks.length - 1 ? "1px solid #F0E6D0" : "none",
+                borderBottom: i < stocks.length - 1 ? "1px solid var(--accent-border)" : "none",
                 cursor: "pointer", transition: "background .15s",
               }}
-                onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
+                onMouseEnter={e => e.currentTarget.style.background = "var(--page-bg)"} onMouseLeave={e => e.currentTarget.style.background = ""}>
                 {/* Left: logo + name + ticker */}
                 <StockLogo ticker={st.ticker} size={32} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -993,7 +1007,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
                 { label: "VaR 95%", val: fmtS(portfolioRisk.var95), good: false, icon: "warning" },
                 { label: "Calmar", val: portfolioRisk.calmar.toFixed(2), good: portfolioRisk.calmar > 1, icon: "target" },
               ].map((m, mi) => (
-                <div key={mi} style={{ background: "#fff", borderRadius: 8, padding: "6px 6px", textAlign: "center", border: "1px solid #F0E6D0" }}>
+                <div key={mi} style={{ background: "#fff", borderRadius: 8, padding: "6px 6px", textAlign: "center", border: "1px solid var(--accent-border)" }}>
                   <div style={{ marginBottom: 1 }}><Icon name={m.icon} size={11} color={m.good ? "#5B8C5A" : "#EF5350"} /></div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</div>
@@ -1012,7 +1026,7 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
                 return acc;
               }, []).sort((a, b) => b.value - a.value);
               const slices = holdings.map(h => ({ ...h, pct: (h.value / totalVal) * 100 }));
-              const pieColors = ["#C48830","#5B8C5A","#42A5F5","#EF5350","#AB47BC","#FFA726","#26A69A","#7E57C2","#EF6C00","#5C6BC0","#8D6E63","#78909C","#D4E157","#EC407A"];
+              const pieColors = ["var(--accent)","#5B8C5A","#42A5F5","#EF5350","#AB47BC","#FFA726","#26A69A","#7E57C2","#EF6C00","#5C6BC0","#8D6E63","#78909C","#D4E157","#EC407A"];
               const hhi = slices.reduce((sum, s) => sum + Math.pow(s.pct, 2), 0);
               const maxHHI = 10000;
               const minHHI = maxHHI / slices.length;
@@ -1058,10 +1072,10 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
               );
             })()}
 
-            <div style={{ padding: "6px 8px", background: "#fff", borderRadius: 8, border: "1px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ padding: "6px 8px", background: "#fff", borderRadius: 8, border: "1px solid var(--accent-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div>
-                <div style={{ fontSize: 11, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div>
+                <div style={{ fontSize: 11, color: "var(--warm-text)" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div>
               </div>
               <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
             </div>
@@ -1070,14 +1084,14 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
           {/* ── Per-Basket Risk Metrics ── */}
           <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Per-Hatch Metrics</div>
-            <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #F0E6D0" }}>
-              <div className="basket-metrics-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
+            <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid var(--accent-border)" }}>
+              <div className="basket-metrics-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "var(--page-bg)", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid var(--accent-border)" }}>
                 <div>Basket</div><div>Sharpe</div><div>Beta</div><div>Alpha</div>
               </div>
               {myBaskets.map((mb, mi) => { const brm = basketRiskMetrics[mb.id]; if (!brm) return null; return (
-                <div key={mb.id} style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", borderBottom: mi < myBaskets.length - 1 ? "1px solid #F0E6D0" : "none", fontSize: 15, alignItems: "center" }}>
+                <div key={mb.id} style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", borderBottom: mi < myBaskets.length - 1 ? "1px solid var(--accent-border)" : "none", fontSize: 15, alignItems: "center" }}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}><Icon name={mb.icon} size={9} /><span style={{ fontWeight: 700, fontFamily: "'Instrument Serif', serif", fontSize: 12 }}>{mb.name}</span></div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.sharpe > 1 ? "#C48830" : "#FFA726" }}>{brm.sharpe.toFixed(2)}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.sharpe > 1 ? "var(--accent)" : "#FFA726" }}>{brm.sharpe.toFixed(2)}</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontWeight: 600, fontSize: 14, color: brm.beta < 1.3 ? "#5B8C5A" : "#EF5350" }}>{brm.beta.toFixed(2)}</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.alpha > 0 ? "#5B8C5A" : "#EF5350" }}>{brm.alpha > 0 ? "+" : ""}{brm.alpha.toFixed(1)}%</div>
                 </div>); })}
@@ -1090,19 +1104,19 @@ function BasketDetail({ basket, onBack, onGoToStock }) {
             {factorExposures.map((f, fi) => {
               const overweight = f.exposure > f.benchmark;
               return (
-                <div key={fi} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderTop: fi > 0 ? "1px solid #F0E6D020" : "none" }}>
+                <div key={fi} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderTop: fi > 0 ? "1px solid var(--accent-border-a13)" : "none" }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "#333334", width: 55 }}>{f.factor}</span>
-                  <div style={{ flex: 1, position: "relative", height: 8, background: "#F5F0E8", borderRadius: 4 }}>
-                    <div style={{ position: "absolute", left: (f.benchmark * 100) + "%", top: 0, bottom: 0, width: 1.5, background: "#A0908066", zIndex: 1 }} />
-                    <div style={{ height: "100%", width: (f.exposure * 100) + "%", background: overweight ? "#C48830" : "#5B8C5A", borderRadius: 4 }} />
+                  <div style={{ flex: 1, position: "relative", height: 8, background: "var(--surface-light)", borderRadius: 4 }}>
+                    <div style={{ position: "absolute", left: (f.benchmark * 100) + "%", top: 0, bottom: 0, width: 1.5, background: "var(--text-muted)", zIndex: 1 }} />
+                    <div style={{ height: "100%", width: (f.exposure * 100) + "%", background: overweight ? "var(--accent)" : "#5B8C5A", borderRadius: 4 }} />
                   </div>
-                  <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 800, color: overweight ? "#C48830" : "#5B8C5A", minWidth: 24, textAlign: "right" }}>{(f.exposure * 100).toFixed(0)}%</span>
+                  <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 800, color: overweight ? "var(--accent)" : "#5B8C5A", minWidth: 24, textAlign: "right" }}>{(f.exposure * 100).toFixed(0)}%</span>
                 </div>
               );
             })}
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, fontSize: 11, color: "#33333480" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 2, background: "#A0908066", borderRadius: 1 }} /><span>Benchmark</span></div>
-              <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "#C48830", borderRadius: 1 }} /><span>Overweight</span></div>
+              <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 2, background: "var(--text-muted)", borderRadius: 1 }} /><span>Benchmark</span></div>
+              <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "var(--accent)", borderRadius: 1 }} /><span>Overweight</span></div>
               <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "#5B8C5A", borderRadius: 1 }} /><span>Underweight</span></div>
             </div>
           </div>
@@ -1241,8 +1255,8 @@ function StockPage({ ticker, onBack, onNavigate }) {
           <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{stockName}</div>
           <div style={{ fontSize: 14, color: "#33333480", fontFamily: "JetBrains Mono" }}>{ticker}{summary?.exchange ? " · " + summary.exchange : ""}</div>
         </div>
-        {holdings.length > 0 && <div style={{ padding: "3px 8px", borderRadius: 6, background: "#FFF8EE", border: "1px solid #C4883033" }}>
-          <span style={{ fontSize: 11, fontWeight: 800, color: "#C48830" }}>IN PORTFOLIO</span>
+        {holdings.length > 0 && <div style={{ padding: "3px 8px", borderRadius: 6, background: "var(--accent-bg)", border: "1px solid var(--accent-a20)" }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--accent)" }}>IN PORTFOLIO</span>
         </div>}
       </div>
 
@@ -1250,9 +1264,9 @@ function StockPage({ ticker, onBack, onNavigate }) {
       {loading && (
         <div style={{ background: "#fff", borderRadius: 16, padding: "40px 14px", textAlign: "center", marginBottom: 8 }}>
           <div style={{ fontSize: 30, marginBottom: 6, animation: "spin 1s linear infinite", display: "inline-block" }}>
-            <Icon name="rotate" size={20} color="#C48830" />
+            <Icon name="rotate" size={20} color="var(--accent)" />
           </div>
-          <div style={{ fontSize: 15, color: "#A09080", fontWeight: 700 }}>Loading {ticker} data from Yahoo Finance...</div>
+          <div style={{ fontSize: 15, color: "var(--text-muted)", fontWeight: 700 }}>Loading {ticker} data from Yahoo Finance...</div>
         </div>
       )}
 
@@ -1270,27 +1284,27 @@ function StockPage({ ticker, onBack, onNavigate }) {
             </div>
           </div>
           {summary?.rsi != null && (
-            <div style={{ textAlign: "center", padding: "4px 8px", borderRadius: 8, background: summary.rsi > 70 ? "#FFEBEE" : summary.rsi < 30 ? "#EDF5ED" : "#FFF8EE" }}>
+            <div style={{ textAlign: "center", padding: "4px 8px", borderRadius: 8, background: summary.rsi > 70 ? "#FFEBEE" : summary.rsi < 30 ? "#EDF5ED" : "var(--accent-bg)" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>RSI</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "#C48830" }}>{summary.rsi}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "var(--accent)" }}>{summary.rsi}</div>
             </div>
           )}
         </div>
 
         {/* Chart */}
         <div style={{ margin: "12px 0 6px", position: "relative" }}>
-          {chartLoading && <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,253,245,0.7)", zIndex: 2, borderRadius: 8 }}><span style={{ fontSize: 14, color: "#A09080", fontWeight: 700 }}>Loading chart...</span></div>}
+          {chartLoading && <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,253,245,0.7)", zIndex: 2, borderRadius: 8 }}><span style={{ fontSize: 14, color: "var(--text-muted)", fontWeight: 700 }}>Loading chart...</span></div>}
           {history ? (
             <MiniChart data={history} color={color} chartId={"stockpage_" + ticker.replace(/[^a-zA-Z]/g, "") + "_" + period} />
           ) : !chartLoading ? (
-            <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "#A09080", fontSize: 15 }}>No chart data available</div>
+            <div style={{ height: 120, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 15 }}>No chart data available</div>
           ) : null}
         </div>
 
         {/* Period selector */}
-        <div style={{ display: "flex", gap: 1, background: "#FFFDF5", borderRadius: 8, padding: 2, width: "fit-content" }}>
+        <div style={{ display: "flex", gap: 1, background: "var(--page-bg)", borderRadius: 8, padding: 2, width: "fit-content" }}>
           {["1D", "1W", "1M", "3M", "1Y", "ALL"].map(t => (
-            <button key={t} onClick={() => setPeriod(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>
+            <button key={t} onClick={() => setPeriod(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "var(--accent)" : "var(--text-muted)", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>
           ))}
         </div>
       </div>}
@@ -1308,7 +1322,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
           { label: "Volatility", val: summary.volatility ? summary.volatility.toFixed(1) + "%" : "—" },
           { label: "Max Drawdown", val: summary.maxDrawdown ? summary.maxDrawdown.toFixed(1) + "%" : "—" },
         ].map((s, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
             <span style={{ fontSize: 14, color: "#33333480", fontWeight: 600 }}>{s.label}</span>
             <span style={{ fontSize: 14, fontFamily: "JetBrains Mono", fontWeight: 700, color: "#333334" }}>{s.val}</span>
           </div>
@@ -1334,10 +1348,10 @@ function StockPage({ ticker, onBack, onNavigate }) {
             </div>
           )}
           {summary.rsi != null && (
-            <div style={{ background: summary.rsi > 70 ? "#FFEBEE" : summary.rsi < 30 ? "#EDF5ED" : "#FFF8EE", borderRadius: 8, padding: "7px 6px", textAlign: "center" }}>
+            <div style={{ background: summary.rsi > 70 ? "#FFEBEE" : summary.rsi < 30 ? "#EDF5ED" : "var(--accent-bg)", borderRadius: 8, padding: "7px 6px", textAlign: "center" }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>RSI (14)</div>
-              <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "#C48830" }}>{summary.rsi}</div>
-              <div style={{ fontSize: 9, fontWeight: 700, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "#C48830" }}>{summary.rsi > 70 ? "Overbought" : summary.rsi < 30 ? "Oversold" : "Neutral"}</div>
+              <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "var(--accent)" }}>{summary.rsi}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: summary.rsi > 70 ? "#EF5350" : summary.rsi < 30 ? "#5B8C5A" : "var(--accent)" }}>{summary.rsi > 70 ? "Overbought" : summary.rsi < 30 ? "Oversold" : "Neutral"}</div>
             </div>
           )}
         </div>
@@ -1346,9 +1360,9 @@ function StockPage({ ticker, onBack, onNavigate }) {
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
             <span style={{ fontSize: 11, color: "#33333480", fontWeight: 600 }}>52 Week Range</span>
           </div>
-          <div style={{ position: "relative", height: 8, background: "#F5F0E8", borderRadius: 4 }}>
+          <div style={{ position: "relative", height: 8, background: "var(--surface-light)", borderRadius: 4 }}>
             <div style={{ position: "absolute", left: 0, height: "100%", width: Math.min(((price - summary.low52w) / (summary.high52w - summary.low52w)) * 100, 100) + "%", background: "linear-gradient(90deg, #EF5350, #FFA726, #5B8C5A)", borderRadius: 4 }} />
-            <div style={{ position: "absolute", left: Math.min(((price - summary.low52w) / (summary.high52w - summary.low52w)) * 100, 100) + "%", top: -3, width: 14, height: 14, borderRadius: "50%", background: "#fff", border: "2px solid #C48830", transform: "translateX(-50%)" }} />
+            <div style={{ position: "absolute", left: Math.min(((price - summary.low52w) / (summary.high52w - summary.low52w)) * 100, 100) + "%", top: -3, width: 14, height: 14, borderRadius: "50%", background: "#fff", border: "2px solid var(--accent)", transform: "translateX(-50%)" }} />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
             <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", color: "#EF5350", fontWeight: 700 }}>${summary.low52w.toFixed(0)}</span>
@@ -1378,12 +1392,12 @@ function StockPage({ ticker, onBack, onNavigate }) {
           const plPct = ((h.current - h.avgCost) / h.avgCost * 100) * ((h.dir || "long") === "short" ? -1 : 1);
           const c = CL[h.basketColor] || CL.terracotta;
           return (
-            <div key={i} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+            <div key={i} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   <Icon name={h.basketIcon} size={12} color={c.a} />
                   <span style={{ fontSize: 14, fontWeight: 800, color: c.a }}>{h.basketName}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 4px", borderRadius: 3, background: h.dir === "short" ? "#FFEBEE" : "#FFF8EE", color: h.dir === "short" ? "#EF5350" : "#C48830" }}>{(h.dir || "long").toUpperCase()}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 4px", borderRadius: 3, background: h.dir === "short" ? "#FFEBEE" : "var(--accent-bg)", color: h.dir === "short" ? "#EF5350" : "var(--accent)" }}>{(h.dir || "long").toUpperCase()}</span>
                 </div>
                 <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: pl >= 0 ? "#5B8C5A" : "#EF5350" }}>{pl >= 0 ? "+" : ""}{plPct.toFixed(1)}%</span>
               </div>
@@ -1394,7 +1408,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
                   { label: "Mkt Val", val: "$" + (h.current * h.shares >= 1000 ? ((h.current * h.shares) / 1000).toFixed(1) + "k" : (h.current * h.shares).toFixed(0)) },
                   { label: "P&L", val: (pl >= 0 ? "+" : "") + "$" + Math.abs(Math.round(pl)).toLocaleString() },
                 ].map((m, mi) => (
-                  <div key={mi} style={{ background: "#FFFDF5", borderRadius: 6, padding: "4px 5px" }}>
+                  <div key={mi} style={{ background: "var(--page-bg)", borderRadius: 6, padding: "4px 5px" }}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
                     <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, color: "#333334" }}>{m.val}</div>
                   </div>
@@ -1446,11 +1460,11 @@ function StockPage({ ticker, onBack, onNavigate }) {
           <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
             <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Related News</div>
             {related.map((n, i) => (
-              <div key={n.id} style={{ padding: "6px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+              <div key={n.id} style={{ padding: "6px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#333334", lineHeight: 1.3 }}>{n.headline}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 3, alignItems: "center" }}>
                   <span style={{ fontSize: 11, color: "#33333480" }}>{n.time}</span>
-                  <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: n.impact === "bullish" ? "#EDF5ED" : n.impact === "bearish" ? "#FFEBEE" : "#FFF8EE", color: n.impact === "bullish" ? "#5B8C5A" : n.impact === "bearish" ? "#EF5350" : "#C48830" }}>{(n.impact || "mixed").toUpperCase()}</span>
+                  <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: n.impact === "bullish" ? "#EDF5ED" : n.impact === "bearish" ? "#FFEBEE" : "var(--accent-bg)", color: n.impact === "bullish" ? "#5B8C5A" : n.impact === "bearish" ? "#EF5350" : "var(--accent)" }}>{(n.impact || "mixed").toUpperCase()}</span>
                   {n.move && <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", fontWeight: 700, color: n.move.startsWith("+") ? "#5B8C5A" : "#EF5350" }}>{n.move}</span>}
                 </div>
               </div>
@@ -1467,8 +1481,8 @@ function StockPage({ ticker, onBack, onNavigate }) {
           <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
             <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8 }}>Upcoming Events</div>
             {events.map((e, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
-                <div style={{ width: 36, height: 36, borderRadius: 8, background: e.type === "earnings" ? "#FFF8EE" : "#EDF5ED", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: e.type === "earnings" ? "var(--accent-bg)" : "#EDF5ED", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: 9, fontWeight: 700, color: "#33333480" }}>{e.date.split("-")[1] === "02" ? "FEB" : "MAR"}</span>
                   <span style={{ fontSize: 17, fontWeight: 900, color: "#333334", fontFamily: "'Instrument Serif', serif" }}>{parseInt(e.date.split("-")[2])}</span>
                 </div>
@@ -1476,7 +1490,7 @@ function StockPage({ ticker, onBack, onNavigate }) {
                   <div style={{ fontSize: 14, fontWeight: 800, color: "#333334" }}>{e.name}</div>
                   <div style={{ fontSize: 11, color: "#33333480" }}>{e.type === "earnings" ? `${e.quarter} · ${e.time} · Est. ${e.expected}` : e.desc}</div>
                 </div>
-                <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 4, background: e.impact === "high" ? "#FFEBEE" : e.impact === "medium" ? "#FFF3E0" : "#FFF8EE", color: e.impact === "high" ? "#EF5350" : e.impact === "medium" ? "#FFA726" : "#C48830" }}>{e.impact.toUpperCase()}</span>
+                <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 4, background: e.impact === "high" ? "#FFEBEE" : e.impact === "medium" ? "#FFF3E0" : "var(--accent-bg)", color: e.impact === "high" ? "#EF5350" : e.impact === "medium" ? "#FFA726" : "var(--accent)" }}>{e.impact.toUpperCase()}</span>
               </div>
             ))}
           </div>
@@ -1552,7 +1566,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
           <div style={{ fontSize: 14, color: "#33333480", fontFamily: "JetBrains Mono" }}>{stock.ticker} · {basketName}</div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: (stock.dir === "short" ? "#FFEBEE" : "#FFF8EE"), color: (stock.dir === "short" ? "#EF5350" : "#C48830"), textTransform: "uppercase" }}>{stock.dir || "long"}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: (stock.dir === "short" ? "#FFEBEE" : "var(--accent-bg)"), color: (stock.dir === "short" ? "#EF5350" : "var(--accent)"), textTransform: "uppercase" }}>{stock.dir || "long"}</div>
         </div>
       </div>
 
@@ -1565,11 +1579,11 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
           <span style={{ fontSize: 12, color: "#33333480" }}>Today</span>
         </div>
         <div style={{ margin: "12px 0 6px", position: "relative" }}>
-          {chartLoading && <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,253,245,0.7)", zIndex: 2, borderRadius: 8 }}><span style={{ fontSize: 14, color: "#A09080", fontWeight: 700 }}>Loading chart...</span></div>}
+          {chartLoading && <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,253,245,0.7)", zIndex: 2, borderRadius: 8 }}><span style={{ fontSize: 14, color: "var(--text-muted)", fontWeight: 700 }}>Loading chart...</span></div>}
           <MiniChart data={history} color={color} chartId={"stock_" + stock.ticker.replace(/[^a-zA-Z]/g, "") + "_" + period} />
         </div>
-        <div style={{ display: "flex", gap: 1, background: "#FFFDF5", borderRadius: 8, padding: 2, width: "fit-content" }}>
-          {["1D","1W","1M","3M","1Y","ALL"].map(t => <button key={t} onClick={() => setPeriod(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>)}
+        <div style={{ display: "flex", gap: 1, background: "var(--page-bg)", borderRadius: 8, padding: 2, width: "fit-content" }}>
+          {["1D","1W","1M","3M","1Y","ALL"].map(t => <button key={t} onClick={() => setPeriod(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "var(--accent)" : "var(--text-muted)", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>)}
         </div>
       </div>
 
@@ -1585,7 +1599,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
             { label: "Total Return", value: (plUp ? "+" : "") + "$" + Math.abs(Math.round(pl)).toLocaleString(), color: plUp ? "#5B8C5A" : "#EF5350" },
             { label: "Return %", value: (plUp ? "+" : "") + plPct.toFixed(2) + "%", color: plUp ? "#5B8C5A" : "#EF5350" },
           ].map((m, i) => (
-            <div key={i} style={{ background: "#FFFDF5", borderRadius: 8, padding: "7px 8px" }}>
+            <div key={i} style={{ background: "var(--page-bg)", borderRadius: 8, padding: "7px 8px" }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
               <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: m.color }}>{m.value}</div>
             </div>
@@ -1603,7 +1617,7 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
           { label: "52W High", val: chartMeta.fiftyTwoWeekHigh ? "$" + chartMeta.fiftyTwoWeekHigh.toFixed(2) : "—" },
           { label: "52W Low", val: chartMeta.fiftyTwoWeekLow ? "$" + chartMeta.fiftyTwoWeekLow.toFixed(2) : "—" },
         ].map((s, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
             <span style={{ fontSize: 14, color: "#33333480", fontWeight: 600 }}>{s.label}</span>
             <span style={{ fontSize: 14, fontFamily: "JetBrains Mono", fontWeight: 700, color: "#333334" }}>{s.val}</span>
           </div>
@@ -1643,8 +1657,8 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
 
       {/* Full Details Button */}
       {onGoToStock && /^[A-Z.]{1,6}$/.test(stock.ticker) && (
-        <button onClick={() => onGoToStock(stock.ticker)} style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1.5px solid #C4883044", background: "#FFF8EE", color: "#C48830", fontSize: 15, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          <Icon name="chart-bar" size={12} color="#C48830" /> View Full Stock Page →
+        <button onClick={() => onGoToStock(stock.ticker)} style={{ width: "100%", padding: "10px", borderRadius: 10, border: "1.5px solid var(--accent-a27)", background: "var(--accent-bg)", color: "var(--accent)", fontSize: 15, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif", marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          <Icon name="chart-bar" size={12} color="var(--accent)" /> View Full Stock Page →
         </button>
       )}
     </div>
@@ -1653,9 +1667,14 @@ function StockDetailPage({ stock, basketName, onBack, onGoToStock }) {
 
 // ═══════════════ AI EXECUTION AGENT ═══════════════
 
-function AIAgent({ onNotify, onNavigate, agentInsights }) {
+function AIAgent({ onNotify, onNavigate, agentInsights, isOpen, onClose }) {
   const [mode, setMode] = useState("closed"); // "closed" | "chat" | "closing"
-  const closeChat = () => { setMode("closing"); setTimeout(() => setMode("closed"), 350); };
+  const closeChat = () => { setMode("closing"); setTimeout(() => { setMode("closed"); if (onClose) onClose(); }, 350); };
+
+  // Open chat when parent triggers via isOpen prop
+  useEffect(() => {
+    if (isOpen && mode === "closed") setMode("chat");
+  }, [isOpen]);
   const [chatMode, setChatMode] = useState("agent"); // "agent" | "plan" | "ask"
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -1898,15 +1917,6 @@ BEHAVIOR:
 
   return (
     <>
-
-      {/* Oval behind egg with border — 7px even gap from egg */}
-      <div style={{ position: "absolute", bottom: 6, left: "50%", marginLeft: -22, width: 44, height: 57, borderRadius: "50%", background: "#fff", border: "1px solid #33333420", zIndex: 201 }} />
-      {/* Golden Egg Button */}
-      <button onClick={() => mode === "closed" ? setMode("chat") : closeChat()}
-        style={{ position: "absolute", bottom: 7, left: "50%", marginLeft: -23, width: 46, height: 56, borderRadius: "50%", border: "none", background: "transparent", cursor: "pointer", zIndex: 210, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", animation: mode === "closed" ? "eggGlow 2.5s ease infinite" : "none" }}>
-        <GoldenEgg size={46} />
-      </button>
-
       {/* Chat Panel — full page slide up/down */}
       {(mode === "chat" || mode === "closing") && (() => {
         const modeConfig = {
@@ -1991,18 +2001,18 @@ BEHAVIOR:
                         if (part.type === "text") return <div key={pi} style={{ whiteSpace: "pre-wrap" }}>{formatText(part.content)}</div>;
                         const actionIdx = mi + "_" + pi;
                         const executed = executedActions.has(actionIdx);
-                        const aCol = { REBALANCE: "#FFA726", BUY: "#26A69A", SELL: "#EF5350", TRIM: "#FFA726", HEDGE: "#AB47BC", ROTATE: "#42A5F5", ANALYZE: "#C48830" };
+                        const aCol = { REBALANCE: "#FFA726", BUY: "#26A69A", SELL: "#EF5350", TRIM: "#FFA726", HEDGE: "#AB47BC", ROTATE: "#42A5F5", ANALYZE: "var(--accent)" };
                         return (
                           <button key={pi} onClick={() => !executed && executeAction(part, actionIdx)}
                             style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", margin: "6px 0", padding: "8px 10px", borderRadius: 10, border: `1.5px solid ${executed ? "#26A69A" : "#E8E8E8"}`, background: executed ? "#F0FFF4" : "#fff", cursor: executed ? "default" : "pointer", transition: "all .2s", textAlign: "left" }}>
-                            <div style={{ width: 26, height: 26, borderRadius: 8, background: executed ? "#26A69A" : (aCol[part.actionType] || "#C48830"), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 17, fontWeight: 900, flexShrink: 0 }}>
+                            <div style={{ width: 26, height: 26, borderRadius: 8, background: executed ? "#26A69A" : (aCol[part.actionType] || "var(--accent)"), display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 17, fontWeight: 900, flexShrink: 0 }}>
                               {executed ? "\u2713" : part.actionType.charAt(0)}
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 15, fontWeight: 800, color: "#2C2C2C" }}>{executed ? "Done: " : ""}{part.label}</div>
                               <div style={{ fontSize: 14, color: "#888" }}>{part.details}</div>
                             </div>
-                            {!executed && <span style={{ fontSize: 14, fontWeight: 800, color: aCol[part.actionType] || "#C48830", whiteSpace: "nowrap" }}>Run</span>}
+                            {!executed && <span style={{ fontSize: 14, fontWeight: 800, color: aCol[part.actionType] || "var(--accent)", whiteSpace: "nowrap" }}>Run</span>}
                           </button>
                         );
                       })}
@@ -2164,19 +2174,19 @@ function MacroTidesPage() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <span style={{ fontSize: 17, fontWeight: 800, padding: "4px 12px", borderRadius: 10, background: tideLevel < 35 ? "#FFEBEE" : tideLevel > 65 ? "#FFF8EE" : "#FFF3E0", color: tideLevel < 35 ? "#EF5350" : tideLevel > 65 ? "#C48830" : "#FFA726" }}>
+            <span style={{ fontSize: 17, fontWeight: 800, padding: "4px 12px", borderRadius: 10, background: tideLevel < 35 ? "#FFEBEE" : tideLevel > 65 ? "var(--accent-bg)" : "#FFF3E0", color: tideLevel < 35 ? "#EF5350" : tideLevel > 65 ? "var(--accent)" : "#FFA726" }}>
               {tideLevel < 25 ? "Crash" : tideLevel < 40 ? "Correction" : tideLevel > 75 ? "FOMO" : tideLevel > 60 ? "Risk-On" : "Current"}
             </span>
-            <button onClick={() => setTideLevel(regimeTide)} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid #F0E6D0", background: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", color: "#8A7040" }}>Reset to Regime</button>
+            <button onClick={() => setTideLevel(regimeTide)} style={{ padding: "4px 10px", borderRadius: 8, border: "1px solid var(--accent-border)", background: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", color: "var(--warm-text)" }}>Reset to Regime</button>
           </div>
         </div>
         <div style={{ position: "relative", height: 38, display: "flex", alignItems: "center" }}>
-          <div style={{ position: "absolute", left: 0, right: 0, height: 10, borderRadius: 5, background: "linear-gradient(90deg, #EF5350 0%, #EF5350 20%, #FFA726 35%, #F0E6D0 50%, #FFA726 65%, #C48830 80%, #C48830 100%)" }} />
-          <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 2, height: 18, background: "#8A7040", borderRadius: 1, zIndex: 1 }} />
+          <div style={{ position: "absolute", left: 0, right: 0, height: 10, borderRadius: 5, background: "linear-gradient(90deg, #EF5350 0%, #EF5350 20%, #FFA726 35%, var(--accent-border) 50%, #FFA726 65%, var(--accent) 80%, var(--accent) 100%)" }} />
+          <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 2, height: 18, background: "var(--warm-text)", borderRadius: 1, zIndex: 1 }} />
           <input type="range" min="0" max="100" value={tideLevel}
             onChange={e => setTideLevel(Number(e.target.value))}
             style={{ position: "relative", width: "100%", height: 38, appearance: "none", background: "transparent", cursor: "pointer", zIndex: 2, WebkitAppearance: "none", outline: "none" }} />
-          <style>{`input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#C48830,#EF5350);border:3px solid #fff;box-shadow:0 2px 10px rgba(212,113,78,.4);cursor:grab}input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.15)}`}</style>
+          <style>{`input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#EF5350);border:3px solid #fff;box-shadow:0 2px 10px rgba(212,113,78,.4);cursor:grab}input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.15)}`}</style>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: 800, color: "#33333480", marginTop: 3 }}>
           <span>Tide pulls back</span><span style={{ color: currentRegime.color, fontWeight: 900 }}>▼ {currentRegime.name}</span><span>Everything pumps</span>
@@ -2222,7 +2232,7 @@ function MacroTidesPage() {
             const isCascade = selected && (selected.cascade || []).includes(asset.id);
             return (
               <div key={asset.id} onClick={() => setSelectedAsset(isSel ? null : asset.id)}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 12px", borderRadius: 16, background: isSel ? asset.color + "22" : "#fff", border: `2px solid ${isSel ? asset.color : isCascade ? "#C48830" : "#F0E6D0"}`, cursor: "pointer", transition: "all .4s ease", transform: `translateY(${Math.max(0, 50 - deviation) * 0.6}px)`, minWidth: 60, boxShadow: isSel ? `0 4px 16px ${asset.color}33` : "0 2px 8px rgba(0,0,0,.04)" }}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 12px", borderRadius: 16, background: isSel ? asset.color + "22" : "#fff", border: `2px solid ${isSel ? asset.color : isCascade ? "var(--accent)" : "var(--accent-border)"}`, cursor: "pointer", transition: "all .4s ease", transform: `translateY(${Math.max(0, 50 - deviation) * 0.6}px)`, minWidth: 60, boxShadow: isSel ? `0 4px 16px ${asset.color}33` : "0 2px 8px rgba(0,0,0,.04)" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = `translateY(${Math.max(0, 50 - deviation) * 0.6 - 4}px)`; e.currentTarget.style.boxShadow = `0 6px 20px ${asset.color}22`; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = `translateY(${Math.max(0, 50 - deviation) * 0.6}px)`; e.currentTarget.style.boxShadow = isSel ? `0 4px 16px ${asset.color}33` : "0 2px 8px rgba(0,0,0,.04)"; }}>
                 <Icon name={asset.icon} size={12} />
@@ -2246,14 +2256,14 @@ function MacroTidesPage() {
             const isCascade = selected && (selected.cascade || []).includes(asset.id);
             return (
               <div key={asset.id} onClick={() => setSelectedAsset(isSel ? null : asset.id)}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 12px", borderRadius: 16, background: isSel ? asset.color + "22" : "rgba(255,255,255,.85)", border: `2px solid ${isSel ? asset.color : isCascade ? "#C48830" : "rgba(255,255,255,.4)"}`, cursor: "pointer", transition: "all .4s ease", transform: `translateY(${Math.min(depth * 0.5, 30)}px)`, minWidth: 60, backdropFilter: "blur(4px)", boxShadow: isSel ? `0 4px 16px ${asset.color}33` : "none" }}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 12px", borderRadius: 16, background: isSel ? asset.color + "22" : "rgba(255,255,255,.85)", border: `2px solid ${isSel ? asset.color : isCascade ? "var(--accent)" : "rgba(255,255,255,.4)"}`, cursor: "pointer", transition: "all .4s ease", transform: `translateY(${Math.min(depth * 0.5, 30)}px)`, minWidth: 60, backdropFilter: "blur(4px)", boxShadow: isSel ? `0 4px 16px ${asset.color}33` : "none" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = `translateY(${Math.min(depth * 0.5, 30) - 4}px)`; e.currentTarget.style.background = "rgba(255,255,255,.95)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = `translateY(${Math.min(depth * 0.5, 30)}px)`; e.currentTarget.style.background = isSel ? asset.color + "22" : "rgba(255,255,255,.85)"; }}>
                 <Icon name={asset.icon} size={12} />
                 <div style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif", textAlign: "center", color: "#333334" }}>{asset.name}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: "#C48830" }}>{Math.round(adj)}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: "var(--accent)" }}>{Math.round(adj)}</div>
                 <div style={{ height: 4, width: 40, borderRadius: 2, background: "rgba(255,255,255,.5)", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: Math.min(adj, 100) + "%", background: adj < 25 ? "#C48830" : "#FFA726", borderRadius: 2, transition: "width .5s" }} />
+                  <div style={{ height: "100%", width: Math.min(adj, 100) + "%", background: adj < 25 ? "var(--accent)" : "#FFA726", borderRadius: 2, transition: "width .5s" }} />
                 </div>
                 {isCascade && <div style={{ fontSize: 11, fontWeight: 900, color: selected.cascadeDir === "up" ? "#5B8C5A" : "#EF5350", background: selected.cascadeDir === "up" ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 6 }}>{selected.cascadeDir === "up" ? "▲ RISES" : "▼ FALLS"}</div>}
               </div>
@@ -2277,17 +2287,17 @@ function MacroTidesPage() {
                 </div>
               </div>
             </div>
-            <div style={{ fontSize: 18, color: "#6B5A2E", lineHeight: 1.6, marginBottom: 7, padding: "7px 10px", background: "#FFFDF5", borderRadius: 12 }}>{selected.desc}</div>
+            <div style={{ fontSize: 18, color: "var(--text-accent)", lineHeight: 1.6, marginBottom: 7, padding: "7px 10px", background: "var(--page-bg)", borderRadius: 12 }}>{selected.desc}</div>
 
             {/* Thermometer */}
             <div style={{ marginBottom: 7 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, color: "#33333480" }}>VALUATION THERMOMETER</span>
-                <span style={{ fontSize: 15, fontWeight: 800, color: selected.level > 50 ? "#EF5350" : "#C48830" }}>{selected.level > 65 ? "Overheated" : selected.level > 50 ? "Elevated" : selected.level > 35 ? "Fair Zone" : "Deep Value"}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: selected.level > 50 ? "#EF5350" : "var(--accent)" }}>{selected.level > 65 ? "Overheated" : selected.level > 50 ? "Elevated" : selected.level > 35 ? "Fair Zone" : "Deep Value"}</span>
               </div>
-              <div style={{ height: 28, background: "linear-gradient(90deg, #C48830 0%, #FFA726 40%, #EF5350 70%, #C94040 100%)", borderRadius: 14, position: "relative", overflow: "visible", border: "1px solid #33333440" }}>
-                <div style={{ position: "absolute", left: selected.fair + "%", top: -6, bottom: -6, width: 2, background: "#8A7040", zIndex: 2, borderRadius: 1 }}>
-                  <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", fontSize: 11, fontWeight: 800, color: "#8A7040", whiteSpace: "nowrap" }}>Fair</div>
+              <div style={{ height: 28, background: "linear-gradient(90deg, var(--accent) 0%, #FFA726 40%, #EF5350 70%, #C94040 100%)", borderRadius: 14, position: "relative", overflow: "visible", border: "1px solid #33333440" }}>
+                <div style={{ position: "absolute", left: selected.fair + "%", top: -6, bottom: -6, width: 2, background: "var(--warm-text)", zIndex: 2, borderRadius: 1 }}>
+                  <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", fontSize: 11, fontWeight: 800, color: "var(--warm-text)", whiteSpace: "nowrap" }}>Fair</div>
                 </div>
                 <div style={{ position: "absolute", left: `calc(${Math.min(Math.round(getAdjustedLevel(selected)), 96)}% - 12px)`, top: "50%", transform: "translateY(-50%)", width: 24, height: 24, borderRadius: "50%", background: "#fff", border: `3px solid ${selected.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 900, fontFamily: "JetBrains Mono", color: selected.color, boxShadow: `0 2px 8px ${selected.color}44`, transition: "left .5s ease", zIndex: 3 }}>
                   {Math.round(getAdjustedLevel(selected))}
@@ -2299,9 +2309,9 @@ function MacroTidesPage() {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
-              <div style={{ background: selected.level > 50 ? "#FFEBEE" : "#FFF8EE", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
+              <div style={{ background: selected.level > 50 ? "#FFEBEE" : "var(--accent-bg)", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Current</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: selected.level > 50 ? "#EF5350" : "#C48830" }}>{selected.level}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: selected.level > 50 ? "#EF5350" : "var(--accent)" }}>{selected.level}</div>
               </div>
               <div style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", textAlign: "center" }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Fair Value</div>
@@ -2335,7 +2345,7 @@ function MacroTidesPage() {
                   <Icon name={target.icon} size={12} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 800, fontSize: 18, fontFamily: "'Instrument Serif', serif" }}>{target.name}</div>
-                    <div style={{ fontSize: 15, color: "#8A7040" }}>{target.ticker}</div>
+                    <div style={{ fontSize: 15, color: "var(--warm-text)" }}>{target.ticker}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: goesUp ? "#5B8C5A" : "#EF5350" }}>
@@ -2350,9 +2360,9 @@ function MacroTidesPage() {
             )}
 
             {cascadeTargets.length > 0 && (
-              <div style={{ marginTop: 10, padding: "7px 10px", background: "#fff", borderRadius: 12, border: "1px solid #F0E6D0" }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: "#C48830", marginBottom: 2 }}>Inverse Correlation</div>
-                <div style={{ fontSize: 15, color: "#8A7040", lineHeight: 1.5 }}>
+              <div style={{ marginTop: 10, padding: "7px 10px", background: "#fff", borderRadius: 12, border: "1px solid var(--accent-border)" }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "var(--accent)", marginBottom: 2 }}>Inverse Correlation</div>
+                <div style={{ fontSize: 15, color: "var(--warm-text)", lineHeight: 1.5 }}>
                   {selected.name} going {selected.level > 50 ? "down" : "up"} historically pushes {cascadeTargets.map(t => t.name).join(", ")} in the opposite direction. Drag the tide slider left to simulate.
                 </div>
               </div>
@@ -2367,8 +2377,8 @@ function MacroTidesPage() {
           <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Full Tide Map — Ranked by Elevation</div>
           <div style={{ fontSize: 15, color: "#33333480" }}>Tap any row to see cascade</div>
         </div>
-        <div className="mobile-scroll-x" style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #F0E6D0" }}>
-          <div className="tide-table-header" style={{ display: "grid", gridTemplateColumns: "1.2fr .6fr .4fr .4fr .4fr .6fr", padding: "6px 10px", background: "#fff", borderBottom: "2px solid #F0E6D0", fontSize: 14, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>
+        <div className="mobile-scroll-x" style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--accent-border)" }}>
+          <div className="tide-table-header" style={{ display: "grid", gridTemplateColumns: "1.2fr .6fr .4fr .4fr .4fr .6fr", padding: "6px 10px", background: "#fff", borderBottom: "2px solid var(--accent-border)", fontSize: 14, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5 }}>
             <div>Asset</div><div>Instrument</div><div>Level</div><div>Fair</div><div>Gap</div><div style={{ textAlign: "right" }}>Tide Effect</div>
           </div>
           {[...tideAssets].sort((a, b) => getAdjustedLevel(b) - getAdjustedLevel(a)).map((asset, i) => {
@@ -2379,22 +2389,22 @@ function MacroTidesPage() {
             const isAbove = adj > 50;
             return (
               <div key={asset.id} className="tide-table-row" onClick={() => setSelectedAsset(isSel ? null : asset.id)}
-                style={{ display: "grid", gridTemplateColumns: "1.2fr .6fr .4fr .4fr .4fr .6fr", padding: "6px 10px", borderBottom: i < tideAssets.length - 1 ? "1px solid #F0E6D0" : "none", alignItems: "center", cursor: "pointer", background: isSel ? asset.color + "12" : "transparent", transition: "background .2s" }}
+                style={{ display: "grid", gridTemplateColumns: "1.2fr .6fr .4fr .4fr .4fr .6fr", padding: "6px 10px", borderBottom: i < tideAssets.length - 1 ? "1px solid var(--accent-border)" : "none", alignItems: "center", cursor: "pointer", background: isSel ? asset.color + "12" : "transparent", transition: "background .2s" }}
                 onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = "#fff"; }} onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = "transparent"; }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <Icon name={asset.icon} size={10} />
                   <div>
                     <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                       <span style={{ fontWeight: 800, fontSize: 18, fontFamily: "'Instrument Serif', serif" }}>{asset.name}</span>
-                      <span style={{ fontSize: 11, fontWeight: 900, padding: "1px 5px", borderRadius: 4, background: isAbove ? "#FFEBEE" : "#FFF8EE", color: isAbove ? "#EF5350" : "#C48830" }}>{isAbove ? "ABOVE" : "BELOW"}</span>
+                      <span style={{ fontSize: 11, fontWeight: 900, padding: "1px 5px", borderRadius: 4, background: isAbove ? "#FFEBEE" : "var(--accent-bg)", color: isAbove ? "#EF5350" : "var(--accent)" }}>{isAbove ? "ABOVE" : "BELOW"}</span>
                     </div>
                     <span style={{ fontSize: 12, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: (typeColors[asset.type] || "#A09080") + "18", color: typeColors[asset.type] || "#A09080", textTransform: "uppercase" }}>{typeLabels[asset.type] || asset.type}</span>
                   </div>
                 </div>
                 <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, color: "#33333480" }}>{asset.ticker}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: adj > 60 ? "#EF5350" : adj < 35 ? "#C48830" : "#FFA726" }}>{adj}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: adj > 60 ? "#EF5350" : adj < 35 ? "var(--accent)" : "#FFA726" }}>{adj}</div>
                 <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, color: "#33333480" }}>{asset.fair}</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: gap > 10 ? "#EF5350" : gap < -10 ? "#C48830" : "#FFA726" }}>{gap > 0 ? "+" : ""}{gap}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: gap > 10 ? "#EF5350" : gap < -10 ? "var(--accent)" : "#FFA726" }}>{gap > 0 ? "+" : ""}{gap}</div>
                 <div style={{ textAlign: "right" }}>
                   {effect !== 0 ? (
                     <span style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: effect > 0 ? "#EDF5ED" : "#FFEBEE", color: effect > 0 ? "#5B8C5A" : "#EF5350" }}>{effect > 0 ? "▲ +" + effect : "▼ " + effect}</span>
@@ -2584,7 +2594,7 @@ function MyBasketsPage({ onSelectBasket }) {
         {myBaskets.map(b => { const clr = CL[b.color] || CL.terracotta; const retPct = b.costBasis > 0 ? b.totalPL / b.costBasis : 0; const isHighestReturn = retPct === _macroMaxRet && _macroMaxRet > 0; const isTrendiest = b.change === _macroMaxChg && _macroMaxChg > 0; return (
           <div key={b.id} onClick={() => onSelectBasket && onSelectBasket(b)} style={{ background: isHighestReturn ? "#FFFDF0" : "#fff", border: `1px solid ${isHighestReturn ? "#DAA52066" : "#33333440"}`, borderRadius: 18, padding: "8px 10px", cursor: "pointer", transition: "all .2s" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA520" : clr.a; e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA52066" : "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
+            onMouseLeave={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA52066" : "var(--accent-border)"; e.currentTarget.style.transform = ""; }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
               {isHighestReturn ? <Icon name="egg" size={14} color="#DAA520" /> : <Icon name={b.icon} size={12} />}
               <div>
@@ -2610,7 +2620,7 @@ function MyBasketsPage({ onSelectBasket }) {
             <div style={{ fontSize: 17, color: "#33333480", marginTop: 2 }}>When one side weighs down, the other lifts up — pick any pair to visualize</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, padding: "4px 10px", borderRadius: 8, background: corrVal < -0.5 ? "#FFF8EE" : corrVal < 0 ? "#FFF3E0" : "#FFEBEE", color: corrVal < -0.5 ? "#C48830" : corrVal < 0 ? "#FFA726" : "#EF5350" }}>
+            <span style={{ fontSize: 15, fontWeight: 800, padding: "4px 10px", borderRadius: 8, background: corrVal < -0.5 ? "var(--accent-bg)" : corrVal < 0 ? "#FFF3E0" : "#FFEBEE", color: corrVal < -0.5 ? "var(--accent)" : corrVal < 0 ? "#FFA726" : "#EF5350" }}>
               ρ = {corrVal.toFixed(2)} · {corrVal < -0.6 ? "Strong Hedge" : corrVal < -0.3 ? "Moderate Hedge" : corrVal < 0 ? "Weak Hedge" : corrVal < 0.3 ? "Weak +" : "Correlated"}
             </span>
           </div>
@@ -2648,7 +2658,7 @@ function MyBasketsPage({ onSelectBasket }) {
             { a:"tlt", b:"sp500", label:"TLT vs SPX" },
           ].map((preset, i) => (
             <button key={i} onClick={() => setSeesawPair({ a: preset.a, b: preset.b })}
-              style={{ padding: "4px 10px", borderRadius: 8, border: "1.5px solid " + (seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#F0E6D0"), background: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#FFF8EE" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#8A7040" }}>{preset.label}</button>
+              style={{ padding: "4px 10px", borderRadius: 8, border: "1.5px solid " + (seesawPair.a === preset.a && seesawPair.b === preset.b ? "var(--accent)" : "var(--accent-border)"), background: seesawPair.a === preset.a && seesawPair.b === preset.b ? "var(--accent-bg)" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: seesawPair.a === preset.a && seesawPair.b === preset.b ? "var(--accent)" : "var(--warm-text)" }}>{preset.label}</button>
           ))}
         </div>
 
@@ -2663,8 +2673,8 @@ function MyBasketsPage({ onSelectBasket }) {
             </defs>
 
             {/* Center pivot triangle */}
-            <polygon points="350,230 336,260 364,260" fill="#C48830" opacity="0.8" />
-            <rect x="300" y="260" width="100" height="8" rx="4" fill="#F0E6D0" />
+            <polygon points="350,230 336,260 364,260" fill="var(--accent)" opacity="0.8" />
+            <rect x="300" y="260" width="100" height="8" rx="4" fill="var(--accent-border)" />
 
             {/* Seesaw beam */}
             <g transform={`rotate(${tiltDeg}, 350, 220)`}>
@@ -2674,7 +2684,7 @@ function MyBasketsPage({ onSelectBasket }) {
               <g>
                 <rect x="40" y="185" width="160" height="32" rx="12" fill="#fff" stroke={seesawA.color} strokeWidth="2" filter="url(#dropSh)" />
                 <text x="120" y="197" textAnchor="middle" fill={seesawA.color} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawA.ticker}</text>
-                <text x="120" y="210" textAnchor="middle" fill="#A09080" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawA.name.length > 20 ? seesawA.name.slice(0,18) + ".." : seesawA.name}</text>
+                <text x="120" y="210" textAnchor="middle" fill="var(--text-muted)" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawA.name.length > 20 ? seesawA.name.slice(0,18) + ".." : seesawA.name}</text>
 
                 {/* Weight block */}
                 <rect x="80" y={140 - Math.abs(returnA) * 1.2} width="80" height={Math.max(20, Math.abs(returnA) * 1.8)} rx="8" fill={returnA >= 0 ? "#5B8C5A" : "#EF5350"} opacity="0.85" />
@@ -2682,7 +2692,7 @@ function MyBasketsPage({ onSelectBasket }) {
                 <text x="120" y={134 - Math.abs(returnA) * 1.2} textAnchor="middle" fill={seesawA.color} fontSize="8" fontWeight="800">YTD RETURN</text>
 
                 {/* Price */}
-                <text x="120" y="240" textAnchor="middle" fill="#6B5A2E" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawA.price >= 1000 ? (seesawA.price).toLocaleString() : seesawA.price}</text>
+                <text x="120" y="240" textAnchor="middle" fill="var(--text-accent)" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawA.price >= 1000 ? (seesawA.price).toLocaleString() : seesawA.price}</text>
                 <text x="120" y="254" textAnchor="middle" fill={seesawA.change >= 0 ? "#5B8C5A" : "#EF5350"} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawA.change >= 0 ? "▲ +" : "▼ "}{seesawA.change}% today</text>
               </g>
 
@@ -2690,7 +2700,7 @@ function MyBasketsPage({ onSelectBasket }) {
               <g>
                 <rect x="500" y="185" width="160" height="32" rx="12" fill="#fff" stroke={seesawB.color} strokeWidth="2" filter="url(#dropSh)" />
                 <text x="580" y="197" textAnchor="middle" fill={seesawB.color} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawB.ticker}</text>
-                <text x="580" y="210" textAnchor="middle" fill="#A09080" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawB.name.length > 20 ? seesawB.name.slice(0,18) + ".." : seesawB.name}</text>
+                <text x="580" y="210" textAnchor="middle" fill="var(--text-muted)" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawB.name.length > 20 ? seesawB.name.slice(0,18) + ".." : seesawB.name}</text>
 
                 {/* Weight block */}
                 <rect x="540" y={140 - Math.abs(returnB) * 1.2} width="80" height={Math.max(20, Math.abs(returnB) * 1.8)} rx="8" fill={returnB >= 0 ? "#5B8C5A" : "#EF5350"} opacity="0.85" />
@@ -2698,25 +2708,25 @@ function MyBasketsPage({ onSelectBasket }) {
                 <text x="580" y={134 - Math.abs(returnB) * 1.2} textAnchor="middle" fill={seesawB.color} fontSize="8" fontWeight="800">YTD RETURN</text>
 
                 {/* Price */}
-                <text x="580" y="240" textAnchor="middle" fill="#6B5A2E" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawB.price >= 1000 ? (seesawB.price).toLocaleString() : seesawB.price}</text>
+                <text x="580" y="240" textAnchor="middle" fill="var(--text-accent)" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawB.price >= 1000 ? (seesawB.price).toLocaleString() : seesawB.price}</text>
                 <text x="580" y="254" textAnchor="middle" fill={seesawB.change >= 0 ? "#5B8C5A" : "#EF5350"} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawB.change >= 0 ? "▲ +" : "▼ "}{seesawB.change}% today</text>
               </g>
 
               {/* Correlation indicator at center */}
-              <circle cx="350" cy="208" r="18" fill="#fff" stroke={corrVal < 0 ? "#EF5350" : "#C48830"} strokeWidth="2.5" />
-              <text x="350" y="206" textAnchor="middle" fill={corrVal < 0 ? "#EF5350" : "#C48830"} fontSize="9" fontWeight="900" fontFamily="JetBrains Mono">{corrVal >= 0 ? "+" : ""}{corrVal.toFixed(2)}</text>
-              <text x="350" y="216" textAnchor="middle" fill="#A09080" fontSize="6" fontWeight="700">CORR</text>
+              <circle cx="350" cy="208" r="18" fill="#fff" stroke={corrVal < 0 ? "#EF5350" : "var(--accent)"} strokeWidth="2.5" />
+              <text x="350" y="206" textAnchor="middle" fill={corrVal < 0 ? "#EF5350" : "var(--accent)"} fontSize="9" fontWeight="900" fontFamily="JetBrains Mono">{corrVal >= 0 ? "+" : ""}{corrVal.toFixed(2)}</text>
+              <text x="350" y="216" textAnchor="middle" fill="var(--text-muted)" fontSize="6" fontWeight="700">CORR</text>
             </g>
 
             {/* Description below */}
-            {seesawCorr && <text x="350" y="290" textAnchor="middle" fill="#8A7040" fontSize="10" fontWeight="600" fontFamily="Quicksand">{seesawCorr.desc}</text>}
+            {seesawCorr && <text x="350" y="290" textAnchor="middle" fill="var(--warm-text)" fontSize="10" fontWeight="600" fontFamily="Quicksand">{seesawCorr.desc}</text>}
           </svg>
         )}
       </div>
 
       {/* ═══════════════ CORRELATION NETWORK ═══════════════ */}
       <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", marginBottom: 8, animation: "fadeUp .4s ease .18s both" }}>
-        <div style={{ padding: "18px 22px", borderBottom: "2px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+        <div style={{ padding: "18px 22px", borderBottom: "2px solid var(--accent-border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Correlation Network</div>
             <div style={{ fontSize: 17, color: "#33333480" }}>Futures · Commodities · Currencies · Metals · Rates — click any node</div>
@@ -2724,26 +2734,26 @@ function MyBasketsPage({ onSelectBasket }) {
           <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: 14, fontWeight: 800, color: "#33333480" }}>MIN |ρ|</span>
             {[0.15, 0.3, 0.5, 0.7].map(t => (
-              <button key={t} onClick={() => setCorrThreshold(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "1.5px solid " + (corrThreshold === t ? "#C48830" : "#F0E6D0"), background: corrThreshold === t ? "#FFF8EE" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "JetBrains Mono", color: corrThreshold === t ? "#C48830" : "#A09080" }}>{t}</button>
+              <button key={t} onClick={() => setCorrThreshold(t)} style={{ padding: "3px 8px", borderRadius: 6, border: "1.5px solid " + (corrThreshold === t ? "var(--accent)" : "var(--accent-border)"), background: corrThreshold === t ? "var(--accent-bg)" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "JetBrains Mono", color: corrThreshold === t ? "var(--accent)" : "var(--text-muted)" }}>{t}</button>
             ))}
           </div>
         </div>
 
         {/* Category filters */}
-        <div style={{ padding: "8px 22px", background: "#FFFDF5", borderBottom: "1px solid #33333420", display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-          <button onClick={() => setCatFilter("ALL")} style={{ padding: "3px 10px", borderRadius: 6, border: "1.5px solid " + (catFilter === "ALL" ? "#C48830" : "#F0E6D0"), background: catFilter === "ALL" ? "#FFF8EE" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: catFilter === "ALL" ? "#C48830" : "#A09080" }}>ALL</button>
+        <div style={{ padding: "8px 22px", background: "var(--page-bg)", borderBottom: "1px solid #33333420", display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+          <button onClick={() => setCatFilter("ALL")} style={{ padding: "3px 10px", borderRadius: 6, border: "1.5px solid " + (catFilter === "ALL" ? "var(--accent)" : "var(--accent-border)"), background: catFilter === "ALL" ? "var(--accent-bg)" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: catFilter === "ALL" ? "var(--accent)" : "var(--text-muted)" }}>ALL</button>
           {cats.map(c => { const cc = catConfig[c] || { color:"#A09080", icon:"chart-bar" }; return (
-            <button key={c} onClick={() => setCatFilter(catFilter === c ? "ALL" : c)} style={{ padding: "3px 10px", borderRadius: 6, border: "1.5px solid " + (catFilter === c ? cc.color : "#F0E6D0"), background: catFilter === c ? cc.color + "18" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: catFilter === c ? cc.color : "#A09080", display: "inline-flex", alignItems: "center", gap: 3 }}><Icon name={cc.icon} size={10} color={catFilter === c ? cc.color : "#A09080"} /> {c}</button>
+            <button key={c} onClick={() => setCatFilter(catFilter === c ? "ALL" : c)} style={{ padding: "3px 10px", borderRadius: 6, border: "1.5px solid " + (catFilter === c ? cc.color : "var(--accent-border)"), background: catFilter === c ? cc.color + "18" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: catFilter === c ? cc.color : "var(--text-muted)", display: "inline-flex", alignItems: "center", gap: 3 }}><Icon name={cc.icon} size={10} color={catFilter === c ? cc.color : "var(--text-muted)"} /> {c}</button>
           ); })}
           <span style={{ marginLeft: "auto", display: "flex", gap: 6, fontSize: 14, fontWeight: 700, color: "#33333480" }}>
-            <span><span style={{ display: "inline-block", width: 16, height: 3, background: "#C48830", borderRadius: 2, verticalAlign: "middle", marginRight: 3 }} />Positive</span>
+            <span><span style={{ display: "inline-block", width: 16, height: 3, background: "var(--accent)", borderRadius: 2, verticalAlign: "middle", marginRight: 3 }} />Positive</span>
             <span><span style={{ display: "inline-block", width: 16, height: 3, background: "#EF5350", borderRadius: 2, verticalAlign: "middle", marginRight: 3, borderTop: "1px dashed #EF5350" }} />Inverse (hedge)</span>
           </span>
         </div>
 
         {/* SVG Network Graph */}
         <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 320, display: "block" }} onClick={() => setSelectedNode(null)}>
-          <rect x="0" y="0" width={W} height={H} fill="#FFFDF5" />
+          <rect x="0" y="0" width={W} height={H} fill="var(--page-bg)" />
 
           {/* Category cluster circles */}
           {cats.map(cat => {
@@ -2796,7 +2806,7 @@ function MyBasketsPage({ onSelectBasket }) {
                 {/* Icon */}
                 <g transform={`translate(${pos.x - (isSel ? 7 : 6)}, ${pos.y - (isSel ? 9 : 8)})`}><Icon name={p.icon} size={isSel ? 14 : 12} color={p.color} /></g>
                 {/* Ticker */}
-                <text x={pos.x} y={pos.y + r + 11} textAnchor="middle" fill={isSel ? p.color : "#6B5A2E"} fontSize="9" fontWeight="800" fontFamily="JetBrains Mono">{p.ticker}</text>
+                <text x={pos.x} y={pos.y + r + 11} textAnchor="middle" fill={isSel ? p.color : "var(--text-accent)"} fontSize="9" fontWeight="800" fontFamily="JetBrains Mono">{p.ticker}</text>
                 {/* YTD return on hover/select */}
                 {isSel && <text x={pos.x} y={pos.y + r + 22} textAnchor="middle" fill={p.ytd >= 0 ? "#5B8C5A" : "#EF5350"} fontSize="8" fontWeight="700" fontFamily="JetBrains Mono">{p.ytd >= 0 ? "+" : ""}{p.ytd}% YTD</text>}
               </g>
@@ -2827,13 +2837,13 @@ function MyBasketsPage({ onSelectBasket }) {
                   { label: "YTD Return", val: (node.ytd >= 0 ? "+" : "") + node.ytd + "%", color: node.ytd >= 0 ? "#5B8C5A" : "#EF5350" },
                   { label: "Connections", val: nodeCorrs.length, color: "#42A5F5" },
                 ].map((m, i) => (
-                  <div key={i} style={{ background: "#FFFDF5", borderRadius: 10, padding: "8px 10px" }}>
+                  <div key={i} style={{ background: "var(--page-bg)", borderRadius: 10, padding: "8px 10px" }}>
                     <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{m.label}</div>
                     <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 700, color: m.color }}>{m.val}</div>
                   </div>
                 ))}
               </div>
-              <button onClick={() => setSeesawPair(p => ({ ...p, a: selectedNode }))} style={{ width: "100%", marginTop: 10, padding: "8px", borderRadius: 10, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 17, fontWeight: 800, cursor: "pointer" }}>Set as Seesaw Left Side</button>
+              <button onClick={() => setSeesawPair(p => ({ ...p, a: selectedNode }))} style={{ width: "100%", marginTop: 10, padding: "8px", borderRadius: 10, border: "1.5px solid var(--accent)", background: "var(--accent-bg)", color: "var(--accent)", fontSize: 17, fontWeight: 800, cursor: "pointer" }}>Set as Seesaw Left Side</button>
             </div>
 
             {/* Correlations list */}
@@ -2857,7 +2867,7 @@ function MyBasketsPage({ onSelectBasket }) {
                         <span style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 18 }}>{other.ticker}</span>
                         <span style={{ fontSize: 12, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: (catConfig[other.cat]?.color || "#A09080") + "15", color: catConfig[other.cat]?.color || "#A09080" }}>{other.cat}</span>
                       </div>
-                      <div style={{ fontSize: 14, color: "#8A7040", marginTop: 1 }}>{c.desc.length > 60 ? c.desc.slice(0, 58) + ".." : c.desc}</div>
+                      <div style={{ fontSize: 14, color: "var(--warm-text)", marginTop: 1 }}>{c.desc.length > 60 ? c.desc.slice(0, 58) + ".." : c.desc}</div>
                     </div>
                     <div style={{ textAlign: "right", minWidth: 0 }}>
                       <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 700, color: isPos ? "#5B8C5A" : "#EF5350" }}>{isPos ? "+" : ""}{c.corr.toFixed(2)}</div>
@@ -2885,9 +2895,9 @@ function MyBasketsPage({ onSelectBasket }) {
             if (!pA || !pB) return null;
             return (
               <div key={i} onClick={() => setSeesawPair({ a: c.a, b: c.b })}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderRadius: 10, marginBottom: 4, cursor: "pointer", background: "#FFEBEE08", border: "1px solid #F0E6D0", transition: "all .15s" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderRadius: 10, marginBottom: 4, cursor: "pointer", background: "#FFEBEE08", border: "1px solid var(--accent-border)", transition: "all .15s" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#FFEBEE22"; e.currentTarget.style.borderColor = "#EF535033"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "#FFEBEE08"; e.currentTarget.style.borderColor = "#F0E6D0"; }}>
+                onMouseLeave={e => { e.currentTarget.style.background = "#FFEBEE08"; e.currentTarget.style.borderColor = "var(--accent-border)"; }}>
                 <Icon name={pA.icon} size={12} />
                 <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 17, minWidth: 30 }}>{pA.ticker}</span>
                 <span style={{ color: "#EF5350", fontSize: 18, fontWeight: 700 }}>⟺</span>
@@ -2925,7 +2935,7 @@ function MyBasketsPage({ onSelectBasket }) {
               </div>
             );
           })}
-          <div style={{ marginTop: 10, padding: "8px 10px", background: "#FFF8EE", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "#C48830" }}>
+          <div style={{ marginTop: 10, padding: "8px 10px", background: "var(--accent-bg)", borderRadius: 10, fontSize: 15, fontWeight: 700, color: "var(--accent)" }}>
             {cats.length} macro asset classes across {macroProducts.length} products — well diversified
           </div>
         </div>
@@ -2991,10 +3001,10 @@ function BrokeragesPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(80px,1fr))", gap: 6, marginBottom: 8, animation: "fadeUp .4s ease .05s both" }}>
         {[
           { label: "Total Balance", val: "$" + (totalBalance / 1000).toFixed(1) + "k", icon: "money", color: "#333334", bg: "#fff" },
-          { label: "Buying Power", val: "$" + (totalBuying / 1000).toFixed(1) + "k", icon: "bolt", color: "#C48830", bg: "#FFF8EE" },
+          { label: "Buying Power", val: "$" + (totalBuying / 1000).toFixed(1) + "k", icon: "bolt", color: "var(--accent)", bg: "var(--accent-bg)" },
           { label: "Linked Brokers", val: connected.length, icon: "link", color: "#42A5F5", bg: "#E3F2FD" },
           { label: "Accounts", val: totalAccts, icon: "bank", color: "#AB47BC", bg: "#F0E8F5" },
-          { label: "Order Routing", val: routePref === "smart" ? "Smart" : "Manual", icon: "target", color: "#C48830", bg: "#FFF8EE" },
+          { label: "Order Routing", val: routePref === "smart" ? "Smart" : "Manual", icon: "target", color: "var(--accent)", bg: "var(--accent-bg)" },
         ].map((m, i) => (
           <div key={i} style={{ background: m.bg, borderRadius: 16, padding: "8px 10px", animation: "fadeUp .4s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -3013,14 +3023,14 @@ function BrokeragesPage() {
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 300px" }}>
             <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>How It Works</div>
-            <div style={{ fontSize: 18, color: "#8A7040", lineHeight: 1.6 }}>BasketTrade connects to your existing brokerage via secure OAuth — we never store your password. When you buy a basket, we send orders directly to your broker for execution. Your funds stay with your broker at all times.</div>
+            <div style={{ fontSize: 18, color: "var(--warm-text)", lineHeight: 1.6 }}>BasketTrade connects to your existing brokerage via secure OAuth — we never store your password. When you buy a basket, we send orders directly to your broker for execution. Your funds stay with your broker at all times.</div>
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             {[{ step: "1", label: "Link Account", icon: "link" }, { step: "2", label: "Choose Basket", icon: "basket" }, { step: "3", label: "We Execute", icon: "bolt" }].map(s => (
               <div key={s.step} style={{ textAlign: "center", minWidth: 0, flex: "1" }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 4px", border: "1px solid #33333440" }}><Icon name={s.icon} size={18} color="#C48830" /></div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#C48830" }}>STEP {s.step}</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#6B5A2E" }}>{s.label}</div>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 4px", border: "1px solid #33333440" }}><Icon name={s.icon} size={18} color="var(--accent)" /></div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "var(--accent)" }}>STEP {s.step}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-accent)" }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -3031,22 +3041,22 @@ function BrokeragesPage() {
       {connected.length > 0 && (
         <div style={{ marginBottom: 10, animation: "fadeUp .4s ease .12s both" }}>
           <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#C48830" }} /> Connected ({connected.length})
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)" }} /> Connected ({connected.length})
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {connected.map(broker => {
               const isExpanded = selectedBroker === broker.id;
               return (
-                <div key={broker.id} style={{ background: "#fff", border: "1.5px solid " + (isExpanded ? broker.color + "44" : "#F0E6D0"), borderRadius: 14, overflow: "hidden", transition: "all .3s" }}>
+                <div key={broker.id} style={{ background: "#fff", border: "1.5px solid " + (isExpanded ? broker.color + "44" : "var(--accent-border)"), borderRadius: 14, overflow: "hidden", transition: "all .3s" }}>
                   {/* Broker Header */}
                   <div onClick={() => setSelectedBroker(isExpanded ? null : broker.id)}
                     style={{ padding: "18px 22px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--page-bg)"} onMouseLeave={e => e.currentTarget.style.background = ""}>
                     <div style={{ width: 48, height: 48, borderRadius: 14, background: broker.color + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, border: "1.5px solid " + broker.color + "22" }}>{broker.logo}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{broker.name}</span>
-                        <span style={{ fontSize: 12, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "#FFF8EE", color: "#C48830" }}>● CONNECTED</span>
+                        <span style={{ fontSize: 12, fontWeight: 800, padding: "2px 8px", borderRadius: 6, background: "var(--accent-bg)", color: "var(--accent)" }}>● CONNECTED</span>
                       </div>
                       <div style={{ fontSize: 17, color: "#33333480", marginTop: 2 }}>{broker.accts.length} account{broker.accts.length !== 1 ? "s" : ""} · Last sync: {broker.lastSync}</div>
                     </div>
@@ -3059,11 +3069,11 @@ function BrokeragesPage() {
 
                   {/* Expanded Account Details */}
                   {isExpanded && (
-                    <div style={{ borderTop: "2px solid #F0E6D0", animation: "fadeUp .2s ease both" }}>
+                    <div style={{ borderTop: "2px solid var(--accent-border)", animation: "fadeUp .2s ease both" }}>
                       {/* Account Cards */}
                       <div style={{ padding: "16px 22px" }}>
                         {broker.accts.map((acct, ai) => (
-                          <div key={ai} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", background: "#FFFDF5", borderRadius: 16, marginBottom: 8, border: "1px solid #F0E6D0" }}>
+                          <div key={ai} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", background: "var(--page-bg)", borderRadius: 16, marginBottom: 8, border: "1px solid var(--accent-border)" }}>
                             <div style={{ width: 40, height: 40, borderRadius: 12, background: broker.color + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, fontFamily: "JetBrains Mono", color: broker.color }}>{acct.type === "Retirement" ? "IRA" : "MRG"}</div>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif" }}>{acct.name}</div>
@@ -3076,7 +3086,7 @@ function BrokeragesPage() {
                               </div>
                               <div>
                                 <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Buying Power</div>
-                                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: "#C48830" }}>${(acct.buying / 1000).toFixed(1)}k</div>
+                                <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: "var(--accent)" }}>${(acct.buying / 1000).toFixed(1)}k</div>
                               </div>
                             </div>
                           </div>
@@ -3091,7 +3101,7 @@ function BrokeragesPage() {
                           ))}
                         </div>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button style={{ padding: "6px 14px", borderRadius: 10, border: "1px solid #33333440", background: "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", color: "#8A7040" }}>Sync Now</button>
+                          <button style={{ padding: "6px 14px", borderRadius: 10, border: "1px solid #33333440", background: "#fff", fontSize: 17, fontWeight: 700, cursor: "pointer", color: "var(--warm-text)" }}>Sync Now</button>
                           <button onClick={() => setShowConfirm(broker.id)} style={{ padding: "6px 14px", borderRadius: 10, border: "1.5px solid #EF535033", background: "#FFEBEE", fontSize: 17, fontWeight: 700, cursor: "pointer", color: "#EF5350" }}>Disconnect</button>
                         </div>
                       </div>
@@ -3113,24 +3123,24 @@ function BrokeragesPage() {
             return (
               <div key={broker.id} style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", transition: "all .3s", animation: "fadeUp .4s ease " + (i * .04) + "s both" }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = broker.color + "44"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--accent-border)"; e.currentTarget.style.transform = ""; }}>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 12 }}>
                   <div style={{ width: 44, height: 44, borderRadius: 12, background: broker.color + "12", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, border: "1.5px solid " + broker.color + "18" }}>{broker.logo}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{broker.name}</div>
                     <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginTop: 3 }}>
                       {broker.features.slice(0, 4).map(f => (
-                        <span key={f} style={{ fontSize: 12, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "#FFF5E6", color: "#8A7040" }}>{f}</span>
+                        <span key={f} style={{ fontSize: 12, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "#FFF5E6", color: "var(--warm-text)" }}>{f}</span>
                       ))}
                       {broker.features.length > 4 && <span style={{ fontSize: 12, color: "#33333480" }}>+{broker.features.length - 4}</span>}
                     </div>
                   </div>
                 </div>
                 <button onClick={() => handleConnect(broker.id)} disabled={isConnecting}
-                  style={{ width: "100%", padding: "10px", borderRadius: 14, border: "none", background: isConnecting ? "#FFF5E6" : "linear-gradient(135deg, " + broker.color + ", " + broker.color + "CC)", color: isConnecting ? "#A09080" : "#fff", fontSize: 15, fontWeight: 800, cursor: isConnecting ? "default" : "pointer", fontFamily: "'Instrument Serif', serif", transition: "all .2s" }}>
+                  style={{ width: "100%", padding: "10px", borderRadius: 14, border: "none", background: isConnecting ? "#FFF5E6" : "linear-gradient(135deg, " + broker.color + ", " + broker.color + "CC)", color: isConnecting ? "var(--text-muted)" : "#fff", fontSize: 15, fontWeight: 800, cursor: isConnecting ? "default" : "pointer", fontFamily: "'Instrument Serif', serif", transition: "all .2s" }}>
                   {isConnecting ? (
                     <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                      <span style={{ display: "inline-block", width: 14, height: 14, border: "1.5px solid #A09080", borderTopColor: "transparent", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
+                      <span style={{ display: "inline-block", width: 14, height: 14, border: "1.5px solid var(--text-muted)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin .8s linear infinite" }} />
                       Connecting via OAuth...
                     </span>
                   ) : "Connect " + broker.name}
@@ -3153,21 +3163,21 @@ function BrokeragesPage() {
             { id: "split", name: "Split Across", desc: "Distribute positions across multiple accounts proportionally", icon: "shuffle" },
           ].map(opt => (
             <div key={opt.id} onClick={() => setRoutePref(opt.id)}
-              style={{ padding: "8px 10px", borderRadius: 16, border: "1.5px solid " + (routePref === opt.id ? "#C48830" : "#F0E6D0"), background: routePref === opt.id ? "#FFF8EE" : "#FFFDF5", cursor: "pointer", transition: "all .2s", position: "relative" }}>
-              {opt.rec && <span style={{ position: "absolute", top: -6, right: 10, fontSize: 12, fontWeight: 800, padding: "1px 8px", borderRadius: 6, background: "#C48830", color: "#fff" }}>RECOMMENDED</span>}
+              style={{ padding: "8px 10px", borderRadius: 16, border: "1.5px solid " + (routePref === opt.id ? "var(--accent)" : "var(--accent-border)"), background: routePref === opt.id ? "var(--accent-bg)" : "var(--page-bg)", cursor: "pointer", transition: "all .2s", position: "relative" }}>
+              {opt.rec && <span style={{ position: "absolute", top: -6, right: 10, fontSize: 12, fontWeight: 800, padding: "1px 8px", borderRadius: 6, background: "var(--accent)", color: "#fff" }}>RECOMMENDED</span>}
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
                 <Icon name={opt.icon} size={10} />
-                <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: routePref === opt.id ? "#C48830" : "#5C4A1E" }}>{opt.name}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: routePref === opt.id ? "var(--accent)" : "var(--text-accent-dark)" }}>{opt.name}</span>
               </div>
-              <div style={{ fontSize: 17, color: "#8A7040", lineHeight: 1.5 }}>{opt.desc}</div>
-              {routePref === opt.id && <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#C48830", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 900, position: "absolute", top: 14, right: 14 }}>✓</div>}
+              <div style={{ fontSize: 17, color: "var(--warm-text)", lineHeight: 1.5 }}>{opt.desc}</div>
+              {routePref === opt.id && <div style={{ width: 18, height: 18, borderRadius: "50%", background: "var(--accent)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 900, position: "absolute", top: 14, right: 14 }}>✓</div>}
             </div>
           ))}
         </div>
       </div>
 
       {/* ── Security Footer ── */}
-      <div style={{ marginTop: 10, padding: "16px 22px", background: "#FFFDF5", border: "1px solid #33333440", borderRadius: 18, display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap", animation: "fadeUp .4s ease .24s both" }}>
+      <div style={{ marginTop: 10, padding: "16px 22px", background: "var(--page-bg)", border: "1px solid #33333440", borderRadius: 18, display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap", animation: "fadeUp .4s ease .24s both" }}>
         {[
           { icon: "lock", label: "256-bit Encryption", desc: "Bank-grade TLS" },
           { icon: "lock", label: "OAuth 2.0", desc: "No passwords stored" },
@@ -3191,10 +3201,10 @@ function BrokeragesPage() {
             <div style={{ textAlign: "center", marginBottom: 8 }}>
               <span style={{ fontSize: 60 }}></span>
               <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginTop: 8 }}>Disconnect Brokerage?</div>
-              <div style={{ fontSize: 18, color: "#8A7040", marginTop: 4, lineHeight: 1.5 }}>This will revoke BasketTrade's access. Open orders will still execute, but new basket trades won't route to this account.</div>
+              <div style={{ fontSize: 18, color: "var(--warm-text)", marginTop: 4, lineHeight: 1.5 }}>This will revoke BasketTrade's access. Open orders will still execute, but new basket trades won't route to this account.</div>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
-              <button onClick={() => setShowConfirm(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid #33333440", background: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", color: "#8A7040" }}>Cancel</button>
+              <button onClick={() => setShowConfirm(null)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "1px solid #33333440", background: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", color: "var(--warm-text)" }}>Cancel</button>
               <button onClick={() => handleDisconnect(showConfirm)} style={{ flex: 1, padding: "12px", borderRadius: 14, border: "none", background: "#EF5350", color: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>Disconnect</button>
             </div>
           </div>
@@ -3279,10 +3289,10 @@ function NewsPage({ liveNews = [], newsStatus = "mock" }) {
   const showAnalyst = activeSection === "all" || activeSection === "analyst";
   const showSector = activeSection === "all" || activeSection === "sector";
 
-  const priorityCol = { flash: "#EF5350", urgent: "#FFA726", high: "#C48830", normal: "#A09080" };
-  const priorityBg = { flash: "#FFEBEE", urgent: "#FFF3E0", high: "#FFF8EE", normal: "#F5F5F3" };
-  const impactCol = { bullish: "#5B8C5A", bearish: "#EF5350", mixed: "#C48830" };
-  const impactBg = { bullish: "#EDF5ED", bearish: "#FFEBEE", mixed: "#FFF8EE" };
+  const priorityCol = { flash: "#EF5350", urgent: "#FFA726", high: "var(--accent)", normal: "var(--text-muted)" };
+  const priorityBg = { flash: "#FFEBEE", urgent: "#FFF3E0", high: "var(--accent-bg)", normal: "#F5F5F3" };
+  const impactCol = { bullish: "#5B8C5A", bearish: "#EF5350", mixed: "var(--accent)" };
+  const impactBg = { bullish: "#EDF5ED", bearish: "#FFEBEE", mixed: "var(--accent-bg)" };
 
   return (
     <div>
@@ -3290,7 +3300,7 @@ function NewsPage({ liveNews = [], newsStatus = "mock" }) {
       <div className="no-scrollbar" style={{ display: "flex", gap: 4, marginBottom: 10, overflowX: "auto", paddingBottom: 2 }}>
         {sections.map(s => (
           <button key={s.id} onClick={() => setActiveSection(s.id)}
-            style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 10, border: activeSection === s.id ? "1.5px solid #C48830" : "1.5px solid #F0E6D0", background: activeSection === s.id ? "#FFF8EE" : "#fff", color: activeSection === s.id ? "#C48830" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap", transition: "all .2s" }}>
+            style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 10, border: activeSection === s.id ? "1.5px solid var(--accent)" : "1.5px solid var(--accent-border)", background: activeSection === s.id ? "var(--accent-bg)" : "#fff", color: activeSection === s.id ? "var(--accent)" : "var(--text-muted)", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap", transition: "all .2s" }}>
             <Icon name={s.icon} size={10} /> {s.label}
           </button>
         ))}
@@ -3300,25 +3310,25 @@ function NewsPage({ liveNews = [], newsStatus = "mock" }) {
       {showTerminal && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, animation: "fadeUp .4s ease both" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Terminal Feed</div>
-          <span style={{ fontSize: 12, fontWeight: 700, color: newsStatus === "live" ? "#5B8C5A" : newsStatus === "mock" ? "#FFA726" : "#A09080" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: newsStatus === "live" ? "#5B8C5A" : newsStatus === "mock" ? "#FFA726" : "var(--text-muted)" }}>
             {newsStatus === "live" ? "● Live" : newsStatus === "loading" ? "● Loading..." : "● Sample"}
           </span>
         </div>
         {liveNews.slice(0, 20).map((n, i) => (
-          <div key={n.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+          <div key={n.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 3, flexWrap: "wrap" }}>
               <span style={{ fontSize: 10, fontFamily: "JetBrains Mono", color: "#33333460", fontWeight: 600 }}>{n.time}</span>
-              <span style={{ fontSize: 9, fontWeight: 900, padding: "1px 4px", borderRadius: 3, background: priorityBg[n.priority] || "#F5F5F3", color: priorityCol[n.priority] || "#A09080", textTransform: "uppercase" }}>{n.priority}</span>
-              <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: "#F0E6D0", color: "#8A7040" }}>{n.cat}</span>
+              <span style={{ fontSize: 9, fontWeight: 900, padding: "1px 4px", borderRadius: 3, background: priorityBg[n.priority] || "#F5F5F3", color: priorityCol[n.priority] || "var(--text-muted)", textTransform: "uppercase" }}>{n.priority}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: "var(--accent-border)", color: "var(--warm-text)" }}>{n.cat}</span>
             </div>
             <div style={{ fontSize: 12, fontWeight: 800, color: "#333334", lineHeight: 1.3, marginBottom: 3 }}>{n.headline}</div>
             {n.desc && <div style={{ fontSize: 11, color: "#33333480", lineHeight: 1.3, marginBottom: 3 }}>{n.desc.slice(0, 120)}{n.desc.length > 120 ? "..." : ""}</div>}
             <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
               <span style={{ fontSize: 10, color: "#33333460" }}>{n.source}</span>
-              <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: impactBg[n.impact] || "#F5F5F3", color: impactCol[n.impact] || "#A09080" }}>{(n.impact || "mixed").toUpperCase()}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 4px", borderRadius: 3, background: impactBg[n.impact] || "#F5F5F3", color: impactCol[n.impact] || "var(--text-muted)" }}>{(n.impact || "mixed").toUpperCase()}</span>
               {n.move && <span style={{ fontSize: 11, fontFamily: "JetBrains Mono", fontWeight: 700, color: n.move.startsWith("+") ? "#5B8C5A" : "#EF5350" }}>{n.move}</span>}
               {n.assets && n.assets.length > 0 && n.assets.slice(0, 4).map(a => (
-                <span key={a} style={{ fontSize: 9, fontWeight: 700, padding: "1px 3px", borderRadius: 2, background: "#FFFDF5", border: "1px solid #F0E6D0", color: "#8A7040" }}>{a}</span>
+                <span key={a} style={{ fontSize: 9, fontWeight: 700, padding: "1px 3px", borderRadius: 2, background: "var(--page-bg)", border: "1px solid var(--accent-border)", color: "var(--warm-text)" }}>{a}</span>
               ))}
             </div>
           </div>
@@ -3333,7 +3343,7 @@ function NewsPage({ liveNews = [], newsStatus = "mock" }) {
           <span style={{ fontSize: 12, color: "#5B8C5A", fontWeight: 700 }}>● Live</span>
         </div>
         {xPosts.map((p, i) => (
-          <div key={p.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+          <div key={p.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1A1A1A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 900 }}>{p.name.charAt(0)}</div>
@@ -3342,7 +3352,7 @@ function NewsPage({ liveNews = [], newsStatus = "mock" }) {
                 <span style={{ fontSize: 11, color: "#33333480" }}>{p.handle}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#1A1A1A", background: "#F0E6D0", padding: "1px 5px", borderRadius: 3 }}>{p.tag}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#1A1A1A", background: "var(--accent-border)", padding: "1px 5px", borderRadius: 3 }}>{p.tag}</span>
                 <span style={{ fontSize: 11, color: "#33333480" }}>{p.time}</span>
               </div>
             </div>
@@ -3362,7 +3372,7 @@ function NewsPage({ liveNews = [], newsStatus = "mock" }) {
           <span style={{ fontSize: 12, color: "#33333480" }}>{analystNotes.length} notes</span>
         </div>
         {analystNotes.map((a, i) => (
-          <div key={a.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+          <div key={a.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 11, fontWeight: 900, color: actionCol[a.action], background: actionBg[a.action], padding: "2px 6px", borderRadius: 4 }}>{a.action}</span>
@@ -3371,7 +3381,7 @@ function NewsPage({ liveNews = [], newsStatus = "mock" }) {
               <span style={{ fontSize: 11, color: "#33333480" }}>{a.time}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-              <span style={{ fontSize: 12, color: "#8A7040" }}>by {a.analyst}</span>
+              <span style={{ fontSize: 12, color: "var(--warm-text)" }}>by {a.analyst}</span>
               <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 800, color: a.color }}>{a.target}</span>
             </div>
             <div style={{ fontSize: 12, color: "#333334", lineHeight: 1.4 }}>{a.summary}</div>
@@ -3395,7 +3405,7 @@ function NewsPage({ liveNews = [], newsStatus = "mock" }) {
               <span style={{ fontSize: 14, fontFamily: "JetBrains Mono", fontWeight: 800, color: s.trend === "up" ? "#5B8C5A" : "#EF5350" }}>{s.change}</span>
             </div>
             {s.headlines.map((h, hi) => (
-              <div key={hi} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 6px", borderBottom: hi < s.headlines.length - 1 ? "1px solid #F0E6D020" : "none" }}>
+              <div key={hi} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 6px", borderBottom: hi < s.headlines.length - 1 ? "1px solid var(--accent-border-a13)" : "none" }}>
                 {h.hot && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#EF5350", flexShrink: 0 }} />}
                 {!h.hot && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#D0C8B8", flexShrink: 0 }} />}
                 <span style={{ fontSize: 12, color: "#333334", flex: 1, lineHeight: 1.3 }}>{h.title}</span>
@@ -3409,7 +3419,7 @@ function NewsPage({ liveNews = [], newsStatus = "mock" }) {
   );
 }
 
-function MyAccountPage({ onNavigate, onSignOut, user }) {
+function MyAccountPage({ onNavigate, onSignOut, user, isPro, activeTier, switchTier }) {
   const [acctSection, setAcctSection] = useState(null);
   const [twoFA, setTwoFA] = useState(true);
   const [biometric, setBiometric] = useState(false);
@@ -3422,8 +3432,8 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
 
   const Toggle = ({ on, onToggle, label }) => (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #33333420" }}>
-      <span style={{ fontSize: 15, fontWeight: 600, color: "#6B5A2E" }}>{label}</span>
-      <div onClick={onToggle} style={{ width: 44, height: 24, borderRadius: 12, background: on ? "#C48830" : "#E8DCC8", cursor: "pointer", position: "relative", transition: "background .2s" }}>
+      <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text-accent)" }}>{label}</span>
+      <div onClick={onToggle} style={{ width: 44, height: 24, borderRadius: 12, background: on ? "var(--accent)" : "var(--border-light)", cursor: "pointer", position: "relative", transition: "background .2s" }}>
         <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fff", position: "absolute", top: 2, left: on ? 22 : 2, transition: "left .2s", boxShadow: "0 1px 4px rgba(0,0,0,.15)" }} />
       </div>
     </div>
@@ -3433,13 +3443,13 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
     <div onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", cursor: "pointer", borderBottom: "1px solid #33333420", transition: "background .15s" }}
       onMouseEnter={e => e.currentTarget.style.background = "#fff"}
       onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-      <div style={{ width: 40, height: 40, borderRadius: 12, background: danger ? "#FFEBEE" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}><Icon name={icon} size={18} color={danger ? "#EF5350" : "#C48830"} /></div>
+      <div style={{ width: 40, height: 40, borderRadius: 12, background: danger ? "#FFEBEE" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}><Icon name={icon} size={18} color={danger ? "#EF5350" : "var(--accent)"} /></div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 17, fontWeight: 700, color: danger ? "#EF5350" : "#5C4A1E" }}>{label}</div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: danger ? "#EF5350" : "var(--text-accent-dark)" }}>{label}</div>
         {desc && <div style={{ fontSize: 17, color: "#33333480", marginTop: 1 }}>{desc}</div>}
       </div>
       {badge && <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: (badgeColor || "#C48830") + "18", color: badgeColor || "#C48830" }}>{badge}</span>}
-      <span style={{ color: "#E8DCC8", fontSize: 18 }}>›</span>
+      <span style={{ color: "var(--border-light)", fontSize: 18 }}>›</span>
     </div>
   );
 
@@ -3454,18 +3464,28 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
   );
 
   // ── SUB-SECTIONS ──
+  if (acctSection === "subscription") return (
+    <div>
+      <BackHeader title="Subscription" icon="diamond" />
+      <TierSelectionPage
+        onSelectFree={() => setAcctSection(null)}
+        showBack={false}
+      />
+    </div>
+  );
+
   if (acctSection === "brokerages") return <div><BackHeader title="Linked Brokerages" icon="bank" /><BrokeragesPage /></div>;
 
   if (acctSection === "trades") return (
     <div>
       <BackHeader title="Trade History" icon="clipboard" />
       <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.3fr .5fr .5fr .5fr .7fr", padding: "8px 12px", borderBottom: "2px solid #F0E6D0", fontSize: 15, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, background: "#fff" }}><div>Basket</div><div>Action</div><div>Date</div><div>Status</div><div style={{ textAlign: "right" }}>Amount</div></div>
-        {recentTrades.map((t, i) => <div key={t.id} style={{ display: "grid", gridTemplateColumns: "1.3fr .5fr .5fr .5fr .7fr", padding: "8px 12px", borderBottom: i < recentTrades.length - 1 ? "1px solid #F0E6D0" : "none", alignItems: "center", transition: "background .2s" }} onMouseEnter={e => e.currentTarget.style.background = "#fff"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+        <div style={{ display: "grid", gridTemplateColumns: "1.3fr .5fr .5fr .5fr .7fr", padding: "8px 12px", borderBottom: "2px solid var(--accent-border)", fontSize: 15, color: "#33333480", textTransform: "uppercase", letterSpacing: 1, fontWeight: 800, background: "#fff" }}><div>Basket</div><div>Action</div><div>Date</div><div>Status</div><div style={{ textAlign: "right" }}>Amount</div></div>
+        {recentTrades.map((t, i) => <div key={t.id} style={{ display: "grid", gridTemplateColumns: "1.3fr .5fr .5fr .5fr .7fr", padding: "8px 12px", borderBottom: i < recentTrades.length - 1 ? "1px solid var(--accent-border)" : "none", alignItems: "center", transition: "background .2s" }} onMouseEnter={e => e.currentTarget.style.background = "#fff"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}><Icon name={t.icon} size={10} /><span style={{ fontWeight: 800, fontSize: 18, fontFamily: "'Instrument Serif', serif" }}>{t.basket}</span></div>
-          <div style={{ fontSize: 17, fontWeight: 800, color: t.action === "Buy" || t.action === "Dividend" ? "#C48830" : t.action === "Sell" ? "#EF5350" : "#42A5F5" }}>{t.action}</div>
-          <div style={{ fontSize: 17, color: "#8A7040" }}>{t.date}</div>
-          <div><span style={{ fontSize: 14, fontWeight: 800, padding: "3px 10px", borderRadius: 14, background: t.status === "Completed" ? "#FFF8EE" : "#FFF3E0", color: t.status === "Completed" ? "#5B8C5A" : "#FFA726" }}>{t.status}</span></div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: t.action === "Buy" || t.action === "Dividend" ? "var(--accent)" : t.action === "Sell" ? "#EF5350" : "#42A5F5" }}>{t.action}</div>
+          <div style={{ fontSize: 17, color: "var(--warm-text)" }}>{t.date}</div>
+          <div><span style={{ fontSize: 14, fontWeight: 800, padding: "3px 10px", borderRadius: 14, background: t.status === "Completed" ? "var(--accent-bg)" : "#FFF3E0", color: t.status === "Completed" ? "#5B8C5A" : "#FFA726" }}>{t.status}</span></div>
           <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 18, color: t.amount.startsWith("+") ? "#5B8C5A" : "#EF5350" }}>{t.amount}</div>
         </div>)}
       </div>
@@ -3479,12 +3499,12 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
     <div>
       <BackHeader title="Profile" icon="person" />
       <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
-        <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24, paddingBottom: 20, borderBottom: "2px solid #F0E6D0" }}>
-          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
+        <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24, paddingBottom: 20, borderBottom: "2px solid var(--accent-border)" }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,var(--accent),#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
           <div>
             <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{user?.displayName || "Trader"}</div>
             <div style={{ fontSize: 15, color: "#33333480" }}>{user?.email || ""}</div>
-            <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830", marginTop: 4, display: "inline-block" }}>Pro Member</span>
+            <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "var(--accent-bg)", color: "var(--accent)", marginTop: 4, display: "inline-block" }}>Pro Member</span>
           </div>
         </div>
         {[
@@ -3496,12 +3516,12 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
           { label: "Tax ID (SSN)", val: "•••-••-4821" },
           { label: "Member Since", val: "January 2024" },
         ].map((f, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderBottom: i < 6 ? "1px solid #F0E6D0" : "none" }}>
+          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderBottom: i < 6 ? "1px solid var(--accent-border)" : "none" }}>
             <span style={{ fontSize: 18, color: "#33333480", fontWeight: 700 }}>{f.label}</span>
             <span style={{ fontSize: 15, fontWeight: 700, fontFamily: f.label.includes("Tax") || f.label.includes("Phone") ? "JetBrains Mono" : "Quicksand", color: "#333334" }}>{f.val}</span>
           </div>
         ))}
-        <button style={{ marginTop: 8, width: "100%", padding: 12, borderRadius: 14, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Edit Profile</button>
+        <button style={{ marginTop: 8, width: "100%", padding: 12, borderRadius: 14, border: "1.5px solid var(--accent)", background: "var(--accent-bg)", color: "var(--accent)", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Edit Profile</button>
       </div>
     </div>
   );
@@ -3510,7 +3530,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
     <div>
       <BackHeader title="Login & Security" icon="lock" />
       <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
-        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "#6B5A2E" }}>Authentication</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "var(--text-accent)" }}>Authentication</div>
         <div style={{ padding: "14px 0", borderBottom: "1px solid #33333420", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700 }}>Password</div>
@@ -3520,7 +3540,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
         </div>
         <Toggle on={twoFA} onToggle={() => setTwoFA(!twoFA)} label="Two-Factor Authentication (2FA)" />
         <Toggle on={biometric} onToggle={() => setBiometric(!biometric)} label="Biometric Login (Face ID / Touch ID)" />
-        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12, marginTop: 10, color: "#6B5A2E" }}>Active Sessions</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 12, marginTop: 10, color: "var(--text-accent)" }}>Active Sessions</div>
         {[
           { device: "MacBook Pro — Chrome", loc: "Portland, OR", time: "Active now", current: true },
           { device: "iPhone 15 Pro — Safari", loc: "Portland, OR", time: "2 hours ago", current: false },
@@ -3531,7 +3551,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
               <div style={{ fontSize: 18, fontWeight: 700 }}>{s.device}</div>
               <div style={{ fontSize: 15, color: "#33333480" }}>{s.loc} · {s.time}</div>
             </div>
-            {s.current ? <span style={{ fontSize: 14, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>This device</span>
+            {s.current ? <span style={{ fontSize: 14, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "var(--accent-bg)", color: "var(--accent)" }}>This device</span>
             : <button style={{ padding: "5px 12px", borderRadius: 8, border: "1.5px solid #FFEBEE", background: "#fff", fontSize: 15, fontWeight: 800, cursor: "pointer", color: "#EF5350" }}>Revoke</button>}
           </div>
         ))}
@@ -3544,10 +3564,10 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
     <div>
       <BackHeader title="Notifications" icon="bell" />
       <div style={{ background: "#fff", borderRadius: 14, padding: 14 }}>
-        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#6B5A2E" }}>Communication</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "var(--text-accent)" }}>Communication</div>
         <Toggle on={emailNotifs} onToggle={() => setEmailNotifs(!emailNotifs)} label="Email notifications" />
         <Toggle on={pushNotifs} onToggle={() => setPushNotifs(!pushNotifs)} label="Push notifications" />
-        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4, marginTop: 10, color: "#6B5A2E" }}>Trading</div>
+        <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4, marginTop: 10, color: "var(--text-accent)" }}>Trading</div>
         <Toggle on={tradeConfirm} onToggle={() => setTradeConfirm(!tradeConfirm)} label="Trade confirmations" />
         <Toggle on={priceAlerts} onToggle={() => setPriceAlerts(!priceAlerts)} label="Price & macro alerts" />
         <div style={{ marginTop: 16, padding: "14px 18px", background: "#E3F2FD", borderRadius: 14, fontSize: 17, color: "#42A5F5", fontWeight: 700 }}>
@@ -3598,7 +3618,7 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 14, padding: "14px 18px", background: "#fff", borderRadius: 14, border: "1px solid #F0E6D0", fontSize: 17, color: "#33333480" }}>
+      <div style={{ marginTop: 14, padding: "14px 18px", background: "#fff", borderRadius: 14, border: "1px solid var(--accent-border)", fontSize: 17, color: "#33333480" }}>
         BasketTrade is not a registered broker-dealer. We do not hold customer funds. All trades are executed through your linked third-party brokerage accounts. Investing involves risk including possible loss of principal.
       </div>
     </div>
@@ -3611,13 +3631,13 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
       <div style={{ marginBottom: 10, animation: "fadeUp .3s ease both" }}>
         {/* Profile header */}
         <div style={{ background: "#fff", borderRadius: 14, padding: "14px 24px", display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#C48830,#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif", flexShrink: 0 }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,var(--accent),#EF5350)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff", fontWeight: 900, fontFamily: "'Instrument Serif', serif", flexShrink: 0 }}>{(user?.displayName || user?.email || "U").charAt(0).toUpperCase()}</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{user?.displayName || "Trader"}</div>
             <div style={{ fontSize: 18, color: "#33333480" }}>{user?.email || ""}</div>
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>Pro Member</span>
-              <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "#FFF8EE", color: "#C48830" }}>{connectedBrokers.length} Broker{connectedBrokers.length !== 1 ? "s" : ""} Linked</span>
+              <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "var(--accent-bg)", color: "var(--accent)" }}>Pro Member</span>
+              <span style={{ fontSize: 15, fontWeight: 800, padding: "3px 10px", borderRadius: 8, background: "var(--accent-bg)", color: "var(--accent)" }}>{connectedBrokers.length} Broker{connectedBrokers.length !== 1 ? "s" : ""} Linked</span>
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
@@ -3631,27 +3651,38 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
       <div style={{ display: "grid", gap: 6 }}>
         {/* Account */}
         <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .05s both" }}>
-          <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
+          <div style={{ padding: "8px 12px", borderBottom: "2px solid var(--accent-border)", background: "#fff" }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Account</div>
           </div>
           <MenuItem icon="person" label="Profile" desc="Name, email, phone, personal info" onClick={() => setAcctSection("profile")} />
-          <MenuItem icon="bank" label="Linked Brokerages" desc="Manage your connected brokerage accounts" badge={connectedBrokers.length + " connected"} badgeColor="#C48830" onClick={() => setAcctSection("brokerages")} />
+          <MenuItem icon="bank" label="Linked Brokerages" desc="Manage your connected brokerage accounts" badge={connectedBrokers.length + " connected"} badgeColor="var(--accent)" onClick={() => setAcctSection("brokerages")} />
           <MenuItem icon="clipboard" label="Trade History" desc="View all executed trades and performance" badge="142 trades" badgeColor="#42A5F5" onClick={() => setAcctSection("trades")} />
+        </div>
+
+        {/* Subscription */}
+        <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .075s both" }}>
+          <div style={{ padding: "8px 12px", borderBottom: "2px solid var(--accent-border)", background: "#fff" }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Subscription</div>
+          </div>
+          <MenuItem icon="diamond" label={isPro ? "Options Pro" : "Free Plan"} desc={isPro ? "Active subscription · $9.99/mo" : "Upgrade to unlock options trading"} badge={isPro ? "Active" : "Upgrade"} badgeColor={isPro ? "#5B8C5A" : "var(--accent)"} onClick={() => setAcctSection("subscription")} />
+          {isPro && (
+            <MenuItem icon="rotate" label="Switch App View" desc={"Currently: " + (activeTier === "free" ? "Investing" : "Options Trading")} onClick={() => switchTier(activeTier === "free" ? "options_pro" : "free")} />
+          )}
         </div>
 
         {/* Security & Privacy */}
         <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .1s both" }}>
-          <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
+          <div style={{ padding: "8px 12px", borderBottom: "2px solid var(--accent-border)", background: "#fff" }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Security & Privacy</div>
           </div>
-          <MenuItem icon="lock" label="Login & Security" desc="Password, 2FA, active sessions" badge="2FA On" badgeColor="#C48830" onClick={() => setAcctSection("security")} />
+          <MenuItem icon="lock" label="Login & Security" desc="Password, 2FA, active sessions" badge="2FA On" badgeColor="var(--accent)" onClick={() => setAcctSection("security")} />
           <MenuItem icon="shield" label="Privacy" desc="Data sharing, analytics, account deletion" onClick={() => setAcctSection("privacy")} />
           <MenuItem icon="bell" label="Notifications" desc="Email, push, trade confirmations, alerts" onClick={() => setAcctSection("notifications")} />
         </div>
 
         {/* Legal */}
         <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", animation: "fadeUp .4s ease .15s both" }}>
-          <div style={{ padding: "8px 12px", borderBottom: "2px solid #F0E6D0", background: "#fff" }}>
+          <div style={{ padding: "8px 12px", borderBottom: "2px solid var(--accent-border)", background: "#fff" }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: 1 }}>Legal & Support</div>
           </div>
           <MenuItem icon="document" label="Legal & Policies" desc="Terms, privacy policy, disclaimers" onClick={() => setAcctSection("policies")} />
@@ -3667,8 +3698,8 @@ function MyAccountPage({ onNavigate, onSignOut, user }) {
 
       {/* Footer */}
       <div style={{ textAlign: "center", padding: "12px 0 8px", animation: "fadeUp .4s ease .25s both" }}>
-        <div style={{ fontSize: 15, color: "#E8DCC8", fontWeight: 700 }}>BasketTrade v2.4.0 · © 2026 BasketTrade Inc.</div>
-        <div style={{ fontSize: 14, color: "#E8DCC8", marginTop: 2 }}>Not a broker-dealer. All trades executed via linked accounts.</div>
+        <div style={{ fontSize: 15, color: "var(--border-light)", fontWeight: 700 }}>BasketTrade v2.4.0 · © 2026 BasketTrade Inc.</div>
+        <div style={{ fontSize: 14, color: "var(--border-light)", marginTop: 2 }}>Not a broker-dealer. All trades executed via linked accounts.</div>
       </div>
     </div>
   );
@@ -3692,7 +3723,7 @@ function HedgeGuidesPage() {
         { heading: "The 2% Rule & Stop Losses", body: "Never risk more than 2% of your total portfolio on a single trade. If you have a $100,000 portfolio, your maximum acceptable loss per position is $2,000. Set stop losses accordingly: on a $10,000 position, that means a 20% stop. Trailing stops of 15-25% capture most upside while limiting drawdowns. Combine with position sizing for a robust risk framework." },
       ]
     },
-    { id: 2, title: "Building a Macro-Resilient Portfolio", tag: "Strategy", icon: "basket", color: "#C48830", summary: "How to combine inflation hedges, geopolitical shields, and growth baskets to weather any macro regime.", time: "8 min read", featured: true,
+    { id: 2, title: "Building a Macro-Resilient Portfolio", tag: "Strategy", icon: "basket", color: "var(--accent)", summary: "How to combine inflation hedges, geopolitical shields, and growth baskets to weather any macro regime.", time: "8 min read", featured: true,
       sections: [
         { heading: "The All-Weather Framework", body: "Ray Dalio's All-Weather portfolio concept allocates assets based on economic environments rather than predictions. The four quadrants: rising growth (equities, commodities, corporate credit), falling growth (nominal bonds, TIPS), rising inflation (commodities, TIPS, EM), falling inflation (equities, nominal bonds). A truly resilient portfolio holds assets that perform in each quadrant, with allocations weighted by risk contribution rather than dollar amount." },
         { heading: "Gold: The 4-15% Allocation Sweet Spot", body: "Research across multiple decades shows gold allocations between 4% and 15% consistently improve risk-adjusted returns across portfolio types. Gold has a near-zero correlation with equities (0.02) and bonds (0.04), meaning it moves independently from both. During the 1970s inflation, gold surged from $35 to over $600. In the 2008 crisis, gold rose 5% while equities fell 37%. A 7-10% gold allocation provides meaningful portfolio insurance without excessive opportunity cost." },
@@ -3757,7 +3788,7 @@ function HedgeGuidesPage() {
   // ── Guide Detail View ──
   if (activeGuide) return (
     <div style={{ animation: "fadeUp .3s ease both" }}>
-      <button onClick={() => setOpenGuide(null)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "#C48830", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginBottom: 8, padding: 0 }}>
+      <button onClick={() => setOpenGuide(null)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "var(--accent)", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginBottom: 8, padding: 0 }}>
         <span style={{ fontSize: 21 }}>&larr;</span> Back to Hedge
       </button>
       <div style={{ background: `linear-gradient(135deg, ${activeGuide.color}12, ${activeGuide.color}04)`, border: `1.5px solid ${activeGuide.color}30`, borderRadius: 16, padding: "14px 16px", marginBottom: 10 }}>
@@ -3770,7 +3801,7 @@ function HedgeGuidesPage() {
             <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3, marginTop: 3 }}>{activeGuide.title}</div>
           </div>
         </div>
-        <div style={{ fontSize: 14, color: "#8A7040", lineHeight: 1.5 }}>{activeGuide.summary}</div>
+        <div style={{ fontSize: 14, color: "var(--warm-text)", lineHeight: 1.5 }}>{activeGuide.summary}</div>
         <div style={{ display: "flex", gap: 8, marginTop: 8, fontSize: 12, color: "#33333480", fontWeight: 700 }}>
           <span>{activeGuide.time}</span>
           <span>·</span>
@@ -3786,7 +3817,7 @@ function HedgeGuidesPage() {
           <div style={{ fontSize: 14, color: "#4A4030", lineHeight: 1.7, fontFamily: "Quicksand", fontWeight: 500 }}>{s.body}</div>
         </div>
       ))}
-      <button onClick={() => setOpenGuide(null)} style={{ width: "100%", padding: "10px", borderRadius: 12, border: "1.5px solid #C48830", background: "#FFF8EE", color: "#C48830", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginTop: 4 }}>
+      <button onClick={() => setOpenGuide(null)} style={{ width: "100%", padding: "10px", borderRadius: 12, border: "1.5px solid var(--accent)", background: "var(--accent-bg)", color: "var(--accent)", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", marginTop: 4 }}>
         &larr; Back to Hedge
       </button>
     </div>
@@ -3810,7 +3841,7 @@ function HedgeGuidesPage() {
                 <span style={{ fontSize: 11, fontWeight: 800, color: g.color, background: g.color + "14", padding: "2px 6px", borderRadius: 4, textTransform: "uppercase" }}>{g.tag}</span>
               </div>
               <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3, marginBottom: 4 }}>{g.title}</div>
-              <div style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.4 }}>{g.summary.slice(0, 80)}...</div>
+              <div style={{ fontSize: 12, color: "var(--warm-text)", lineHeight: 1.4 }}>{g.summary.slice(0, 80)}...</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
                 <span style={{ fontSize: 11, color: "#33333480", fontWeight: 600 }}>{g.time}</span>
                 <span style={{ fontSize: 12, fontWeight: 800, color: g.color }}>Read &rarr;</span>
@@ -3821,7 +3852,7 @@ function HedgeGuidesPage() {
         {/* Article list */}
         {guides.filter(g => !g.featured).map(g => (
           <div key={g.id} onClick={() => setOpenGuide(g.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: "1px solid #33333420", cursor: "pointer", transition: "all .15s" }}
-            onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
+            onMouseEnter={e => e.currentTarget.style.background = "var(--page-bg)"} onMouseLeave={e => e.currentTarget.style.background = ""}>
             <Icon name={g.icon} size={18} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.3 }}>{g.title}</div>
@@ -3845,7 +3876,7 @@ function HedgeGuidesPage() {
             <div style={{ fontSize: 17, color: "#33333480", marginTop: 2 }}>When one side weighs down, the other lifts up — pick any pair to visualize</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, padding: "4px 10px", borderRadius: 8, background: corrVal < -0.5 ? "#FFF8EE" : corrVal < 0 ? "#FFF3E0" : "#FFEBEE", color: corrVal < -0.5 ? "#C48830" : corrVal < 0 ? "#FFA726" : "#EF5350" }}>
+            <span style={{ fontSize: 15, fontWeight: 800, padding: "4px 10px", borderRadius: 8, background: corrVal < -0.5 ? "var(--accent-bg)" : corrVal < 0 ? "#FFF3E0" : "#FFEBEE", color: corrVal < -0.5 ? "var(--accent)" : corrVal < 0 ? "#FFA726" : "#EF5350" }}>
               ρ = {corrVal.toFixed(2)} · {corrVal < -0.6 ? "Strong Hedge" : corrVal < -0.3 ? "Moderate Hedge" : corrVal < 0 ? "Weak Hedge" : corrVal < 0.3 ? "Weak +" : "Correlated"}
             </span>
           </div>
@@ -3883,7 +3914,7 @@ function HedgeGuidesPage() {
             { a:"tlt", b:"sp500", label:"TLT vs SPX" },
           ].map((preset, i) => (
             <button key={i} onClick={() => setSeesawPair({ a: preset.a, b: preset.b })}
-              style={{ padding: "4px 10px", borderRadius: 8, border: "1.5px solid " + (seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#F0E6D0"), background: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#FFF8EE" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: seesawPair.a === preset.a && seesawPair.b === preset.b ? "#C48830" : "#8A7040" }}>{preset.label}</button>
+              style={{ padding: "4px 10px", borderRadius: 8, border: "1.5px solid " + (seesawPair.a === preset.a && seesawPair.b === preset.b ? "var(--accent)" : "var(--accent-border)"), background: seesawPair.a === preset.a && seesawPair.b === preset.b ? "var(--accent-bg)" : "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", color: seesawPair.a === preset.a && seesawPair.b === preset.b ? "var(--accent)" : "var(--warm-text)" }}>{preset.label}</button>
           ))}
         </div>
 
@@ -3898,8 +3929,8 @@ function HedgeGuidesPage() {
             </defs>
 
             {/* Center pivot triangle */}
-            <polygon points="350,230 336,260 364,260" fill="#C48830" opacity="0.8" />
-            <rect x="300" y="260" width="100" height="8" rx="4" fill="#F0E6D0" />
+            <polygon points="350,230 336,260 364,260" fill="var(--accent)" opacity="0.8" />
+            <rect x="300" y="260" width="100" height="8" rx="4" fill="var(--accent-border)" />
 
             {/* Seesaw beam */}
             <g transform={`rotate(${tiltDeg}, 350, 220)`}>
@@ -3909,7 +3940,7 @@ function HedgeGuidesPage() {
               <g>
                 <rect x="40" y="185" width="160" height="32" rx="12" fill="#fff" stroke={seesawA.color} strokeWidth="2" filter="url(#dropShHedge)" />
                 <text x="120" y="197" textAnchor="middle" fill={seesawA.color} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawA.ticker}</text>
-                <text x="120" y="210" textAnchor="middle" fill="#A09080" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawA.name.length > 20 ? seesawA.name.slice(0,18) + ".." : seesawA.name}</text>
+                <text x="120" y="210" textAnchor="middle" fill="var(--text-muted)" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawA.name.length > 20 ? seesawA.name.slice(0,18) + ".." : seesawA.name}</text>
 
                 {/* Weight block */}
                 <rect x="80" y={140 - Math.abs(returnA) * 1.2} width="80" height={Math.max(20, Math.abs(returnA) * 1.8)} rx="8" fill={returnA >= 0 ? "#5B8C5A" : "#EF5350"} opacity="0.85" />
@@ -3917,7 +3948,7 @@ function HedgeGuidesPage() {
                 <text x="120" y={134 - Math.abs(returnA) * 1.2} textAnchor="middle" fill={seesawA.color} fontSize="8" fontWeight="800">YTD RETURN</text>
 
                 {/* Price */}
-                <text x="120" y="240" textAnchor="middle" fill="#6B5A2E" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawA.price >= 1000 ? (seesawA.price).toLocaleString() : seesawA.price}</text>
+                <text x="120" y="240" textAnchor="middle" fill="var(--text-accent)" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawA.price >= 1000 ? (seesawA.price).toLocaleString() : seesawA.price}</text>
                 <text x="120" y="254" textAnchor="middle" fill={seesawA.change >= 0 ? "#5B8C5A" : "#EF5350"} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawA.change >= 0 ? "▲ +" : "▼ "}{seesawA.change}% today</text>
               </g>
 
@@ -3925,7 +3956,7 @@ function HedgeGuidesPage() {
               <g>
                 <rect x="500" y="185" width="160" height="32" rx="12" fill="#fff" stroke={seesawB.color} strokeWidth="2" filter="url(#dropShHedge)" />
                 <text x="580" y="197" textAnchor="middle" fill={seesawB.color} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawB.ticker}</text>
-                <text x="580" y="210" textAnchor="middle" fill="#A09080" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawB.name.length > 20 ? seesawB.name.slice(0,18) + ".." : seesawB.name}</text>
+                <text x="580" y="210" textAnchor="middle" fill="var(--text-muted)" fontSize="8" fontFamily="Poppins" fontWeight="700">{seesawB.name.length > 20 ? seesawB.name.slice(0,18) + ".." : seesawB.name}</text>
 
                 {/* Weight block */}
                 <rect x="540" y={140 - Math.abs(returnB) * 1.2} width="80" height={Math.max(20, Math.abs(returnB) * 1.8)} rx="8" fill={returnB >= 0 ? "#5B8C5A" : "#EF5350"} opacity="0.85" />
@@ -3933,18 +3964,18 @@ function HedgeGuidesPage() {
                 <text x="580" y={134 - Math.abs(returnB) * 1.2} textAnchor="middle" fill={seesawB.color} fontSize="8" fontWeight="800">YTD RETURN</text>
 
                 {/* Price */}
-                <text x="580" y="240" textAnchor="middle" fill="#6B5A2E" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawB.price >= 1000 ? (seesawB.price).toLocaleString() : seesawB.price}</text>
+                <text x="580" y="240" textAnchor="middle" fill="var(--text-accent)" fontSize="12" fontWeight="700" fontFamily="JetBrains Mono">${seesawB.price >= 1000 ? (seesawB.price).toLocaleString() : seesawB.price}</text>
                 <text x="580" y="254" textAnchor="middle" fill={seesawB.change >= 0 ? "#5B8C5A" : "#EF5350"} fontSize="10" fontWeight="800" fontFamily="JetBrains Mono">{seesawB.change >= 0 ? "▲ +" : "▼ "}{seesawB.change}% today</text>
               </g>
 
               {/* Correlation indicator at center */}
-              <circle cx="350" cy="208" r="18" fill="#fff" stroke={corrVal < 0 ? "#EF5350" : "#C48830"} strokeWidth="2.5" />
-              <text x="350" y="206" textAnchor="middle" fill={corrVal < 0 ? "#EF5350" : "#C48830"} fontSize="9" fontWeight="900" fontFamily="JetBrains Mono">{corrVal >= 0 ? "+" : ""}{corrVal.toFixed(2)}</text>
-              <text x="350" y="216" textAnchor="middle" fill="#A09080" fontSize="6" fontWeight="700">CORR</text>
+              <circle cx="350" cy="208" r="18" fill="#fff" stroke={corrVal < 0 ? "#EF5350" : "var(--accent)"} strokeWidth="2.5" />
+              <text x="350" y="206" textAnchor="middle" fill={corrVal < 0 ? "#EF5350" : "var(--accent)"} fontSize="9" fontWeight="900" fontFamily="JetBrains Mono">{corrVal >= 0 ? "+" : ""}{corrVal.toFixed(2)}</text>
+              <text x="350" y="216" textAnchor="middle" fill="var(--text-muted)" fontSize="6" fontWeight="700">CORR</text>
             </g>
 
             {/* Description below */}
-            {seesawCorr && <text x="350" y="290" textAnchor="middle" fill="#8A7040" fontSize="10" fontWeight="600" fontFamily="Quicksand">{seesawCorr.desc}</text>}
+            {seesawCorr && <text x="350" y="290" textAnchor="middle" fill="var(--warm-text)" fontSize="10" fontWeight="600" fontFamily="Quicksand">{seesawCorr.desc}</text>}
           </svg>
         )}
       </div>
@@ -3958,9 +3989,9 @@ function HedgeGuidesPage() {
           if (!pA || !pB) return null;
           return (
             <div key={i} onClick={() => setSeesawPair({ a: c.a, b: c.b })}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderRadius: 10, marginBottom: 4, cursor: "pointer", background: "#FFEBEE08", border: "1px solid #F0E6D0", transition: "all .15s" }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderRadius: 10, marginBottom: 4, cursor: "pointer", background: "#FFEBEE08", border: "1px solid var(--accent-border)", transition: "all .15s" }}
               onMouseEnter={e => { e.currentTarget.style.background = "#FFEBEE22"; e.currentTarget.style.borderColor = "#EF535033"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#FFEBEE08"; e.currentTarget.style.borderColor = "#F0E6D0"; }}>
+              onMouseLeave={e => { e.currentTarget.style.background = "#FFEBEE08"; e.currentTarget.style.borderColor = "var(--accent-border)"; }}>
               <Icon name={pA.icon} size={12} />
               <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 17, minWidth: 30 }}>{pA.ticker}</span>
               <span style={{ color: "#EF5350", fontSize: 18, fontWeight: 700 }}>⟺</span>
@@ -4001,12 +4032,12 @@ function HoroscopePage() {
 
   // ── Cycle Correlations ──
   const cycles = [
-    { name: "Lunar Cycle (29.5d)", icon: "moon-full", phase: "Waxing Gibbous", correlation: "+68%", note: "Markets historically rally +0.8% in 5 days before full moon. Institutional buying peaks at waxing gibbous. Full moon = local top risk.", barPct: 68, color: "#C48830" },
+    { name: "Lunar Cycle (29.5d)", icon: "moon-full", phase: "Waxing Gibbous", correlation: "+68%", note: "Markets historically rally +0.8% in 5 days before full moon. Institutional buying peaks at waxing gibbous. Full moon = local top risk.", barPct: 68, color: "var(--accent)" },
     { name: "Mercury Retrograde", icon: "mercury", phase: "IN RETROGRADE", correlation: "-62%", note: "S&P averages -1.2% during Rx periods (3-4x/year, ~21 days each). Miscommunication drives earnings misses. Avoid initiating new positions.", barPct: 62, color: "#EF5350" },
     { name: "Sunspot Cycle (11yr)", icon: "sun", phase: "Solar Maximum", correlation: "+54%", note: "We're at solar max (Cycle 25, peak 2024-25). Historically correlated with market volatility spikes. The Jevons solar-economic hypothesis shows agricultural & commodity sensitivity.", barPct: 54, color: "#FFA726" },
     { name: "Saturn Return (29.5yr)", icon: "saturn", phase: "Pisces transit", correlation: "+71%", note: "Saturn entered Pisces 2023 — last time was 1994 (bond crisis) and 1964 (structural shift). Major financial regulation and institutional restructuring ahead.", barPct: 71, color: "#42A5F5" },
     { name: "Jupiter-Saturn Conjunction", icon: "jupiter-saturn", phase: "Next: 2040", correlation: "+73%", note: "Every ~20 years: 2000 (dot-com), 1980 (Volcker), 1961 (Kennedy boom), 1940 (war economy). 2020 conjunction marked COVID pivot. Pattern suggests next structural break ~2040.", barPct: 73, color: "#AB47BC" },
-    { name: "Metonic Cycle (19yr)", icon: "moon", phase: "Year 6 of 19", correlation: "+58%", note: "Moon returns to exact same phase on same calendar date every 19 years. 2007 → 2026 echo: credit conditions tightening, yield curve dynamics rhyming. Watch spring equinox.", barPct: 58, color: "#C48830" },
+    { name: "Metonic Cycle (19yr)", icon: "moon", phase: "Year 6 of 19", correlation: "+58%", note: "Moon returns to exact same phase on same calendar date every 19 years. 2007 → 2026 echo: credit conditions tightening, yield curve dynamics rhyming. Watch spring equinox.", barPct: 58, color: "var(--accent)" },
   ];
 
   // ── Current Celestial Weather ──
@@ -4033,7 +4064,7 @@ function HoroscopePage() {
       {/* View tabs */}
       <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
         {[{ id: "lunar", l: "Lunar" }, { id: "planets", l: "Planets" }, { id: "cycles", l: "Cycles" }].map(t => (
-          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", background: view === t.id ? "#1A1A2E" : "#fff", color: view === t.id ? "#E8DCC8" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", border: view !== t.id ? "1.5px solid #F0E6D0" : "1.5px solid #1A1A2E" }}>{t.l}</button>
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "none", background: view === t.id ? "#1A1A2E" : "#fff", color: view === t.id ? "var(--border-light)" : "var(--text-muted)", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", border: view !== t.id ? "1.5px solid var(--accent-border)" : "1.5px solid #1A1A2E" }}>{t.l}</button>
         ))}
       </div>
 
@@ -4056,16 +4087,16 @@ function HoroscopePage() {
           <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(255,255,255,.05)", borderRadius: 10, padding: "8px 10px", marginBottom: 8 }}>
             <div style={{ fontSize: 42, lineHeight: 1 }}></div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif" }}>{moonPhase}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "var(--border-light)", fontFamily: "'Instrument Serif', serif" }}>{moonPhase}</div>
               <div style={{ fontSize: 12, color: "#7A8BA0" }}>Day {lunarDay} of 29.5 · {moonPct}% illuminated</div>
               <div style={{ display: "flex", gap: 8, marginTop: 3 }}>
-                <span style={{ fontSize: 11, color: "#C48830", fontWeight: 700 }}>Full in {nextFull}d</span>
+                <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 700 }}>Full in {nextFull}d</span>
                 <span style={{ fontSize: 11, color: "#7A8BA0", fontWeight: 700 }}>New in {nextNew}d</span>
               </div>
             </div>
             {/* Moon progress bar */}
             <div style={{ width: 50, height: 50, borderRadius: "50%", border: "2px solid #334", position: "relative", overflow: "hidden", flexShrink: 0 }}>
-              <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: moonPct + "%", background: "#E8DCC8", transition: "width .5s" }} />
+              <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: moonPct + "%", background: "var(--border-light)", transition: "width .5s" }} />
             </div>
           </div>
           <p style={{ fontSize: 12, color: "#9AABBD", lineHeight: 1.5 }}>{celestialWeather.summary}</p>
@@ -4094,8 +4125,8 @@ function HoroscopePage() {
           <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Lunar Cycle → Market Pattern (50yr data)</div>
           <div style={{ display: "flex", gap: 2, alignItems: "flex-end", height: 50, marginBottom: 4 }}>
             {[3,5,7,8,10,9,7,4,2,-1,-3,-4,-2,0,2,4,6,8,9,10,8,6,4,3,2,1,0,-1,3,5].map((v, i) => (
-              <div key={i} style={{ flex: 1, height: Math.abs(v) * 4 + 2, background: v >= 0 ? "#C48830" : "#EF5350", borderRadius: 1, opacity: i === lunarDay ? 1 : 0.4, transition: "all .3s", position: "relative" }}>
-                {i === lunarDay && <div style={{ position: "absolute", top: -6, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "#C48830" }} />}
+              <div key={i} style={{ flex: 1, height: Math.abs(v) * 4 + 2, background: v >= 0 ? "var(--accent)" : "#EF5350", borderRadius: 1, opacity: i === lunarDay ? 1 : 0.4, transition: "all .3s", position: "relative" }}>
+                {i === lunarDay && <div style={{ position: "absolute", top: -6, left: "50%", transform: "translateX(-50%)", width: 4, height: 4, borderRadius: "50%", background: "var(--accent)" }} />}
               </div>
             ))}
           </div>
@@ -4103,7 +4134,7 @@ function HoroscopePage() {
             <span>New</span><span>Q1</span><span>Full</span><span>Q3</span><span>New</span>
           </div>
           <div style={{ fontSize: 12, color: "#8A7A68", marginTop: 6, lineHeight: 1.4 }}>
-            Strongest returns cluster around waxing phases (days 5-13). Post-full-moon correction is statistically significant (p &lt; 0.03). Current position: <span style={{ fontWeight: 800, color: "#C48830" }}>day {lunarDay} — approaching peak</span>.
+            Strongest returns cluster around waxing phases (days 5-13). Post-full-moon correction is statistically significant (p &lt; 0.03). Current position: <span style={{ fontWeight: 800, color: "var(--accent)" }}>day {lunarDay} — approaching peak</span>.
           </div>
         </div>
       </div>}
@@ -4112,12 +4143,12 @@ function HoroscopePage() {
       {view === "planets" && <div>
         <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Planetary Positions & Market Effects</div>
         {planets.map((p, i) => (
-          <div key={i} style={{ background: p.retro ? "#1A1A2E" : "#fff", border: `1.5px solid ${p.retro ? "#EF535044" : "#F0E6D0"}`, borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
+          <div key={i} style={{ background: p.retro ? "#1A1A2E" : "#fff", border: `1.5px solid ${p.retro ? "#EF535044" : "var(--accent-border)"}`, borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
               <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                 <span style={{ fontSize: 24, fontFamily: "serif" }}>{p.symbol}</span>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: p.retro ? "#E8DCC8" : "#5C4A1E" }}>{p.name} <span style={{ fontWeight: 600, color: p.retro ? "#7A8BA0" : "#8A7A68" }}>in {p.sign}</span></div>
+                  <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: p.retro ? "var(--border-light)" : "var(--text-accent-dark)" }}>{p.name} <span style={{ fontWeight: 600, color: p.retro ? "#7A8BA0" : "#8A7A68" }}>in {p.sign}</span></div>
                   {p.retro && <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 1 }}>
                     <span style={{ fontSize: 11, fontWeight: 900, background: "#EF5350", color: "#fff", padding: "1px 5px", borderRadius: 3, animation: "blink 2s ease infinite" }}>℞ RETROGRADE</span>
                     <span style={{ fontSize: 11, color: "#7A8BA0" }}>{p.retroDates}</span>
@@ -4134,7 +4165,7 @@ function HoroscopePage() {
 
         {/* Retrograde Calendar */}
         <div style={{ background: "#1A1A2E", borderRadius: 10, padding: "8px 10px", marginTop: 6 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Retrograde Calendar 2026</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "var(--border-light)", fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Retrograde Calendar 2026</div>
           {[
             { planet: "Mercury", dates: "Feb 4 – Feb 24", status: "ACTIVE", color: "#EF5350" },
             { planet: "Mercury", dates: "May 29 – Jun 22", status: "Upcoming", color: "#FFA726" },
@@ -4143,7 +4174,7 @@ function HoroscopePage() {
             { planet: "Mars", dates: "Oct 30 – Jan 12 '27", status: "Upcoming", color: "#FFA726" },
           ].map((r, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderTop: i > 0 ? "1px solid #ffffff11" : "none" }}>
-              <span style={{ fontSize: 14, color: "#E8DCC8", fontWeight: 600 }}>{r.planet}</span>
+              <span style={{ fontSize: 14, color: "var(--border-light)", fontWeight: 600 }}>{r.planet}</span>
               <span style={{ fontSize: 12, color: "#7A8BA0", fontFamily: "JetBrains Mono" }}>{r.dates}</span>
               <span style={{ fontSize: 11, fontWeight: 800, color: r.color, background: r.color + "22", padding: "1px 5px", borderRadius: 3 }}>{r.status}</span>
             </div>
@@ -4170,7 +4201,7 @@ function HoroscopePage() {
               </div>
             </div>
             {/* Correlation bar */}
-            <div style={{ height: 4, background: "#F0E6D0", borderRadius: 2, marginBottom: 4 }}>
+            <div style={{ height: 4, background: "var(--accent-border)", borderRadius: 2, marginBottom: 4 }}>
               <div style={{ height: "100%", width: c.barPct + "%", background: c.color, borderRadius: 2, transition: "width .5s" }} />
             </div>
             <div style={{ fontSize: 12, color: "#8A7A68", lineHeight: 1.4 }}>{c.note}</div>
@@ -4179,7 +4210,7 @@ function HoroscopePage() {
 
         {/* Historical echo */}
         <div style={{ background: "linear-gradient(135deg, #0D1B2A, #162447)", borderRadius: 10, padding: "10px 12px", marginTop: 6 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Cyclical Echo: 2007 → 2026</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "var(--border-light)", fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Cyclical Echo: 2007 → 2026</div>
           <div style={{ fontSize: 12, color: "#9AABBD", lineHeight: 1.5 }}>
             The Metonic cycle (19 years) places 2026 as a lunar echo of 2007. Key parallels: yield curve normalization after prolonged inversion, housing market stretched, credit conditions tightening, and Saturn in the same sign. The 2007 analog suggests a <span style={{ fontWeight: 800, color: "#EF5350" }}>Q3 vulnerability window</span> — but Jupiter's Taurus transit (absent in 2007) provides a stabilizing counterweight through material wealth expansion.
           </div>
@@ -4215,7 +4246,7 @@ function WeatherMarketPage() {
       affected: [{ ticker: "CORN", move: "+2.1%", clr: "#5B8C5A" }, { ticker: "DE", move: "-1.2%", clr: "#EF5350" }, { ticker: "UNG", move: "+2.8%", clr: "#5B8C5A" }, { ticker: "RAIL", move: "-0.9%", clr: "#EF5350" }] },
     { name: "West Coast", icon: "wave", temp: "58°F", condition: "Rain", wind: "12mph W", sentiment: "Neutral", color: "#FFA726",
       impact: "Atmospheric river brings heavy rain to CA. Drought relief positive for agriculture long-term but short-term flooding risks. Tech corridor unaffected.",
-      affected: [{ ticker: "AAPL", move: "0.0%", clr: "#A09080" }, { ticker: "DWA", move: "+0.4%", clr: "#5B8C5A" }, { ticker: "AGR", move: "+1.1%", clr: "#5B8C5A" }, { ticker: "PG", move: "-0.2%", clr: "#EF5350" }] },
+      affected: [{ ticker: "AAPL", move: "0.0%", clr: "var(--text-muted)" }, { ticker: "DWA", move: "+0.4%", clr: "#5B8C5A" }, { ticker: "AGR", move: "+1.1%", clr: "#5B8C5A" }, { ticker: "PG", move: "-0.2%", clr: "#EF5350" }] },
     { name: "Gulf Coast", icon: "oil-barrel", temp: "65°F", condition: "Partly Cloudy", wind: "10mph SE", sentiment: "Bullish", color: "#5B8C5A",
       impact: "Calm conditions for Gulf oil operations. Refinery throughput at full capacity. No tropical threats in forecast. Energy production stable.",
       affected: [{ ticker: "XOM", move: "+0.5%", clr: "#5B8C5A" }, { ticker: "CVX", move: "+0.4%", clr: "#5B8C5A" }, { ticker: "PSX", move: "+0.7%", clr: "#5B8C5A" }, { ticker: "SLB", move: "+0.3%", clr: "#5B8C5A" }] },
@@ -4227,7 +4258,7 @@ function WeatherMarketPage() {
     { pattern: "Spring Planting", period: "Mar–May", correlation: "+61%", desc: "Corn/soybean futures react to planting-season moisture. Too wet delays planting → futures spike. Ideal conditions → agri-stocks rally.", barPct: 61, color: "#5B8C5A", active: false },
     { pattern: "Hurricane Season", period: "Jun–Nov", correlation: "+77%", desc: "Gulf hurricanes disrupt 45% of US refining. Historical: Cat 3+ storm = oil +8%, insurance stocks -5%. Rebuilding boosts HD, LOW.", barPct: 77, color: "#FFA726", active: false },
     { pattern: "Summer Drought Risk", period: "Jun–Aug", correlation: "+65%", desc: "Corn belt drought = crop failure risk. 2012 drought: corn +50% in 8 weeks. Water utilities and irrigation companies benefit.", barPct: 65, color: "#EF5350", active: false },
-    { pattern: "Harvest Pressure", period: "Sep–Oct", correlation: "+58%", desc: "Record harvests depress grain prices as supply floods market. Good weather = bearish crops, bullish food processors.", barPct: 58, color: "#C48830", active: false },
+    { pattern: "Harvest Pressure", period: "Sep–Oct", correlation: "+58%", desc: "Record harvests depress grain prices as supply floods market. Good weather = bearish crops, bullish food processors.", barPct: 58, color: "var(--accent)", active: false },
   ];
 
   const weatherAlpha = {
@@ -4252,7 +4283,7 @@ function WeatherMarketPage() {
 
       <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
         {[{ id: "current", l: "Live" }, { id: "seasonal", l: "Seasonal" }, { id: "alpha", l: "Alpha" }].map(t => (
-          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#42A5F5" : "#F0E6D0"}`, background: view === t.id ? "#42A5F5" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#42A5F5" : "var(--accent-border)"}`, background: view === t.id ? "#42A5F5" : "#fff", color: view === t.id ? "#fff" : "var(--text-muted)", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
         ))}
       </div>
 
@@ -4290,10 +4321,10 @@ function WeatherMarketPage() {
               </div>
               <span style={{ fontSize: 12, fontWeight: 800, color: r.color, background: r.color + "15", padding: "2px 6px", borderRadius: 4 }}>{r.sentiment}</span>
             </div>
-            <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3, marginBottom: 6 }}>{r.impact}</div>
+            <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.3, marginBottom: 6 }}>{r.impact}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 3 }}>
               {r.affected.map((a, j) => (
-                <div key={j} style={{ background: "#FFFDF5", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
+                <div key={j} style={{ background: "var(--page-bg)", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800 }}>{a.ticker}</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: a.clr }}>{a.move}</div>
                 </div>
@@ -4307,7 +4338,7 @@ function WeatherMarketPage() {
       {view === "seasonal" && <div>
         <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6, color: "#333334" }}>Seasonal Weather Patterns × Market Correlation</div>
         {seasonal.map((s, i) => (
-          <div key={i} style={{ background: s.active ? s.color + "08" : "#fff", border: `1.5px solid ${s.active ? s.color + "44" : "#F0E6D0"}`, borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
+          <div key={i} style={{ background: s.active ? s.color + "08" : "#fff", border: `1.5px solid ${s.active ? s.color + "44" : "var(--accent-border)"}`, borderRadius: 10, padding: "8px 10px", marginBottom: 4, animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>
@@ -4320,10 +4351,10 @@ function WeatherMarketPage() {
                 <div style={{ fontSize: 11, color: "#33333480" }}>correlation</div>
               </div>
             </div>
-            <div style={{ height: 4, background: "#F0E6D0", borderRadius: 2, marginBottom: 4 }}>
+            <div style={{ height: 4, background: "var(--accent-border)", borderRadius: 2, marginBottom: 4 }}>
               <div style={{ height: "100%", width: s.barPct + "%", background: s.color, borderRadius: 2 }} />
             </div>
-            <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3 }}>{s.desc}</div>
+            <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.3 }}>{s.desc}</div>
           </div>
         ))}
 
@@ -4358,19 +4389,19 @@ function WeatherMarketPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
               <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: s.color }}>{s.signal}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <div style={{ width: 40, height: 4, background: "#F0E6D0", borderRadius: 2 }}>
+                <div style={{ width: 40, height: 4, background: "var(--accent-border)", borderRadius: 2 }}>
                   <div style={{ height: "100%", width: s.confidence + "%", background: s.color, borderRadius: 2 }} />
                 </div>
                 <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: s.color }}>{s.confidence}%</span>
               </div>
             </div>
-            <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3 }}>{s.reason}</div>
+            <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.3 }}>{s.reason}</div>
           </div>
         ))}
 
         {/* Historical weather alpha */}
         <div style={{ background: "linear-gradient(135deg, #1B3A5C, #2D5A87)", borderRadius: 10, padding: "10px 12px", marginTop: 6 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: "#E8DCC8", fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Historical Weather Alpha (10yr backtest)</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "var(--border-light)", fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Historical Weather Alpha (10yr backtest)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
             {[
               { label: "Cold Snap → Nat Gas", win: "78%", avgReturn: "+4.2%", clr: "#5B8C5A" },
@@ -4435,9 +4466,9 @@ function CurrenciesScenarioPage() {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 4, marginBottom: 8 }}>
         {Object.entries(pairs).map(([id, pr]) => (
-          <button key={id} onClick={() => setPair(id)} style={{ padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${pair === id ? "#C48830" : "#F0E6D0"}`, background: pair === id ? "#FFF8EE" : "#fff", cursor: "pointer", textAlign: "center" }}>
+          <button key={id} onClick={() => setPair(id)} style={{ padding: "8px 4px", borderRadius: 10, border: `1.5px solid ${pair === id ? "var(--accent)" : "var(--accent-border)"}`, background: pair === id ? "var(--accent-bg)" : "#fff", cursor: "pointer", textAlign: "center" }}>
             <div><Icon name={pr.icon} size={14} /></div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: pair === id ? "#C48830" : "#A09080" }}>{id.toUpperCase()}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: pair === id ? "var(--accent)" : "var(--text-muted)" }}>{id.toUpperCase()}</div>
           </button>
         ))}
       </div>
@@ -4455,7 +4486,7 @@ function CurrenciesScenarioPage() {
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#33333480" }}>{sc.prob}</span>
               </div>
             </div>
-            <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3 }}>{sc.desc}</div>
+            <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.3 }}>{sc.desc}</div>
           </div>
         ))}
       </div>
@@ -4471,7 +4502,7 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
   const [chartHover, setChartHover] = useState(null);
   const [period, setPeriod] = useState("2Y");
   const chartRef = useRef(null);
-  if (!ind) return <div style={{ padding: 20, textAlign: "center", color: "#A09080" }}>Indicator not found</div>;
+  if (!ind) return <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)" }}>Indicator not found</div>;
 
   const periodData = ind.periods?.[period] || ind.periods?.["2Y"] || { dates: [], data: [] };
   const pts = periodData.data;
@@ -4480,9 +4511,9 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
   const baseVal = pts[0];
 
   const analysis = analyzeHistory(pts);
-  const sc = { bullish: "#5B8C5A", bearish: "#EF5350", neutral: "#A09080" };
+  const sc = { bullish: "#5B8C5A", bearish: "#EF5350", neutral: "var(--text-muted)" };
   const delta = ind.value - ind.prev;
-  const clr = sc[ind.signal] || "#A09080";
+  const clr = sc[ind.signal] || "var(--text-muted)";
 
   // Related alerts & news
   const relatedAlerts = macroAlerts.filter(a =>
@@ -4531,7 +4562,7 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
     <div style={{ animation: "fadeUp .3s ease both" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <button onClick={onBack} style={{ background: "#fff", borderRadius: 12, width: 34, height: 34, border: "1.5px solid #F0E6D0", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>←</button>
+        <button onClick={onBack} style={{ background: "#fff", borderRadius: 12, width: 34, height: 34, border: "1.5px solid var(--accent-border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>←</button>
         <Icon name={details.icon || "chart-bar"} size={16} color={clr} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{ind.name}</div>
@@ -4561,8 +4592,8 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: sc[analysis.maSignal], background: sc[analysis.maSignal] + "15", padding: "2px 8px", borderRadius: 6 }}>MA-5: {analysis.ma5.toFixed(2)}</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#33333480", background: "#F5F0E8", padding: "2px 8px", borderRadius: 6 }}>MA-10: {analysis.ma10.toFixed(2)}</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#C48830", background: "#FFF8EE", padding: "2px 8px", borderRadius: 6 }}>Weight: {(ind.weight * 100).toFixed(0)}%</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#33333480", background: "var(--surface-light)", padding: "2px 8px", borderRadius: 6 }}>MA-10: {analysis.ma10.toFixed(2)}</span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", background: "var(--accent-bg)", padding: "2px 8px", borderRadius: 6 }}>Weight: {(ind.weight * 100).toFixed(0)}%</span>
         </div>
 
         {/* Interactive Chart */}
@@ -4575,8 +4606,8 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
             {/* Grid lines */}
             {gridLines.map((g, i) => (
               <g key={i}>
-                <line x1={PX} y1={g.y} x2={W - PX} y2={g.y} stroke="#F0E6D0" strokeWidth=".8" />
-                <text x={PX - 6} y={g.y + 4} textAnchor="end" fontSize="9" fill="#A09080" fontFamily="JetBrains Mono">{g.val}</text>
+                <line x1={PX} y1={g.y} x2={W - PX} y2={g.y} stroke="var(--accent-border)" strokeWidth=".8" />
+                <text x={PX - 6} y={g.y + 4} textAnchor="end" fontSize="9" fill="var(--text-muted)" fontFamily="JetBrains Mono">{g.val}</text>
               </g>
             ))}
             {/* Support & Resistance lines */}
@@ -4591,13 +4622,13 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
                 const maVal = pts.slice(i - 4, i + 1).reduce((a, b) => a + b, 0) / 5;
                 return `${i === 4 ? "M" : "L"}${chartPts[i].x.toFixed(1)},${toY(maVal).toFixed(1)}`;
               }).filter(Boolean).join(" ");
-              return <path d={maPath} fill="none" stroke="#C48830" strokeWidth="1.2" strokeDasharray="3,3" opacity="0.6" />;
+              return <path d={maPath} fill="none" stroke="var(--accent)" strokeWidth="1.2" strokeDasharray="3,3" opacity="0.6" />;
             })()}
             {/* Key levels */}
             {keyLevelEntries.map(([label, val], i) => (
               <g key={i}>
                 <line x1={PX} y1={toY(val)} x2={W - PX} y2={toY(val)} stroke="#C4883060" strokeWidth="0.8" strokeDasharray="2,3" />
-                <text x={PX + 4} y={toY(val) - 4} fontSize="8" fill="#C48830" fontWeight="600">{label} ({val})</text>
+                <text x={PX + 4} y={toY(val) - 4} fontSize="8" fill="var(--accent)" fontWeight="600">{label} ({val})</text>
               </g>
             ))}
             {/* Area fill */}
@@ -4609,7 +4640,7 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
             {chartPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill="#fff" stroke={clr} strokeWidth="2" />)}
             {/* X-axis labels */}
             {[0, Math.floor(n / 4), Math.floor(n / 2), Math.floor(3 * n / 4), n - 1].map((i, idx) => (
-              <text key={idx} x={chartPts[i].x} y={H - 1} textAnchor="middle" fontSize="9" fill="#A09080" fontFamily="Quicksand" fontWeight="600">{chartPts[i].label}</text>
+              <text key={idx} x={chartPts[i].x} y={H - 1} textAnchor="middle" fontSize="9" fill="var(--text-muted)" fontFamily="Quicksand" fontWeight="600">{chartPts[i].label}</text>
             ))}
             {/* Hover indicator */}
             {chartHover && <g>
@@ -4625,50 +4656,50 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
           <div style={{ display: "flex", gap: 8 }}>
-            <span style={{ fontSize: 11, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 2, background: clr, borderRadius: 1 }} />Price</span>
-            <span style={{ fontSize: 11, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #C48830" }} />MA-5</span>
-            <span style={{ fontSize: 11, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #5B8C5A" }} />S</span>
-            <span style={{ fontSize: 11, color: "#A09080", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #EF5350" }} />R</span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 2, background: clr, borderRadius: 1 }} />Price</span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed var(--accent)" }} />MA-5</span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #5B8C5A" }} />S</span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}><span style={{ width: 10, height: 1, borderTop: "2px dashed #EF5350" }} />R</span>
           </div>
-          <div style={{ display: "flex", gap: 1, background: "#FFFDF5", borderRadius: 8, padding: 2 }}>
+          <div style={{ display: "flex", gap: 1, background: "var(--page-bg)", borderRadius: 8, padding: 2 }}>
             {["1Y","2Y","5Y","10Y"].map(t => (
               <button key={t} onClick={() => { setPeriod(t); setChartHover(null); }}
-                style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "#C48830" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none", transition: "all .15s" }}>{t}</button>
+                style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: period === t ? "#fff" : "transparent", color: period === t ? "var(--accent)" : "var(--text-muted)", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", boxShadow: period === t ? "0 1px 4px rgba(0,0,0,.06)" : "none", transition: "all .15s" }}>{t}</button>
             ))}
           </div>
         </div>
       </div>
 
       {/* Pattern Recognition */}
-      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #C4883022" }}>
-        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "#C48830" }}>Pattern Recognition</div>
+      <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid var(--accent-a13)" }}>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 8, color: "var(--accent)" }}>Pattern Recognition</div>
         {analysis.patterns.length > 0 ? (
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
             {analysis.patterns.map((p, i) => (
               <span key={i} style={{ fontSize: 11, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: sc[p.type] + "15", color: sc[p.type], border: `1px solid ${sc[p.type]}30` }}>{p.label}</span>
             ))}
           </div>
-        ) : <div style={{ fontSize: 12, color: "#A09080", marginBottom: 8 }}>No significant patterns detected</div>}
+        ) : <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 8 }}>No significant patterns detected</div>}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Trend</div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: analysis.trendDirection === "rising" ? "#5B8C5A" : analysis.trendDirection === "falling" ? "#EF5350" : "#A09080", textTransform: "capitalize" }}>{analysis.trendDirection}</div>
-            <div style={{ fontSize: 11, color: "#A09080", fontFamily: "JetBrains Mono" }}>slope {analysis.slope >= 0 ? "+" : ""}{analysis.slope.toFixed(3)}/p</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: analysis.trendDirection === "rising" ? "#5B8C5A" : analysis.trendDirection === "falling" ? "#EF5350" : "var(--text-muted)", textTransform: "capitalize" }}>{analysis.trendDirection}</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "JetBrains Mono" }}>slope {analysis.slope >= 0 ? "+" : ""}{analysis.slope.toFixed(3)}/p</div>
           </div>
           <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Momentum</div>
             <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "JetBrains Mono", color: analysis.roc5 >= 0 ? "#5B8C5A" : "#EF5350" }}>{analysis.roc5 >= 0 ? "+" : ""}{analysis.roc5.toFixed(1)}%</div>
-            <div style={{ fontSize: 11, color: "#A09080" }}>5-period ROC</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>5-period ROC</div>
           </div>
           <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Streak</div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: analysis.streak > 0 ? "#5B8C5A" : analysis.streak < 0 ? "#EF5350" : "#A09080" }}>{analysis.streak > 0 ? "+" : ""}{analysis.streak} periods</div>
-            <div style={{ fontSize: 11, color: "#A09080" }}>{analysis.streak > 0 ? "consecutive rises" : analysis.streak < 0 ? "consecutive falls" : "no streak"}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: analysis.streak > 0 ? "#5B8C5A" : analysis.streak < 0 ? "#EF5350" : "var(--text-muted)" }}>{analysis.streak > 0 ? "+" : ""}{analysis.streak} periods</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{analysis.streak > 0 ? "consecutive rises" : analysis.streak < 0 ? "consecutive falls" : "no streak"}</div>
           </div>
           <div style={{ background: "#FAFAFA", borderRadius: 8, padding: "6px 8px" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Volatility</div>
             <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "JetBrains Mono", color: "#333334" }}>{analysis.volatility.toFixed(3)}</div>
-            <div style={{ fontSize: 11, color: "#A09080" }}>avg chg: {analysis.avgChange.toFixed(3)}</div>
+            <div style={{ fontSize: 11, color: "var(--text-muted)" }}>avg chg: {analysis.avgChange.toFixed(3)}</div>
           </div>
         </div>
       </div>
@@ -4683,7 +4714,7 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
             { label: "Range", val: analysis.range.toFixed(2), clr: "#333334" },
             { label: "Support", val: analysis.support.toFixed(2) + (ind.unit || ""), clr: "#5B8C5A" },
             { label: "Resistance", val: analysis.resistance.toFixed(2) + (ind.unit || ""), clr: "#EF5350" },
-            { label: "Percentile", val: analysis.percentile + "th", clr: "#C48830" },
+            { label: "Percentile", val: analysis.percentile + "th", clr: "var(--accent)" },
           ].map((s, i) => (
             <div key={i} style={{ background: "#FAFAFA", borderRadius: 8, padding: "5px 7px", textAlign: "center" }}>
               <div style={{ fontSize: 9, fontWeight: 800, color: "#33333480", textTransform: "uppercase", marginBottom: 2 }}>{s.label}</div>
@@ -4694,18 +4725,18 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
         {/* Range bar */}
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", marginBottom: 3 }}>Position in Range</div>
-          <div style={{ position: "relative", height: 8, background: "#F5F0E8", borderRadius: 4 }}>
-            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${analysis.percentile}%`, background: `linear-gradient(90deg, #5B8C5A, ${analysis.percentile > 70 ? "#EF5350" : "#C48830"})`, borderRadius: 4 }} />
+          <div style={{ position: "relative", height: 8, background: "var(--surface-light)", borderRadius: 4 }}>
+            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${analysis.percentile}%`, background: `linear-gradient(90deg, #5B8C5A, ${analysis.percentile > 70 ? "#EF5350" : "var(--accent)"})`, borderRadius: 4 }} />
             <div style={{ position: "absolute", top: -2, left: `${analysis.percentile}%`, transform: "translateX(-50%)", width: 12, height: 12, borderRadius: "50%", background: "#fff", border: `2px solid ${clr}`, boxShadow: "0 1px 4px rgba(0,0,0,.15)" }} />
           </div>
         </div>
       </div>
 
       {/* About */}
-      {details.desc && <div style={{ background: "#FFF8EE", borderRadius: 12, padding: "10px 12px", marginBottom: 8, border: "1px solid #C4883022" }}>
-        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#C48830", marginBottom: 4 }}>About {ind.name}</div>
-        <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.5 }}>{details.desc}</div>
-        {details.release && <div style={{ fontSize: 11, color: "#A09080", marginTop: 4 }}>Next release: <span style={{ fontWeight: 800, color: "#C48830" }}>{details.release}</span></div>}
+      {details.desc && <div style={{ background: "var(--accent-bg)", borderRadius: 12, padding: "10px 12px", marginBottom: 8, border: "1px solid var(--accent-a13)" }}>
+        <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "var(--accent)", marginBottom: 4 }}>About {ind.name}</div>
+        <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.5 }}>{details.desc}</div>
+        {details.release && <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>Next release: <span style={{ fontWeight: 800, color: "var(--accent)" }}>{details.release}</span></div>}
       </div>}
 
       {/* Impact Assets */}
@@ -4713,7 +4744,7 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
         <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Impacted Assets</div>
         <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
           {details.impactAssets.map(t => (
-            <span key={t} style={{ fontSize: 12, fontWeight: 800, fontFamily: "JetBrains Mono", padding: "4px 10px", borderRadius: 8, background: "#F5F0E8", color: "#5C4A1E", cursor: "pointer" }}>{t}</span>
+            <span key={t} style={{ fontSize: 12, fontWeight: 800, fontFamily: "JetBrains Mono", padding: "4px 10px", borderRadius: 8, background: "var(--surface-light)", color: "var(--text-accent-dark)", cursor: "pointer" }}>{t}</span>
           ))}
         </div>
       </div>}
@@ -4725,7 +4756,7 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
           const sevCol = { critical: "#EF5350", warning: "#FFA726", info: "#42A5F5" };
           const sevBg = { critical: "#FFEBEE", warning: "#FFF3E0", info: "#E3F2FD" };
           return (
-            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+            <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
               <Icon name={a.icon} size={11} color={sevCol[a.severity]} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 800 }}>{a.title}</div>
@@ -4733,7 +4764,7 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
               </div>
               <div style={{ textAlign: "right" }}>
                 <span style={{ fontSize: 11, fontWeight: 800, background: sevBg[a.severity], color: sevCol[a.severity], padding: "2px 6px", borderRadius: 4 }}>{a.severity.toUpperCase()}</span>
-                <div style={{ fontSize: 11, color: "#A09080", marginTop: 2 }}>{a.time} ago</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{a.time} ago</div>
               </div>
             </div>
           );
@@ -4744,16 +4775,16 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
       {relatedNews.length > 0 && <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
         <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Related News</div>
         {relatedNews.map((f, i) => (
-          <div key={f.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+          <div key={f.id} style={{ padding: "8px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-              <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 4, background: f.impact === "bullish" ? "#5B8C5A18" : f.impact === "bearish" ? "#EF535018" : "#F5F0E8", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "#A09080", flexShrink: 0, marginTop: 1 }}>{f.cat}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 5px", borderRadius: 4, background: f.impact === "bullish" ? "#5B8C5A18" : f.impact === "bearish" ? "#EF535018" : "var(--surface-light)", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "var(--text-muted)", flexShrink: 0, marginTop: 1 }}>{f.cat}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#333334", lineHeight: 1.3, marginBottom: 2 }}>{f.headline}</div>
                 <div style={{ fontSize: 11, color: "#33333480", lineHeight: 1.4 }}>{f.desc.slice(0, 100)}...</div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div style={{ fontSize: 11, color: "#A09080", fontFamily: "JetBrains Mono" }}>{f.time}</div>
-                <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "JetBrains Mono", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "#A09080" }}>{f.move}</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "JetBrains Mono" }}>{f.time}</div>
+                <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "JetBrains Mono", color: f.impact === "bullish" ? "#5B8C5A" : f.impact === "bearish" ? "#EF5350" : "var(--text-muted)" }}>{f.move}</div>
               </div>
             </div>
           </div>
@@ -4767,7 +4798,7 @@ function IndicatorDetailPage({ indicatorId, onBack, onSelectIndicator, liveNews 
           {details.related.map(rid => {
             const ri = macroDashboardData.find(m => m.id === rid);
             if (!ri) return null;
-            const rClr = sc[ri.signal] || "#A09080";
+            const rClr = sc[ri.signal] || "var(--text-muted)";
             const rDelta = ri.value - ri.prev;
             return (
               <div key={rid} onClick={() => onSelectIndicator && onSelectIndicator(rid)} style={{ background: "#fff", borderRadius: 10, padding: "8px 12px", border: `1px solid ${rClr}22`, cursor: "pointer", flexShrink: 0, minWidth: 100 }}>
@@ -4795,7 +4826,7 @@ function PieChartInteractive({ arcs, slices, cx, cy, rx, ry, depth, darken, divC
     .sort((a, b) => a.midAngle - b.midAngle);
 
   return (
-    <div style={{ background: "#fff", borderRadius: 14, padding: "12px 10px", border: "1px solid #F0E6D0", marginBottom: 8 }}>
+    <div style={{ background: "#fff", borderRadius: 14, padding: "12px 10px", border: "1px solid var(--accent-border)", marginBottom: 8 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
         <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Portfolio Allocation</div>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -4840,12 +4871,12 @@ function PieChartInteractive({ arcs, slices, cx, cy, rx, ry, depth, darken, divC
           {active ? (
             <>
               <text x={cx} y={cy - 4} textAnchor="middle" style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, fill: active.color }}>{active.pct.toFixed(1)}%</text>
-              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 11, fontWeight: 700, fill: "#A09080" }}>{active.ticker}</text>
+              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 11, fontWeight: 700, fill: "var(--text-muted)" }}>{active.ticker}</text>
             </>
           ) : (
             <>
               <text x={cx} y={cy - 3} textAnchor="middle" style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 900, fill: "#333334" }}>{slices.length}</text>
-              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 11, fontWeight: 700, fill: "#A09080" }}>stocks</text>
+              <text x={cx} y={cy + 8} textAnchor="middle" style={{ fontFamily: "Quicksand", fontSize: 11, fontWeight: 700, fill: "var(--text-muted)" }}>stocks</text>
             </>
           )}
         </svg>
@@ -4853,18 +4884,18 @@ function PieChartInteractive({ arcs, slices, cx, cy, rx, ry, depth, darken, divC
 
       {/* Tooltip card on select */}
       {active && (
-        <div style={{ background: "#FFFDF5", borderRadius: 10, padding: "8px 10px", marginTop: 4, border: `1.5px solid ${active.color}33`, animation: "popIn .2s ease both" }}>
+        <div style={{ background: "var(--page-bg)", borderRadius: 10, padding: "8px 10px", marginTop: 4, border: `1.5px solid ${active.color}33`, animation: "popIn .2s ease both" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div style={{ width: 8, height: 8, borderRadius: 2, background: active.color }} />
               <span style={{ fontWeight: 800, fontSize: 15, fontFamily: "'Instrument Serif', serif" }}>{active.ticker}</span>
-              <span style={{ fontSize: 12, color: "#A09080" }}>{active.name}</span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{active.name}</span>
             </div>
             <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 900, color: active.color }}>{active.pct.toFixed(1)}%</span>
           </div>
           <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-            <div><div style={{ fontSize: 11, color: "#A09080", fontWeight: 700 }}>VALUE</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800 }}>{fmt(active.value)}</div></div>
-            <div><div style={{ fontSize: 11, color: "#A09080", fontWeight: 700 }}>OF TOTAL</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800 }}>{fmt(totalVal)}</div></div>
+            <div><div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700 }}>VALUE</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800 }}>{fmt(active.value)}</div></div>
+            <div><div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 700 }}>OF TOTAL</div><div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800 }}>{fmt(totalVal)}</div></div>
           </div>
         </div>
       )}
@@ -4872,7 +4903,7 @@ function PieChartInteractive({ arcs, slices, cx, cy, rx, ry, depth, darken, divC
       {/* Legend grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "3px 10px", marginTop: 8 }}>
         {arcs.map((a, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 4px", borderRadius: 6, cursor: "pointer", background: activeIdx === i ? "#FFFDF5" : "transparent", transition: "background .15s" }}
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 4px", borderRadius: 6, cursor: "pointer", background: activeIdx === i ? "var(--page-bg)" : "transparent", transition: "background .15s" }}
             onClick={() => setActiveIdx(activeIdx === i ? null : i)}
             onMouseEnter={() => setActiveIdx(i)} onMouseLeave={() => setActiveIdx(null)}>
             <div style={{ width: 7, height: 7, borderRadius: 2, background: a.color, flexShrink: 0 }} />
@@ -4900,7 +4931,7 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
     <div>
       {/* ── Header with Back Button ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, animation: "fadeUp .3s ease both" }}>
-        <button onClick={() => onNavigate("dashboard")} style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, border: "1.5px solid #F0E6D0", flexShrink: 0 }}>←</button>
+        <button onClick={() => onNavigate("dashboard")} style={{ background: "#fff", borderRadius: 12, width: 38, height: 38, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, border: "1.5px solid var(--accent-border)", flexShrink: 0 }}>←</button>
         <div>
           <h1 style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Macro Dashboard</h1>
           <p style={{ color: "#33333480", fontSize: 14, marginTop: 1 }}>FRED + BEA + BLS economic data & regime analysis</p>
@@ -4920,8 +4951,8 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
             <div style={{ fontFamily: "JetBrains Mono", fontSize: 20, fontWeight: 800, color: regime.color }}>{regime.confidence}%</div>
           </div>
         </div>
-        <div style={{ fontSize: 14, color: "#6B5A2E", lineHeight: 1.5, marginBottom: 8 }}>{regime.desc}</div>
-        <div style={{ fontSize: 14, color: "#8A7040", lineHeight: 1.5, background: "#fff", borderRadius: 10, padding: "7px 10px" }}>
+        <div style={{ fontSize: 14, color: "var(--text-accent)", lineHeight: 1.5, marginBottom: 8 }}>{regime.desc}</div>
+        <div style={{ fontSize: 14, color: "var(--warm-text)", lineHeight: 1.5, background: "#fff", borderRadius: 10, padding: "7px 10px" }}>
           <span style={{ fontWeight: 800, color: regime.color }}>Playbook:</span> {regime.playbook}
         </div>
       </div>
@@ -4931,7 +4962,7 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
         <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Key Indicators</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
           {macroDashboardData.map(ind => {
-            const sc = { bullish: "#5B8C5A", bearish: "#EF5350", neutral: "#A09080" };
+            const sc = { bullish: "#5B8C5A", bearish: "#EF5350", neutral: "var(--text-muted)" };
             const bg = { bullish: "#F0F7F0", bearish: "#FFEBEE", neutral: "#fff" };
             const delta = ind.value - ind.prev;
             const clr = sc[ind.signal];
@@ -4943,7 +4974,7 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
             const sparkPath = pts.map((v, i) => `${i === 0 ? "M" : "L"}${(i / n) * 100},${28 - ((v - spMin) / spRange) * 24}`).join(" ");
             const areaPath = sparkPath + ` L100,30 L0,30 Z`;
             const isPercent = ind.unit === "%" || ind.unit === "bp";
-            const srcClr = sourceColors[ind.source] || "#A09080";
+            const srcClr = sourceColors[ind.source] || "var(--text-muted)";
             return (
               <div key={ind.id} onClick={() => onSelectIndicator && onSelectIndicator(ind.id)} style={{ background: bg[ind.signal], borderRadius: 10, padding: "8px 10px", border: `1px solid ${clr}22`, cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
@@ -4966,8 +4997,8 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
                   <circle cx="100" cy={28 - ((pts[n] - spMin) / spRange) * 24} r="2" fill={clr} />
                 </svg>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: 2 }}>
-                  <span style={{ fontSize: 9.5, color: "#A09080" }}>{ind.freq}</span>
-                  <span style={{ fontSize: 9.5, color: "#A09080" }}>Released: {ind.release}</span>
+                  <span style={{ fontSize: 9.5, color: "var(--text-muted)" }}>{ind.freq}</span>
+                  <span style={{ fontSize: 9.5, color: "var(--text-muted)" }}>Released: {ind.release}</span>
                 </div>
               </div>
             );
@@ -4988,10 +5019,10 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
           const circumference = 2 * Math.PI * 16;
           const dashOffset = circumference * (1 - pct);
           return (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none", opacity: r.active ? 1 : 0.7 }}>
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none", opacity: r.active ? 1 : 0.7 }}>
               <div style={{ position: "relative", width: 40, height: 40, flexShrink: 0 }}>
                 <svg viewBox="0 0 40 40" style={{ width: 40, height: 40, transform: "rotate(-90deg)" }}>
-                  <circle cx="20" cy="20" r="16" fill="none" stroke="#F0E6D0" strokeWidth="3" />
+                  <circle cx="20" cy="20" r="16" fill="none" stroke="var(--accent-border)" strokeWidth="3" />
                   <circle cx="20" cy="20" r="16" fill="none" stroke={r.color} strokeWidth="3"
                     strokeDasharray={circumference} strokeDashoffset={dashOffset}
                     strokeLinecap="round" style={r.active ? { animation: "pulse 2s infinite" } : {}} />
@@ -5008,7 +5039,7 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
                   {r.active && <span style={{ fontSize: 9, background: r.color, color: "#fff", padding: "1px 5px", borderRadius: 3, fontWeight: 800, letterSpacing: 0.5 }}>ACTIVE</span>}
                 </div>
                 <div style={{ fontSize: 12, color: "#33333480" }}>{r.label}</div>
-                <div style={{ fontSize: 11, color: "#A09080", marginTop: 1 }}>{r.period}</div>
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 1 }}>{r.period}</div>
               </div>
               {i < 3 && <div style={{ position: "absolute", right: 16, marginTop: 38, color: "#D0C8B8", fontSize: 15 }}></div>}
             </div>
@@ -5028,7 +5059,7 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
           ].map((item, i) => (
             <div key={i} style={{ background: "#fff", borderRadius: 8, padding: "6px 8px" }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: item.clr, textTransform: "uppercase", marginBottom: 2 }}>{item.label}</div>
-              <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3 }}>{item.items}</div>
+              <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.3 }}>{item.items}</div>
             </div>
           ))}
         </div>
@@ -5038,7 +5069,7 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
       {alerts.length > 0 && <div style={{ marginBottom: 8, animation: "fadeUp .4s ease .35s both" }}>
         <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Macro Alerts</div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
-          {[{ k: "all", l: "All", n: alerts.length, c: "#5C4A1E", bg: "#fff" }, { k: "critical", l: "Critical", n: alerts.filter(a => a.severity === "critical").length, c: "#EF5350", bg: "#FFEBEE" }, { k: "warning", l: "Warning", n: alerts.filter(a => a.severity === "warning").length, c: "#FFA726", bg: "#FFF3E0" }, { k: "info", l: "Info", n: alerts.filter(a => a.severity === "info").length, c: "#42A5F5", bg: "#E3F2FD" }].map(f => (
+          {[{ k: "all", l: "All", n: alerts.length, c: "var(--text-accent-dark)", bg: "#fff" }, { k: "critical", l: "Critical", n: alerts.filter(a => a.severity === "critical").length, c: "#EF5350", bg: "#FFEBEE" }, { k: "warning", l: "Warning", n: alerts.filter(a => a.severity === "warning").length, c: "#FFA726", bg: "#FFF3E0" }, { k: "info", l: "Info", n: alerts.filter(a => a.severity === "info").length, c: "#42A5F5", bg: "#E3F2FD" }].map(f => (
             <button key={f.k} onClick={() => setAlertFilter(f.k)} style={{ flex: "1 1 60px", padding: "8px 10px", borderRadius: 12, border: "1.5px solid " + (alertFilter === f.k ? f.c : "transparent"), background: f.bg, cursor: "pointer", textAlign: "left" }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: f.c }}>{f.l}</div>
               <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: f.c }}>{f.n}</div>
@@ -5053,12 +5084,12 @@ function MacroDashboardPage({ onGoRiskLab, onNavigate, regime, alerts = [], onSe
               <span style={{ fontSize: 11, fontWeight: 800, background: sBg[a.severity], color: sCol[a.severity], padding: "2px 8px", borderRadius: 8 }}>{a.severity.toUpperCase()}</span>
               <span style={{ fontSize: 14, color: "#33333480" }}>{a.time} ago</span>
             </div>
-            <div style={{ fontSize: 14, color: "#8A7040", lineHeight: 1.5 }}>{a.summary}</div>
+            <div style={{ fontSize: 14, color: "var(--warm-text)", lineHeight: 1.5 }}>{a.summary}</div>
           </div>
         ))}
       </div>}
 
-      <button onClick={onGoRiskLab} style={{ width: "100%", padding: 11, background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Open Risk Lab →</button>
+      <button onClick={onGoRiskLab} style={{ width: "100%", padding: 11, background: "linear-gradient(135deg,var(--accent),var(--accent-light))", color: "#fff", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Open Risk Lab →</button>
     </div>
   );
 }
@@ -5094,32 +5125,32 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
         <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Hedge Recommendations</div>
         {filteredHedges.length === 0 && <div style={{ textAlign: "center", padding: "20px 0", color: "#33333480", fontSize: 14 }}>All hedges executed or expired ✓</div>}
         {filteredHedges.map((h, i) => {
-          const aCol = { BUY: "#C48830", SELL: "#EF5350", ADD: "#C48830", REDUCE: "#EF5350", ROTATE: "#42A5F5" };
+          const aCol = { BUY: "var(--accent)", SELL: "#EF5350", ADD: "var(--accent)", REDUCE: "#EF5350", ROTATE: "#42A5F5" };
           const expPct = h.totalDuration > 0 ? ((h.totalDuration - (h.expiresIn * (h.expiresUnit === "hrs" ? 1 : 24))) / h.totalDuration) * 100 : 0;
           const circumference = 2 * Math.PI * 14;
           const strokeDashoffset = circumference * (1 - expPct / 100);
           return (
-            <div key={h.id} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none", animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
+            <div key={h.id} style={{ padding: "10px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none", animation: "fadeUp .3s ease " + (i * .04) + "s both" }}>
               <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                 {/* Expiration Circle */}
                 <div style={{ flexShrink: 0, position: "relative", width: 36, height: 36 }}>
                   <svg width="36" height="36" viewBox="0 0 36 36" style={{ transform: "rotate(-90deg)" }}>
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#F0E6D0" strokeWidth="3" />
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#A09080" strokeWidth="3"
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="var(--accent-border)" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="var(--text-muted)" strokeWidth="3"
                       strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
                   </svg>
                   <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: "#5C4A1E", lineHeight: 1 }}>{h.expiresIn}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: "var(--text-accent-dark)", lineHeight: 1 }}>{h.expiresIn}</div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: "#33333480", lineHeight: 1 }}>{h.expiresUnit}</div>
                   </div>
                 </div>
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 3, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 12, fontWeight: 900, padding: "1px 6px", borderRadius: 4, background: aCol[h.action] || "#A09080", color: "#fff" }}>{h.action}</span>
+                    <span style={{ fontSize: 12, fontWeight: 900, padding: "1px 6px", borderRadius: 4, background: aCol[h.action] || "var(--text-muted)", color: "#fff" }}>{h.action}</span>
                     <span style={{ fontWeight: 800, fontSize: 14, fontFamily: "'Instrument Serif', serif" }}>{h.instrument}</span>
                   </div>
-                  <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.3, marginBottom: 4 }}>{h.desc}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.3, marginBottom: 4 }}>{h.desc}</div>
                   <div style={{ display: "flex", gap: 4, fontSize: 12, color: "#33333480", flexWrap: "wrap" }}>
                     <span>{h.cost}</span>
                     <span>{h.impact}</span>
@@ -5127,8 +5158,8 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
                 </div>
                 {/* Action buttons */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
-                  <button style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Execute</button>
-                  <button onClick={() => setDismissedHedges(prev => [...prev, h.id])} style={{ background: "#F0E6D0", color: "#33333480", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>Dismiss</button>
+                  <button style={{ background: "linear-gradient(135deg,var(--accent),var(--accent-light))", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Execute</button>
+                  <button onClick={() => setDismissedHedges(prev => [...prev, h.id])} style={{ background: "var(--accent-border)", color: "#33333480", border: "none", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>Dismiss</button>
                 </div>
               </div>
             </div>
@@ -5141,21 +5172,21 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
         <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Portfolio Risk Metrics</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
           {[
-            { label: "Sharpe", value: portfolioRisk.sharpe.toFixed(2), good: portfolioRisk.sharpe > 1 },
-            { label: "Beta", value: portfolioRisk.beta.toFixed(2), good: portfolioRisk.beta < 1.3 },
-            { label: "Ann. Vol", value: portfolioRisk.volatility.toFixed(1) + "%", good: portfolioRisk.volatility < 20 },
-            { label: "Max DD", value: portfolioRisk.maxDrawdown.toFixed(1) + "%", good: portfolioRisk.maxDrawdown > -15 },
-            { label: "VaR 95%", value: fmtS(portfolioRisk.var95), good: false },
-            { label: "Calmar", value: portfolioRisk.calmar.toFixed(2), good: portfolioRisk.calmar > 1 },
+            { label: "Risk-Adj Return", value: portfolioRisk.sharpe.toFixed(2), good: portfolioRisk.sharpe > 1 },
+            { label: "Market Link", value: portfolioRisk.beta.toFixed(2), good: portfolioRisk.beta < 1.3 },
+            { label: "Price Swing", value: portfolioRisk.volatility.toFixed(1) + "%", good: portfolioRisk.volatility < 20 },
+            { label: "Worst Drop", value: portfolioRisk.maxDrawdown.toFixed(1) + "%", good: portfolioRisk.maxDrawdown > -15 },
+            { label: "Daily Risk (95%)", value: fmtS(portfolioRisk.var95), good: false },
+            { label: "Recovery Ratio", value: portfolioRisk.calmar.toFixed(2), good: portfolioRisk.calmar > 1 },
           ].map((m, i) => (
-            <div key={i} style={{ background: "#fff", borderRadius: 8, padding: "6px 8px", border: "1px solid #F0E6D0" }}>
+            <div key={i} style={{ background: "#fff", borderRadius: 8, padding: "6px 8px", border: "1px solid var(--accent-border)" }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#33333480" }}>{m.label}</div>
               <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.value}</div>
             </div>
           ))}
         </div>
-        <div style={{ marginTop: 8, padding: "6px 8px", background: "#fff", borderRadius: 8, border: "1px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div><div style={{ fontSize: 12, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div></div>
+        <div style={{ marginTop: 8, padding: "6px 8px", background: "#fff", borderRadius: 8, border: "1px solid var(--accent-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div><div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div><div style={{ fontSize: 12, color: "var(--warm-text)" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div></div>
           <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
         </div>
       </div>
@@ -5172,12 +5203,12 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
               {basketCorrelations[ri] && basketCorrelations[ri].map((c, ci) => {
                 const abs = Math.abs(c);
                 const bg = ri === ci ? "#FFF5E6" : c > 0.5 ? "rgba(232,116,97," + (abs * 0.4) + ")" : c < -0.05 ? "rgba(91,155,213," + (abs * 0.6) + ")" : "rgba(107,155,110," + (abs * 0.3) + ")";
-                return <div key={ci} style={{ textAlign: "center", padding: "8px 2px", borderRadius: 6, background: bg, fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 15, color: ri === ci ? "#A09080" : "#5C4A1E" }}>{c.toFixed(2)}</div>;
+                return <div key={ci} style={{ textAlign: "center", padding: "8px 2px", borderRadius: 6, background: bg, fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 15, color: ri === ci ? "var(--text-muted)" : "var(--text-accent-dark)" }}>{c.toFixed(2)}</div>;
               })}
             </React.Fragment>
           ))}
         </div>
-        <div style={{ marginTop: 8, fontSize: 14, color: "#8A7040", lineHeight: 1.5 }}>
+        <div style={{ marginTop: 8, fontSize: 14, color: "var(--warm-text)", lineHeight: 1.5 }}>
           <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "rgba(232,116,97,0.35)", marginRight: 3, verticalAlign: "middle" }} /> High correlation
           <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "rgba(91,155,213,0.35)", marginRight: 3, marginLeft: 8, verticalAlign: "middle" }} /> Negative (hedge)
         </div>
@@ -5189,11 +5220,11 @@ function RiskLabPage({ onOpenMacro, hedges, regime }) {
             <div key={i} style={{ marginBottom: 6 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
                 <span style={{ fontSize: 12, fontWeight: 700 }}>{f.factor}</span>
-                <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", color: "#C48830" }}>{(f.exposure * 100).toFixed(0)}% vs {(f.benchmark * 100).toFixed(0)}%</span>
+                <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", color: "var(--accent)" }}>{(f.exposure * 100).toFixed(0)}% vs {(f.benchmark * 100).toFixed(0)}%</span>
               </div>
               <div style={{ height: 4, background: "#FFF5E6", borderRadius: 2, position: "relative" }}>
-                <div style={{ position: "absolute", height: "100%", width: (f.exposure * 100) + "%", background: "#C48830", borderRadius: 2 }} />
-                <div style={{ position: "absolute", left: (f.benchmark * 100) + "%", top: -1, width: 2, height: 6, background: "#5C4A1E", borderRadius: 1 }} />
+                <div style={{ position: "absolute", height: "100%", width: (f.exposure * 100) + "%", background: "var(--accent)", borderRadius: 2 }} />
+                <div style={{ position: "absolute", left: (f.benchmark * 100) + "%", top: -1, width: 2, height: 6, background: "var(--text-accent-dark)", borderRadius: 1 }} />
               </div>
             </div>
           ))}
@@ -5224,7 +5255,7 @@ function StressTestPage() {
     { id: "dotcom", name: "2000 Dot-Com Bust", period: "Mar 2000 – Oct 2002", icon: "laptop", color: "#FFA726",
       shocks: { spx: -49.1, nasdaq: -78.4, bonds: 38.6, gold: 12.4, vix: 43.7, oil: -48.8, dxy: 18.2, reits: 22.4, em: -42.6, hy: -8.2 },
       desc: "Tech valuation bubble burst. Nasdaq lost 78%. Rotation to bonds and value. Earnings didn't support prices — PE ratios compressed violently.", duration: "30 months" },
-    { id: "rate22", name: "2022 Rate Shock", period: "Jan – Oct 2022", icon: "chart-up", color: "#C48830",
+    { id: "rate22", name: "2022 Rate Shock", period: "Jan – Oct 2022", icon: "chart-up", color: "var(--accent)",
       shocks: { spx: -25.4, nasdaq: -33.1, bonds: -17.8, gold: -3.2, vix: 36.5, oil: 42.6, dxy: 16.8, reits: -28.7, em: -22.4, hy: -14.8 },
       desc: "Most aggressive Fed tightening since Volcker. Both stocks AND bonds fell — 60/40 had worst year since 1937. No safe haven except cash and energy.", duration: "10 months" },
     { id: "stagflation70s", name: "1970s Stagflation", period: "1973 – 1975", icon: "oil-barrel", color: "#7E57C2",
@@ -5300,8 +5331,8 @@ function StressTestPage() {
       <div className="no-scrollbar" style={{ display: "flex", gap: 3, marginBottom: 8, overflowX: "auto" }}>
         {views.map(v => (
           <button key={v.id} onClick={() => setView(v.id)}
-            style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 8px", borderRadius: 8, border: `1.5px solid ${view === v.id ? "#C48830" : "#F0E6D0"}`, background: view === v.id ? "#C48830" : "#fff", color: view === v.id ? "#fff" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap", transition: "all .2s" }}>
-            <Icon name={v.icon} size={8} color={view === v.id ? "#fff" : "#A09080"} />{v.label}
+            style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 8px", borderRadius: 8, border: `1.5px solid ${view === v.id ? "var(--accent)" : "var(--accent-border)"}`, background: view === v.id ? "var(--accent)" : "#fff", color: view === v.id ? "#fff" : "var(--text-muted)", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap", transition: "all .2s" }}>
+            <Icon name={v.icon} size={8} color={view === v.id ? "#fff" : "var(--text-muted)"} />{v.label}
           </button>
         ))}
       </div>
@@ -5311,8 +5342,8 @@ function StressTestPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(90px,1fr))", gap: 6, marginBottom: 8 }}>
           {historicalReplays.map(r => (
             <button key={r.id} onClick={() => setStressId(stressId === r.id ? null : r.id)}
-              style={{ background: stressId === r.id ? r.color + "15" : "#fff", border: `1.5px solid ${stressId === r.id ? r.color : "#F0E6D0"}`, borderRadius: 12, padding: "8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
-              <Icon name={r.icon} size={12} color={stressId === r.id ? r.color : "#A09080"} />
+              style={{ background: stressId === r.id ? r.color + "15" : "#fff", border: `1.5px solid ${stressId === r.id ? r.color : "var(--accent-border)"}`, borderRadius: 12, padding: "8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
+              <Icon name={r.icon} size={12} color={stressId === r.id ? r.color : "var(--text-muted)"} />
               <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginTop: 4, lineHeight: 1.2 }}>{r.name.split(" ").slice(0,2).join(" ")}</div>
               <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#EF5350", marginTop: 3 }}>{r.shocks.spx > 0 ? "+" : ""}{r.shocks.spx}%</div>
               <div style={{ fontSize: 11, color: "#33333480" }}>S&P 500</div>
@@ -5373,7 +5404,7 @@ function StressTestPage() {
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: scaledImpact >= 0 ? "#5B8C5A" : "#EF5350" }}>{scaledImpact >= 0 ? "+" : ""}{scaledImpact.toFixed(1)}%</span>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImpact)}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 600, color: "var(--warm-text)" }}>{fmtS(dollarImpact)}</span>
                   </div>
                 </div>
               );
@@ -5390,14 +5421,14 @@ function StressTestPage() {
 
       {/* ════════ MONTE CARLO SIMULATION ════════ */}
       {view === "montecarlo" && <div style={{ animation: "fadeUp .3s ease both" }}>
-        <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #F0E6D0" }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid var(--accent-border)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div>
               <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Monte Carlo Simulation</div>
               <div style={{ fontSize: 12, color: "#33333480", marginTop: 2 }}>{mcResults.simulations.toLocaleString()} paths · {mcResults.horizon} horizon · {mcResults.confidence}% CI</div>
             </div>
             <button onClick={() => setMonteCarloRun(!monteCarloRun)}
-              style={{ padding: "6px 14px", borderRadius: 10, border: "none", background: monteCarloRun ? "#5B8C5A" : "#C48830", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>
+              style={{ padding: "6px 14px", borderRadius: 10, border: "none", background: monteCarloRun ? "#5B8C5A" : "var(--accent)", color: "#fff", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>
               {monteCarloRun ? "Re-run" : "Run Simulation"}
             </button>
           </div>
@@ -5412,7 +5443,7 @@ function StressTestPage() {
                   <stop offset="100%" stopColor="#7E57C2" />
                 </linearGradient>
               </defs>
-              <rect x="30" y="120" width="540" height="1" fill="#F0E6D0" />
+              <rect x="30" y="120" width="540" height="1" fill="var(--accent-border)" />
               {/* Bell curve approximation */}
               <path d="M30,120 Q60,118 90,112 Q130,100 170,82 Q210,55 250,30 Q280,15 310,10 Q340,15 370,30 Q410,55 450,82 Q490,100 520,112 Q550,118 570,120" fill="url(#mcGrad)" fillOpacity="0.12" stroke="url(#mcGrad)" strokeWidth="2" />
               {/* 5th percentile line */}
@@ -5435,7 +5466,7 @@ function StressTestPage() {
                 <div key={i} style={{ background: p.val >= 0 ? "#EDF5ED" : "#FFEBEE", borderRadius: 8, padding: "5px 6px", textAlign: "center", border: `1px solid ${p.color}18` }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480" }}>{p.p}</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: p.color }}>{p.val >= 0 ? "+" : ""}{p.val}%</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarVal)}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 600, color: "var(--warm-text)" }}>{fmtS(dollarVal)}</div>
                 </div>
               );
             })}
@@ -5460,7 +5491,7 @@ function StressTestPage() {
 
       {/* ════════ SENSITIVITY ANALYSIS (Factor Shock Grid) ════════ */}
       {view === "sensitivity" && <div style={{ animation: "fadeUp .3s ease both" }}>
-        <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid #F0E6D0" }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid var(--accent-border)" }}>
           <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Factor Sensitivity Analysis</div>
           <div style={{ fontSize: 12, color: "#33333480", marginBottom: 10 }}>How your portfolio responds to individual factor shocks</div>
 
@@ -5468,8 +5499,8 @@ function StressTestPage() {
           <div className="no-scrollbar" style={{ display: "flex", gap: 4, marginBottom: 10, overflowX: "auto" }}>
             {Object.entries(sensFactors).map(([key, f]) => (
               <button key={key} onClick={() => setSensitivity(key)}
-                style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 8, border: `1.5px solid ${sensitivity === key ? "#C48830" : "#F0E6D0"}`, background: sensitivity === key ? "#FFF8EE" : "#fff", color: sensitivity === key ? "#C48830" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap" }}>
-                <Icon name={f.icon} size={9} color={sensitivity === key ? "#C48830" : "#A09080"} /> {f.label}
+                style={{ display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 8, border: `1.5px solid ${sensitivity === key ? "var(--accent)" : "var(--accent-border)"}`, background: sensitivity === key ? "var(--accent-bg)" : "#fff", color: sensitivity === key ? "var(--accent)" : "var(--text-muted)", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", whiteSpace: "nowrap" }}>
+                <Icon name={f.icon} size={9} color={sensitivity === key ? "var(--accent)" : "var(--text-muted)"} /> {f.label}
               </button>
             ))}
           </div>
@@ -5507,7 +5538,7 @@ function StressTestPage() {
                 <div key={i} style={{ background: col + "0A", borderRadius: 8, padding: "5px 6px", textAlign: "center", border: `1px solid ${col}15` }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480" }}>{step >= 0 ? "+" : ""}{step}{sensData.unit}</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: col }}>{imp >= 0 ? "+" : ""}{imp}%</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 600, color: "#8A7040" }}>{fmtS(dollarImp)}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 11, fontWeight: 600, color: "var(--warm-text)" }}>{fmtS(dollarImp)}</div>
                 </div>
               );
             })}
@@ -5517,7 +5548,7 @@ function StressTestPage() {
 
       {/* ════════ VaR / CVaR ANALYTICS ════════ */}
       {view === "var" && <div style={{ animation: "fadeUp .3s ease both" }}>
-        <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #F0E6D0" }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid var(--accent-border)" }}>
           <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Value at Risk & Expected Shortfall</div>
           <div style={{ fontSize: 12, color: "#33333480", marginBottom: 10 }}>Parametric VaR using variance-covariance method · CVaR (ES) for tail risk</div>
 
@@ -5532,7 +5563,7 @@ function StressTestPage() {
               <div key={i} style={{ background: v.color + "08", border: `1.5px solid ${v.color}22`, borderRadius: 12, padding: "8px 10px" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{v.label}</div>
                 <div style={{ fontFamily: "JetBrains Mono", fontSize: 21, fontWeight: 900, color: v.color, marginTop: 3 }}>{v.val}%</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 600, color: "#8A7040", marginTop: 1 }}>{fmtS(v.dollar)}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 600, color: "var(--warm-text)", marginTop: 1 }}>{fmtS(v.dollar)}</div>
                 <div style={{ fontSize: 11, color: "#33333480", marginTop: 3, lineHeight: 1.3 }}>{v.desc}</div>
               </div>
             ))}
@@ -5548,7 +5579,7 @@ function StressTestPage() {
               <div key={i} style={{ background: "#F9F6F0", borderRadius: 10, padding: "8px 10px", border: `1px solid ${v.color}18` }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>{v.label}</div>
                 <div style={{ fontFamily: "JetBrains Mono", fontSize: 18, fontWeight: 900, color: v.color, marginTop: 2 }}>{v.val}%</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 600, color: "#8A7040" }}>{fmtS(Math.round(totalValue * v.val / 100))}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 600, color: "var(--warm-text)" }}>{fmtS(Math.round(totalValue * v.val / 100))}</div>
                 <div style={{ fontSize: 11, color: "#33333480", marginTop: 2 }}>{v.desc}</div>
               </div>
             ))}
@@ -5579,7 +5610,7 @@ function StressTestPage() {
             <Icon name="warning" size={14} color="#FFA726" />
             <div>
               <div style={{ fontSize: 12, fontWeight: 800, color: "#FFA726" }}>Fat Tails Detected (Kurtosis: {varMetrics.kurtosis.toFixed(2)})</div>
-              <div style={{ fontSize: 12, color: "#8A7040", marginTop: 2 }}>Your portfolio has excess kurtosis &gt; 3, meaning extreme events are more likely than a normal distribution predicts. Parametric VaR may understate true tail risk — consider using Monte Carlo or Historical VaR for more accurate estimates.</div>
+              <div style={{ fontSize: 12, color: "var(--warm-text)", marginTop: 2 }}>Your portfolio has excess kurtosis &gt; 3, meaning extreme events are more likely than a normal distribution predicts. Parametric VaR may understate true tail risk — consider using Monte Carlo or Historical VaR for more accurate estimates.</div>
             </div>
           </div>}
         </div>
@@ -5587,7 +5618,7 @@ function StressTestPage() {
 
       {/* ════════ CUSTOM SCENARIO BUILDER ════════ */}
       {view === "custom" && <div style={{ animation: "fadeUp .3s ease both" }}>
-        <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid #F0E6D0" }}>
+        <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid var(--accent-border)" }}>
           <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 3 }}>Custom Scenario Builder</div>
           <div style={{ fontSize: 12, color: "#33333480", marginBottom: 10 }}>Define your own macro shocks and see the estimated portfolio impact</div>
 
@@ -5602,13 +5633,13 @@ function StressTestPage() {
               { key: "gold", label: "Gold", icon: "sparkle", min: -30, max: 50, unit: "%" },
             ].map(s => {
               const val = customShocks[s.key];
-              const col = val === 0 ? "#A09080" : val > 0 ? "#5B8C5A" : "#EF5350";
+              const col = val === 0 ? "var(--text-muted)" : val > 0 ? "#5B8C5A" : "#EF5350";
               return (
                 <div key={s.key}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                       <Icon name={s.icon} size={9} color={col} />
-                      <span style={{ fontSize: 12, fontWeight: 800, color: "#5C4A1E" }}>{s.label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text-accent-dark)" }}>{s.label}</span>
                     </div>
                     <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: col }}>
                       {val >= 0 ? "+" : ""}{val}{s.unit}
@@ -5616,7 +5647,7 @@ function StressTestPage() {
                   </div>
                   <input type="range" min={s.min} max={s.max} value={val}
                     onChange={e => setCustomShocks(prev => ({ ...prev, [s.key]: Number(e.target.value) }))}
-                    style={{ width: "100%", height: 4, appearance: "none", background: `linear-gradient(to right, #EF5350, #F0E6D0, #5B8C5A)`, borderRadius: 2, outline: "none", cursor: "pointer" }} />
+                    style={{ width: "100%", height: 4, appearance: "none", background: `linear-gradient(to right, #EF5350, var(--accent-border), #5B8C5A)`, borderRadius: 2, outline: "none", cursor: "pointer" }} />
                 </div>
               );
             })}
@@ -5627,11 +5658,11 @@ function StressTestPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Estimated Portfolio Impact</div>
-                <div style={{ fontSize: 11, color: "#8A7040", marginTop: 2 }}>Based on factor loadings and historical betas</div>
+                <div style={{ fontSize: 11, color: "var(--warm-text)", marginTop: 2 }}>Based on factor loadings and historical betas</div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontFamily: "JetBrains Mono", fontSize: 24, fontWeight: 900, color: customPortfolioImpact >= 0 ? "#5B8C5A" : "#EF5350" }}>{customPortfolioImpact >= 0 ? "+" : ""}{customPortfolioImpact.toFixed(1)}%</div>
-                <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 600, color: "#8A7040" }}>{fmtS(Math.round(totalValue * customPortfolioImpact / 100))}</div>
+                <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 600, color: "var(--warm-text)" }}>{fmtS(Math.round(totalValue * customPortfolioImpact / 100))}</div>
               </div>
             </div>
           </div>
@@ -5639,7 +5670,7 @@ function StressTestPage() {
           {/* Reset & Preset Buttons */}
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             <button onClick={() => setCustomShocks({ spx: 0, rates: 0, vix: 0, oil: 0, dxy: 0, gold: 0 })}
-              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #F0E6D0", background: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", color: "#A09080" }}>Reset All</button>
+              style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid var(--accent-border)", background: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", color: "var(--text-muted)" }}>Reset All</button>
             <button onClick={() => setCustomShocks({ spx: -30, rates: -100, vix: 40, oil: -40, dxy: 5, gold: 15 })}
               style={{ padding: "5px 10px", borderRadius: 8, border: "1.5px solid #EF535044", background: "#FFEBEE", fontSize: 12, fontWeight: 800, cursor: "pointer", color: "#EF5350" }}>Recession</button>
             <button onClick={() => setCustomShocks({ spx: -15, rates: 200, vix: 25, oil: 50, dxy: 10, gold: 20 })}
@@ -5665,7 +5696,7 @@ function HistoricalPatternsPage() {
     { id: "2000", label: "2000 Dot-Com", icon: "laptop", similarity: 52, color: "#FFA726", desc: "Tech bubble burst, valuation reset, Nasdaq -78%", spxDrawdown: -49.1, duration: "30 months", recovery: "7.1 years", trigger: "Tech valuation euphoria collapse", indicators: { unemployment: 6.3, gdpGrowth: 0.8, cpi: 3.4, fedRate: 1.0, vix: 43.7 } },
     { id: "2020", label: "2020 COVID", icon: "syringe", similarity: 28, color: "#42A5F5", desc: "Pandemic shock, V-shaped recovery, massive stimulus", spxDrawdown: -33.9, duration: "1 month", recovery: "5 months", trigger: "Global pandemic lockdowns", indicators: { unemployment: 14.7, gdpGrowth: -31.2, cpi: 0.1, fedRate: 0.0, vix: 82.7 } },
     { id: "2022", label: "2022 Rate Shock", icon: "chart-up", similarity: 71, color: "#5B8C5A", desc: "Fed tightening cycle, inflation battle, growth scare", spxDrawdown: -25.4, duration: "10 months", recovery: "14 months", trigger: "Aggressive Fed rate hikes", indicators: { unemployment: 3.7, gdpGrowth: 2.1, cpi: 9.1, fedRate: 4.5, vix: 36.5 } },
-    { id: "1970s", label: "1970s Stagflation", icon: "oil-barrel", similarity: 45, color: "#C48830", desc: "Oil shocks, wage-price spiral, double-dip recession", spxDrawdown: -48.2, duration: "21 months", recovery: "3.3 years", trigger: "OPEC oil embargo + monetary policy failure", indicators: { unemployment: 9.0, gdpGrowth: -1.4, cpi: 11.0, fedRate: 13.0, vix: null } },
+    { id: "1970s", label: "1970s Stagflation", icon: "oil-barrel", similarity: 45, color: "var(--accent)", desc: "Oil shocks, wage-price spiral, double-dip recession", spxDrawdown: -48.2, duration: "21 months", recovery: "3.3 years", trigger: "OPEC oil embargo + monetary policy failure", indicators: { unemployment: 9.0, gdpGrowth: -1.4, cpi: 11.0, fedRate: 13.0, vix: null } },
   ];
 
   const currentIndicators = { unemployment: 4.1, gdpGrowth: 2.6, cpi: 3.4, fedRate: 5.25, vix: 18.2 };
@@ -5690,15 +5721,15 @@ function HistoricalPatternsPage() {
 
       <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
         {[{ id: "comparison", l: "Compare" }, { id: "patterns", l: "Patterns" }, { id: "indicators", l: "Indicators" }].map(t => (
-          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#C48830" : "#F0E6D0"}`, background: view === t.id ? "#C48830" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "var(--accent)" : "var(--accent-border)"}`, background: view === t.id ? "var(--accent)" : "#fff", color: view === t.id ? "#fff" : "var(--text-muted)", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
         ))}
       </div>
 
       {view === "comparison" && <>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(90px,1fr))", gap: 6, marginBottom: 8, animation: "fadeUp .4s ease .05s both" }}>
           {historicalPeriods.map(p => (
-            <button key={p.id} onClick={() => setSelectedPeriod(p.id)} style={{ background: selectedPeriod === p.id ? p.color + "15" : "#fff", border: `1.5px solid ${selectedPeriod === p.id ? p.color : "#F0E6D0"}`, borderRadius: 12, padding: "8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
-              <Icon name={p.icon} size={12} color={selectedPeriod === p.id ? p.color : "#A09080"} />
+            <button key={p.id} onClick={() => setSelectedPeriod(p.id)} style={{ background: selectedPeriod === p.id ? p.color + "15" : "#fff", border: `1.5px solid ${selectedPeriod === p.id ? p.color : "var(--accent-border)"}`, borderRadius: 12, padding: "8px", cursor: "pointer", textAlign: "left", transition: "all .2s" }}>
+              <Icon name={p.icon} size={12} color={selectedPeriod === p.id ? p.color : "var(--text-muted)"} />
               <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginTop: 4 }}>{p.label}</div>
               <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: p.color, marginTop: 2 }}>{p.similarity}%</div>
               <div style={{ fontSize: 11, color: "#33333480" }}>similarity</div>
@@ -5707,7 +5738,7 @@ function HistoricalPatternsPage() {
         </div>
 
         {period && (
-          <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease both" }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8, border: "1px solid var(--accent-border)", animation: "fadeUp .3s ease both" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: period.color + "15", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon name={period.icon} size={16} color={period.color} />
@@ -5737,14 +5768,14 @@ function HistoricalPatternsPage() {
 
             <div style={{ padding: "6px 10px", background: period.color + "10", borderRadius: 8, border: `1px solid ${period.color}22`, marginBottom: 8 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: period.color, textTransform: "uppercase" }}>Trigger</div>
-              <div style={{ fontSize: 14, color: "#5C4A1E", marginTop: 2 }}>{period.trigger}</div>
+              <div style={{ fontSize: 14, color: "var(--text-accent-dark)", marginTop: 2 }}>{period.trigger}</div>
             </div>
 
             <div style={{ fontSize: 14, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 6 }}>Then vs Now</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: "#33333480" }}>METRIC</div>
               <div style={{ fontSize: 11, fontWeight: 800, color: period.color, textAlign: "center" }}>{period.label.toUpperCase()}</div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "#C48830", textAlign: "center" }}>NOW</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "var(--accent)", textAlign: "center" }}>NOW</div>
               {[
                 { label: "Unemployment", key: "unemployment", unit: "%" },
                 { label: "GDP Growth", key: "gdpGrowth", unit: "%" },
@@ -5753,9 +5784,9 @@ function HistoricalPatternsPage() {
                 { label: "VIX", key: "vix", unit: "" },
               ].map((m, i) => (
                 <React.Fragment key={i}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#5C4A1E", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{m.label}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: period.color, textAlign: "center", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{period.indicators[m.key] !== null ? period.indicators[m.key] + m.unit : "N/A"}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#C48830", textAlign: "center", padding: "4px 0", borderTop: "1px solid #F0E6D0" }}>{currentIndicators[m.key]}{m.unit}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-accent-dark)", padding: "4px 0", borderTop: "1px solid var(--accent-border)" }}>{m.label}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: period.color, textAlign: "center", padding: "4px 0", borderTop: "1px solid var(--accent-border)" }}>{period.indicators[m.key] !== null ? period.indicators[m.key] + m.unit : "N/A"}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "var(--accent)", textAlign: "center", padding: "4px 0", borderTop: "1px solid var(--accent-border)" }}>{currentIndicators[m.key]}{m.unit}</div>
                 </React.Fragment>
               ))}
             </div>
@@ -5767,7 +5798,7 @@ function HistoricalPatternsPage() {
         <div style={{ animation: "fadeUp .3s ease both" }}>
           <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Pattern Recognition</div>
           {patternMatches.map((p, i) => (
-            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid var(--accent-border)", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <Icon name={p.icon} size={11} color={p.color} />
                 <div style={{ flex: 1 }}>
@@ -5778,14 +5809,14 @@ function HistoricalPatternsPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
                 <div style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 8px" }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Current</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{p.current}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-accent-dark)", marginTop: 1 }}>{p.current}</div>
                 </div>
                 <div style={{ background: "#F9F6F0", borderRadius: 8, padding: "5px 8px" }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480", textTransform: "uppercase" }}>Historical</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{p.historical}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-accent-dark)", marginTop: 1 }}>{p.historical}</div>
                 </div>
               </div>
-              <div style={{ marginTop: 6, height: 4, background: "#F0E6D0", borderRadius: 2 }}>
+              <div style={{ marginTop: 6, height: 4, background: "var(--accent-border)", borderRadius: 2 }}>
                 <div style={{ height: "100%", width: p.confidence + "%", background: p.color, borderRadius: 2, transition: "width .5s ease" }} />
               </div>
             </div>
@@ -5796,7 +5827,7 @@ function HistoricalPatternsPage() {
       {view === "indicators" && (
         <div style={{ animation: "fadeUp .3s ease both" }}>
           <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Macro Indicators Timeline</div>
-          <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid #F0E6D0" }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 12, border: "1px solid var(--accent-border)" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 8 }}>
               {[
                 { label: "Unemployment", value: "4.1%", trend: "flat", icon: "person" },
@@ -5808,11 +5839,11 @@ function HistoricalPatternsPage() {
               ].map((ind, i) => (
                 <div key={i} style={{ background: "#F9F6F0", borderRadius: 8, padding: "6px 8px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
-                    <Icon name={ind.icon} size={9} color="#A09080" />
+                    <Icon name={ind.icon} size={9} color="var(--text-muted)" />
                     <span style={{ fontSize: 12, fontWeight: 700, color: "#33333480" }}>{ind.label}</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: "#5C4A1E" }}>{ind.value}</span>
+                    <span style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 800, color: "var(--text-accent-dark)" }}>{ind.value}</span>
                     <span style={{ fontSize: 12, color: ind.trend === "up" ? "#5B8C5A" : ind.trend === "down" ? "#EF5350" : "#FFA726", fontWeight: 700 }}>
                       {ind.trend === "up" ? "▲" : ind.trend === "down" ? "▼" : "—"}
                     </span>
@@ -5824,7 +5855,7 @@ function HistoricalPatternsPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 800, color: "#EF5350", textTransform: "uppercase" }}>Recession Probability (12mo)</div>
-                  <div style={{ fontSize: 12, color: "#8A7040", marginTop: 2 }}>Based on yield curve, PMI, and leading indicators</div>
+                  <div style={{ fontSize: 12, color: "var(--warm-text)", marginTop: 2 }}>Based on yield curve, PMI, and leading indicators</div>
                 </div>
                 <div style={{ fontFamily: "JetBrains Mono", fontSize: 24, fontWeight: 900, color: "#EF5350" }}>32%</div>
               </div>
@@ -5887,7 +5918,7 @@ function ContrarianSignalsPage() {
 
       <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
         {[{ id: "flows", l: "Flows" }, { id: "underloved", l: "Underloved" }, { id: "crowded", l: "Crowded" }, { id: "commodities", l: "Commodities" }].map(t => (
-          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "#C48830" : "#F0E6D0"}`, background: view === t.id ? "#C48830" : "#fff", color: view === t.id ? "#fff" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
+          <button key={t.id} onClick={() => setView(t.id)} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1.5px solid ${view === t.id ? "var(--accent)" : "var(--accent-border)"}`, background: view === t.id ? "var(--accent)" : "#fff", color: view === t.id ? "#fff" : "var(--text-muted)", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand" }}>{t.l}</button>
         ))}
       </div>
 
@@ -5896,7 +5927,7 @@ function ContrarianSignalsPage() {
           <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Trade Flow Analysis</div>
           <div style={{ fontSize: 12, color: "#33333480", marginBottom: 8 }}>Volume vs average — when the crowd piles in, contrarians step back.</div>
           {tradeFlows.map((t, i) => (
-            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid var(--accent-border)", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <Icon name={t.icon} size={12} />
                 <div style={{ flex: 1 }}>
@@ -5916,16 +5947,16 @@ function ContrarianSignalsPage() {
                 ].map((s, j) => (
                   <div key={j} style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>{s.label}</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{s.value}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "var(--text-accent-dark)" }}>{s.value}</div>
                   </div>
                 ))}
               </div>
-              <div style={{ marginTop: 6, height: 4, background: "#F0E6D0", borderRadius: 2, position: "relative" }}>
+              <div style={{ marginTop: 6, height: 4, background: "var(--accent-border)", borderRadius: 2, position: "relative" }}>
                 <div style={{ height: "100%", width: Math.min(t.ratio / 3 * 100, 100) + "%", background: t.color, borderRadius: 2 }} />
-                <div style={{ position: "absolute", left: "33.3%", top: -1, width: 2, height: 6, background: "#5C4A1E", borderRadius: 1 }} />
+                <div style={{ position: "absolute", left: "33.3%", top: -1, width: 2, height: 6, background: "var(--text-accent-dark)", borderRadius: 1 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#33333480", marginTop: 2 }}>
-                <span>Normal</span><span style={{ fontWeight: 700, color: "#5C4A1E" }}>1x avg</span><span>3x+ (crowded)</span>
+                <span>Normal</span><span style={{ fontWeight: 700, color: "var(--text-accent-dark)" }}>1x avg</span><span>3x+ (crowded)</span>
               </div>
             </div>
           ))}
@@ -5937,19 +5968,19 @@ function ContrarianSignalsPage() {
           <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Underloved & Overlooked</div>
           <div style={{ fontSize: 12, color: "#33333480", marginBottom: 8 }}>Stocks the market has abandoned. High neglect = potential contrarian opportunity.</div>
           {underloved.map((s, i) => (
-            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid var(--accent-border)", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <Icon name={s.icon} size={12} />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800 }}>{s.ticker}</span>
                     <span style={{ fontSize: 12, color: "#33333480" }}>{s.name}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#A09080" }}>{s.sector}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-muted)" }}>{s.sector}</span>
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>Neglect</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: "#C48830" }}>{s.neglectScore}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: "var(--accent)" }}>{s.neglectScore}</div>
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginBottom: 6 }}>
@@ -5961,12 +5992,12 @@ function ContrarianSignalsPage() {
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#5B8C5A" }}>P/E</div>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5B8C5A" }}>{s.pe}x</div>
                 </div>
-                <div style={{ background: "#FFF8EE", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#C48830" }}>Div %</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#C48830" }}>{s.div}%</div>
+                <div style={{ background: "var(--accent-bg)", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)" }}>Div %</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "var(--accent)" }}>{s.div}%</div>
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.4 }}>{s.reason}</div>
+              <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.4 }}>{s.reason}</div>
             </div>
           ))}
         </div>
@@ -5977,7 +6008,7 @@ function ContrarianSignalsPage() {
           <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Overly Crowded Trades</div>
           <div style={{ fontSize: 12, color: "#33333480", marginBottom: 8 }}>When everyone is on one side of the trade, the exit gets narrow.</div>
           {overtraded.map((s, i) => (
-            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid var(--accent-border)", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -5995,21 +6026,21 @@ function ContrarianSignalsPage() {
                 ].map((m, j) => (
                   <div key={j} style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 6px", textAlign: "center" }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>{m.label}</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{m.value}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "var(--text-accent-dark)" }}>{m.value}</div>
                   </div>
                 ))}
               </div>
-              <div style={{ height: 4, background: "#F0E6D0", borderRadius: 2, marginBottom: 4 }}>
+              <div style={{ height: 4, background: "var(--accent-border)", borderRadius: 2, marginBottom: 4 }}>
                 <div style={{ height: "100%", width: s.crowding + "%", background: s.color, borderRadius: 2 }} />
               </div>
-              <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.4 }}>{s.risk}</div>
+              <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.4 }}>{s.risk}</div>
             </div>
           ))}
 
           <div style={{ marginTop: 8, animation: "fadeUp .3s ease .25s both" }}>
             <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Futures Positioning</div>
             {futuresSignals.map((f, i) => (
-              <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0" }}>
+              <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid var(--accent-border)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                   <Icon name={f.icon} size={12} color={f.color} />
                   <div style={{ flex: 1 }}>
@@ -6021,14 +6052,14 @@ function ContrarianSignalsPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 4 }}>
                   <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>OPEN INTEREST</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{f.openInterest}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "var(--text-accent-dark)" }}>{f.openInterest}</div>
                   </div>
                   <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>NET SPEC</div>
-                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{f.netSpec}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "var(--text-accent-dark)" }}>{f.netSpec}</div>
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.4 }}>{f.note}</div>
+                <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.4 }}>{f.note}</div>
               </div>
             ))}
           </div>
@@ -6040,26 +6071,26 @@ function ContrarianSignalsPage() {
           <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 4 }}>Commodity Contrarian Signals</div>
           <div style={{ fontSize: 12, color: "#33333480", marginBottom: 8 }}>COT positioning data reveals when speculators are offside.</div>
           {commoditySignals.map((c, i) => (
-            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid #F0E6D0", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
+            <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "10px 12px", marginBottom: 6, border: "1px solid var(--accent-border)", animation: "fadeUp .3s ease " + (i * .05) + "s both" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 <Icon name={c.icon} size={12} color={c.color} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{c.name}</div>
-                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "#5C4A1E" }}>{c.price}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: "var(--text-accent-dark)" }}>{c.price}</div>
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 800, padding: "3px 8px", borderRadius: 6, background: c.color + "15", color: c.color }}>{c.signal}</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, marginBottom: 6 }}>
                 <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>POSITIONING</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#5C4A1E", marginTop: 1 }}>{c.positioning}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-accent-dark)", marginTop: 1 }}>{c.positioning}</div>
                 </div>
                 <div style={{ background: "#F9F6F0", borderRadius: 6, padding: "4px 8px" }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: "#33333480" }}>COT NET</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "JetBrains Mono", color: "#5C4A1E", marginTop: 1 }}>{c.cot}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, fontFamily: "JetBrains Mono", color: "var(--text-accent-dark)", marginTop: 1 }}>{c.cot}</div>
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: "#6B5A2E", lineHeight: 1.4 }}>{c.contrarianView}</div>
+              <div style={{ fontSize: 12, color: "var(--text-accent)", lineHeight: 1.4 }}>{c.contrarianView}</div>
             </div>
           ))}
         </div>
@@ -6073,11 +6104,11 @@ function CheckoutModal({ cart, onClose, onExecute }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(45,32,22,.4)", backdropFilter: "blur(12px)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "18vh", zIndex: 1000 }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 16, width: "calc(100% - 24px)", maxWidth: 360, maxHeight: "65vh", overflow: "auto", animation: "popIn .4s ease" }} onClick={e => e.stopPropagation()}>
-        <div style={{ padding: "18px 24px", borderBottom: "2px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 18 }}>🧺</span><span style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{step === "review" ? "Checkout" : step === "executing" ? "Processing..." : "Done!"}</span></div><button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 17, color: "#33333480" }}>✕</button></div>
+        <div style={{ padding: "18px 24px", borderBottom: "2px solid var(--accent-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 18 }}>🧺</span><span style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>{step === "review" ? "Checkout" : step === "executing" ? "Processing..." : "Done!"}</span></div><button onClick={onClose} style={{ background: "#fff", border: "none", width: 32, height: 32, borderRadius: 10, cursor: "pointer", fontSize: 17, color: "#33333480" }}>✕</button></div>
         <div style={{ padding: "18px 24px" }}>
-          {step === "review" && <div>{cart.map((b, i) => <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < cart.length - 1 ? "1px solid #F0E6D0" : "none" }}><div style={{ display: "flex", gap: 6, alignItems: "center" }}><Icon name={b.icon} size={11} /><div><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{b.name}</div><div style={{ fontSize: 15, color: "#33333480" }}>{b.stocks.length} stocks</div></div></div><div style={{ fontFamily: "JetBrains Mono", fontWeight: 700 }}>{fmt(b.price)}</div></div>)}<div style={{ display: "flex", justifyContent: "space-between", paddingTop: 14, borderTop: "2px solid #F0E6D0", marginTop: 6 }}><span style={{ fontWeight: 800 }}>Total</span><span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 18, fontWeight: 900, color: "#C48830" }}>{fmt(total)}</span></div><button onClick={() => { setStep("executing"); setTimeout(() => setStep("done"), 2200); }} style={{ width: "100%", marginTop: 16, padding: 13, background: "linear-gradient(135deg,#C48830,#EF5350)", color: "#fff", border: "none", borderRadius: 16, fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Execute</button></div>}
-          {step === "executing" && <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 72, animation: "wiggle .5s ease infinite", marginBottom: 8 }}>🚀</div><div style={{ width: 40, height: 40, borderRadius: "50%", border: "4px solid #F0E6D0", borderTopColor: "#C48830", margin: "0 auto 18px", animation: "spin .8s linear infinite" }} /><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Filling your Hatch...</div></div>}
-          {step === "done" && <div style={{ textAlign: "center", padding: "36px 0" }}><div style={{ fontSize: 78, animation: "popIn .5s ease" }}>🎉</div><div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", margin: "10px 0" }}>Complete!</div><button onClick={() => { onExecute(); onClose(); }} style={{ marginTop: 14, padding: "10px 28px", background: "#C48830", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer" }}>Dashboard</button></div>}
+          {step === "review" && <div>{cart.map((b, i) => <div key={b.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: i < cart.length - 1 ? "1px solid var(--accent-border)" : "none" }}><div style={{ display: "flex", gap: 6, alignItems: "center" }}><Icon name={b.icon} size={11} /><div><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>{b.name}</div><div style={{ fontSize: 15, color: "#33333480" }}>{b.stocks.length} stocks</div></div></div><div style={{ fontFamily: "JetBrains Mono", fontWeight: 700 }}>{fmt(b.price)}</div></div>)}<div style={{ display: "flex", justifyContent: "space-between", paddingTop: 14, borderTop: "2px solid var(--accent-border)", marginTop: 6 }}><span style={{ fontWeight: 800 }}>Total</span><span style={{ fontFamily: "'Instrument Serif', serif", fontSize: 18, fontWeight: 900, color: "var(--accent)" }}>{fmt(total)}</span></div><button onClick={() => { setStep("executing"); setTimeout(() => setStep("done"), 2200); }} style={{ width: "100%", marginTop: 16, padding: 13, background: "linear-gradient(135deg,var(--accent),#EF5350)", color: "#fff", border: "none", borderRadius: 16, fontSize: 17, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Execute</button></div>}
+          {step === "executing" && <div style={{ textAlign: "center", padding: "40px 0" }}><div style={{ fontSize: 72, animation: "wiggle .5s ease infinite", marginBottom: 8 }}>🚀</div><div style={{ width: 40, height: 40, borderRadius: "50%", border: "4px solid var(--accent-border)", borderTopColor: "var(--accent)", margin: "0 auto 18px", animation: "spin .8s linear infinite" }} /><div style={{ fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Filling your Hatch...</div></div>}
+          {step === "done" && <div style={{ textAlign: "center", padding: "36px 0" }}><div style={{ fontSize: 78, animation: "popIn .5s ease" }}>🎉</div><div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", margin: "10px 0" }}>Complete!</div><button onClick={() => { onExecute(); onClose(); }} style={{ marginTop: 14, padding: "10px 28px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer" }}>Dashboard</button></div>}
         </div>
       </div>
     </div>
@@ -6088,20 +6119,14 @@ function CheckoutModal({ cart, onClose, onExecute }) {
 
 export default function App() {
   const { user, loading, logout, isFirebaseConfigured } = useAuth();
+  const { isPro, activeTier, switchTier, needsTierSelection, dismissTierSelection, isLoading: subLoading, openCheckout, manageBilling } = useSubscription();
   const [page, setPage] = useState("dashboard");
   const [cart, setCart] = useState([]);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [isAIOpen, setIsAIOpen] = useState(false);
   const [selectedBasket, setSelectedBasket] = useState(null);
-  const [activeScenario, setActiveScenario] = useState(null);
-  const [flippedCards, setFlippedCards] = useState({});
-  useEffect(() => {
-    const flipped = Object.entries(flippedCards).filter(([, v]) => v);
-    if (flipped.length === 0) return;
-    const timers = flipped.map(([id]) => setTimeout(() => setFlippedCards(f => ({ ...f, [id]: false })), 5000));
-    return () => timers.forEach(clearTimeout);
-  }, [flippedCards]);
   const [shopShares, setShopShares] = useState({});
   const [selectedShopBasket, setSelectedShopBasket] = useState(null);
   const [stockSearch, setStockSearch] = useState("");
@@ -6131,6 +6156,18 @@ export default function App() {
     PortfolioService.setLiveNews(liveNews);
   }, [liveNews]);
 
+  // Update macroProducts VIX entry with live data from Yahoo Finance
+  React.useEffect(() => {
+    const vixData = livePrices['^VIX'];
+    if (vixData) {
+      const vixEntry = macroProducts.find(p => p.id === 'vix');
+      if (vixEntry) {
+        vixEntry.price = Math.round(vixData.current * 100) / 100;
+        vixEntry.change = Math.round(vixData.changePercent * 100) / 100;
+      }
+    }
+  }, [livePrices]);
+
   // Use agent data with fallbacks
   const displaySignals = hasAIData ? agentState.signals : tradeSignals;
   const displayHedges = hasAIData ? agentState.hedges : hedgeRecommendations;
@@ -6154,7 +6191,7 @@ export default function App() {
   // Auth gates — render after all hooks
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFEF9", fontFamily: "'Quicksand',sans-serif" }}>
+      <div style={{ height: "100%", width: "100%", maxWidth: 430, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", background: "#FFFEF9", fontFamily: "'Quicksand',sans-serif" }}>
         <style>{STYLES}</style>
         <div style={{ textAlign: "center", animation: "fadeUp 0.4s ease both" }}>
           <div style={{ fontSize: 60, marginBottom: 12 }}>🥚</div>
@@ -6166,9 +6203,19 @@ export default function App() {
 
   if (!user) {
     return (
-      <div style={{ fontFamily: "'Quicksand',sans-serif", background: "#FFFDF5", height: "100%", width: "100%", display: "flex", flexDirection: "column", paddingTop: "env(safe-area-inset-top, 0px)", overflow: "hidden" }}>
+      <div style={{ fontFamily: "'Quicksand',sans-serif", background: "var(--page-bg)", height: "100%", width: "100%", maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", paddingTop: "env(safe-area-inset-top, 0px)", overflow: "hidden" }}>
         <style>{STYLES}</style>
         <AuthPage />
+      </div>
+    );
+  }
+
+  // Tier selection gate — shown to new users who haven't chosen a plan
+  if (needsTierSelection && !subLoading) {
+    return (
+      <div style={{ fontFamily: "'Quicksand',sans-serif", background: "var(--page-bg)", height: "100%", width: "100%", maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <style>{STYLES}</style>
+        <TierSelectionPage onSelectFree={dismissTierSelection} />
       </div>
     );
   }
@@ -6178,91 +6225,124 @@ export default function App() {
   const handleCreate = (data) => { const nb = { id: Date.now(), name: data.name, icon: data.icon, strategy: data.strategy, color: "terracotta", stocks: data.instruments.map(i => i.ticker), value: 0, change: 0, allocation: 0, desc: data.instruments.length + " instruments · " + data.strategy, costBasis: 0, dayPL: 0, totalPL: 0 }; setCustomBaskets([...customBaskets, nb]); notify(data.icon + " " + data.name + " created!"); };
   const goToStock = (ticker) => { if (/^[A-Z.]{1,6}$/.test(ticker)) { setViewStockTicker(ticker); setPage("stock"); setSelectedBasket(null); setPortfolioView(false); } };
 
-  const filteredExplorer = activeScenario ? explorerBaskets.filter(b => b.scenario === activeScenario) : explorerBaskets;
-  const maxExplorerYoY = Math.max(...filteredExplorer.map(b => b.stocks.reduce((sum, t) => sum + (stockYoYReturns[t] || 0), 0) / b.stocks.length));
+  // ── Market Section Data ──
+  const MARKET_STOCKS = [
+    { ticker: "AAPL", name: "Apple" }, { ticker: "MSFT", name: "Microsoft" }, { ticker: "NVDA", name: "NVIDIA" },
+    { ticker: "GOOGL", name: "Alphabet" }, { ticker: "AMZN", name: "Amazon" }, { ticker: "TSLA", name: "Tesla" },
+    { ticker: "AMD", name: "AMD" }, { ticker: "AVGO", name: "Broadcom" }, { ticker: "JPM", name: "JPMorgan" },
+    { ticker: "XOM", name: "Exxon" }, { ticker: "LLY", name: "Eli Lilly" }, { ticker: "UNH", name: "UnitedHealth" },
+  ];
+  const MARKET_OPTIONS = [
+    ...allInstruments.filter(i => i.type === "option"),
+    { ticker: "TSLA 300C 04/19", name: "TSLA $300 Call", type: "option", price: 8.40, change: 12.30 },
+    { ticker: "AMD 200C 03/21", name: "AMD $200 Call", type: "option", price: 6.20, change: 9.80 },
+    { ticker: "META 550C 04/19", name: "META $550 Call", type: "option", price: 11.60, change: 7.40 },
+  ];
+  const MARKET_CRYPTO = [
+    { ticker: "BTC-USD", name: "Bitcoin", icon: "bitcoin", color: "#F7931A", price: 62480.00, change: 4.20 },
+    { ticker: "ETH-USD", name: "Ethereum", icon: "diamond", color: "#627EEA", price: 3420.00, change: 3.10 },
+    { ticker: "SOL-USD", name: "Solana", icon: "bolt", color: "#9945FF", price: 148.60, change: 5.80 },
+    { ticker: "XRP-USD", name: "XRP", icon: "coin", color: "#23292F", price: 0.62, change: 2.40 },
+    { ticker: "ADA-USD", name: "Cardano", icon: "shield", color: "#0033AD", price: 0.48, change: -1.20 },
+    { ticker: "DOGE-USD", name: "Dogecoin", icon: "coin", color: "#C3A634", price: 0.084, change: 6.40 },
+    { ticker: "AVAX-USD", name: "Avalanche", icon: "snowflake", color: "#E84142", price: 38.20, change: 3.60 },
+    { ticker: "LINK-USD", name: "Chainlink", icon: "chain", color: "#2A5ADA", price: 18.40, change: 2.80 },
+  ];
+  const MARKET_FUTURES = [
+    ...allInstruments.filter(i => i.type === "future"),
+    { ticker: "SI Mar26", name: "Silver", type: "future", price: 24.86, change: 1.20 },
+    { ticker: "HG Mar26", name: "Copper", type: "future", price: 3.92, change: 0.85 },
+    { ticker: "NG Mar26", name: "Natural Gas", type: "future", price: 3.42, change: 3.20 },
+  ];
+  const futureIcons = { "ES Mar26": "chart-up", "NQ Mar26": "chart-bar", "CL Mar26": "gas-pump", "GC Apr26": "gold-medal", "ZB Mar26": "building", "ZN Mar26": "building", "SI Mar26": "diamond", "HG Mar26": "pickaxe", "NG Mar26": "fire" };
   const critCount = macroAlerts.filter(a => a.severity === "critical").length;
   const todayEvents = calendarEvents.filter(e => e.date === "2026-02-06").length;
 
-  const navItemsLeft = [
+  const navItems = [
     { id: "dashboard", label: "Home", icon: "home" },
     { id: "risklab", label: "Risk Lab", icon: "flask" },
-  ];
-  const navItemsRight = [
+    { id: "options", label: "Options", icon: "chart-bar" },
     { id: "explorer", label: "Market", icon: "cart" },
     { id: "news", label: "News", icon: "newspaper" },
   ];
 
-  return (
-    <div style={{ fontFamily: "'Quicksand',sans-serif", background: "#FFFDF5", height: "100%", width: "100%", position: "relative", display: "flex", flexDirection: "column", overflowX: "hidden", overflow: "hidden", paddingTop: "env(safe-area-inset-top, 0px)" }}>
-      <style>{STYLES}</style>
+  // Page name mapping for universal header
+  const pageDisplayNames = {
+    dashboard: "Hatch", risklab: "Risk Lab", options: "Options", explorer: "Market",
+    news: "News", calendar: "Calendar", macro: "Macro Dashboard", account: "My Account",
+    stock: viewStockTicker || "Stock", indicator: "Indicator",
+  };
 
-        {/* ── Top Header Bar (Dashboard/Home only, collapses on scroll) ── */}
-        {page === "dashboard" && <div style={{
-          background: "#fff", borderBottom: "1.5px solid #F0E6D0", flexShrink: 0, zIndex: 200,
-          maxHeight: headerCollapsed ? 0 : 110,
+  // Theme: gold (free) or platinum (pro)
+  const t = GOLD_THEME;
+  const themeCSS = `:root{--accent:${t.accent};--accent-dark:${t.accentDark};--accent-light:${t.accentLight};--accent-bg:${t.accentBg};--accent-border:${t.accentBorder};--border-light:${t.borderLight};--text-accent-dark:${t.textAccentDark};--text-accent:${t.textAccent};--text-muted:${t.textMuted};--page-bg:${t.pageBg};--surface-light:${t.surfaceLight};--body-bg:${t.bodyBg};--root-bg:${t.rootBg};--subtle-text:${t.subtleText};--grad-text1:${t.gradText1};--grad-text2:${t.gradText2};--warm-text:${t.warmText};--accent-a13:${t.accent}22;--accent-a20:${t.accent}33;--accent-a27:${t.accent}44;--accent-border-a13:${t.accentBorder}20}`;
+
+  return (
+    <div style={{ fontFamily: "'Quicksand',sans-serif", background: t.pageBg, height: "100%", width: "100%", maxWidth: 430, margin: "0 auto", position: "relative", display: "flex", flexDirection: "column", overflowX: "hidden", overflow: "hidden", paddingTop: "env(safe-area-inset-top, 0px)" }}>
+      <style>{STYLES + themeCSS}</style>
+
+        {/* ── Universal Collapsible Header (all pages — golden egg + page name) ── */}
+        <div style={{
+          background: "#fff", borderBottom: "1.5px solid var(--accent-border)", flexShrink: 0, zIndex: 200,
+          maxHeight: headerCollapsed ? 0 : 64,
           overflow: "hidden",
           transition: "max-height .3s ease",
         }}>
           <div style={{
-            display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 18px 10px",
+            display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 18px 8px",
             opacity: headerCollapsed ? 0 : 1, transform: headerCollapsed ? "translateY(-10px)" : "translateY(0)",
             transition: "opacity .25s ease, transform .25s ease",
           }}>
-            {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }} onClick={() => { setPage("dashboard"); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); setViewIndicatorId(null); }}>
-              <svg width="34" height="34" viewBox="0 0 64 64" style={{ animation: "basketBounce 2.5s ease-in-out infinite" }}>
+            {/* Golden Egg + Page Name */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setIsAIOpen(true)}>
+              <svg width="30" height="36" viewBox="0 0 30 36" style={{ animation: "eggWobble 3.5s ease-in-out infinite, eggGlow 3s ease-in-out infinite", flexShrink: 0 }}>
                 <defs>
-                  <linearGradient id="bsk" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#D4A76A"/><stop offset="100%" stopColor="#A67C52"/></linearGradient>
-                  <linearGradient id="bskH" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#C49A5C"/><stop offset="100%" stopColor="#8B6914"/></linearGradient>
+                  <radialGradient id="goldenEggHdr" cx="40%" cy="35%">
+                    <stop offset="0%" stopColor="#FFF8E1"/>
+                    <stop offset="35%" stopColor="#FFD54F"/>
+                    <stop offset="100%" stopColor="#C48830"/>
+                  </radialGradient>
                 </defs>
-                <path d="M16 26 Q32 4 48 26" fill="none" stroke="url(#bskH)" strokeWidth="3.5" strokeLinecap="round"/>
-                <path d="M17.5 26 Q32 6 46.5 26" fill="none" stroke="#D4A76A" strokeWidth="1.5" strokeLinecap="round" opacity="0.5"/>
-                <path d="M10 28 L14 50 Q32 54 50 50 L54 28 Z" fill="url(#bsk)" stroke="#8B6914" strokeWidth="1"/>
-                <rect x="8" y="26" width="48" height="4" rx="2" fill="#C49A5C" stroke="#8B6914" strokeWidth="0.8"/>
-                <path d="M12 33 Q32 35 52 33" fill="none" stroke="#8B6914" strokeWidth="0.7" opacity="0.5"/>
-                <path d="M13 38 Q32 40 51 38" fill="none" stroke="#8B6914" strokeWidth="0.7" opacity="0.5"/>
-                <path d="M13.5 43 Q32 45 50.5 43" fill="none" stroke="#8B6914" strokeWidth="0.7" opacity="0.5"/>
-                {[18,24,30,36,42].map(x => <line key={x} x1={x} y1="28" x2={x + (x < 32 ? 1.5 : -1.5)} y2="50" stroke="#8B6914" strokeWidth="0.6" opacity="0.4"/>)}
-                <rect x="10" y="26.5" width="44" height="1.2" rx="0.6" fill="#E8C97A" opacity="0.6"/>
-                <ellipse cx="24" cy="24" rx="7.5" ry="9.5" fill="#FFF8E1" stroke="#F0D9A0" strokeWidth="1" style={{ animation: "eggWobble 3.5s ease-in-out infinite" }}/>
-                <ellipse cx="40" cy="24" rx="7" ry="9" fill="#FAFAFA" stroke="#E0E0E0" strokeWidth="1" style={{ animation: "eggWobble 3.5s ease-in-out .6s infinite" }}/>
-                <ellipse cx="32" cy="21" rx="7.5" ry="9.5" fill="#FFF9C4" stroke="#FFE082" strokeWidth="1" style={{ animation: "eggWobble 3.5s ease-in-out 1.2s infinite" }}/>
-                <ellipse cx="30" cy="18" rx="2.2" ry="3.5" fill="#fff" opacity="0.55"/>
-                <ellipse cx="22" cy="21" rx="2" ry="3" fill="#fff" opacity="0.45"/>
-                <ellipse cx="38" cy="21" rx="2" ry="3" fill="#fff" opacity="0.45"/>
+                <ellipse cx="15" cy="19" rx="12" ry="15" fill="url(#goldenEggHdr)" stroke="#D4A03C" strokeWidth="1.2"/>
+                <ellipse cx="12" cy="14" rx="3.5" ry="5.5" fill="#fff" opacity="0.5"/>
+                <ellipse cx="18" cy="22" rx="2" ry="3" fill="#fff" opacity="0.2"/>
               </svg>
               <div>
-                <span style={{ fontWeight: 900, fontSize: 23, fontFamily: "'Instrument Serif', serif", background: "linear-gradient(135deg,#C48830,#D4A03C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", display: "block", lineHeight: 1.1 }}>Hatch</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#C8B898", letterSpacing: 1.5, textTransform: "uppercase" }}>Smart Trading</span>
-                {isLive && <span style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 1 }}>
-                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#5B8C5A", animation: "pulse 2s infinite" }} />
-                  <span style={{ fontSize: 9, fontWeight: 700, color: "#5B8C5A", letterSpacing: 1, textTransform: "uppercase" }}>Live</span>
+                <span style={{ fontWeight: 900, fontSize: 21, fontFamily: "'Instrument Serif', serif", background: "linear-gradient(135deg,var(--accent),var(--accent-light))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", display: "block", lineHeight: 1.15 }}>
+                  {pageDisplayNames[page] || "Hatch"}
+                </span>
+                {page === "dashboard" && <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2,
+                  fontSize: 10, fontWeight: 900, letterSpacing: 1.5, textTransform: "uppercase",
+                  padding: "2px 8px", borderRadius: 6,
+                  background: isPro ? "linear-gradient(135deg, #F9E547, #C48830)" : "linear-gradient(135deg, #E0E0E0, #B0BEC5)",
+                  color: isPro ? "#5C3D0E" : "#546E7A",
+                }}>
+                  {isPro ? "Gold" : "Silver"}
                 </span>}
               </div>
             </div>
             {/* Calendar + Account */}
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <button onClick={() => { setPage("calendar"); setSelectedBasket(null); }}
-                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "calendar" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "calendar" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 23 }}>
+                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "calendar" ? "2px solid var(--accent)" : "1.5px solid var(--accent-border)", background: page === "calendar" ? "var(--accent-bg)" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 23 }}>
                 <Icon name="calendar" size={12} />
                 {todayEvents > 0 && <span style={{ position: "absolute", top: -2, right: -2, width: 14, height: 14, borderRadius: "50%", background: "#FFA726", color: "#fff", fontSize: 11, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid #fff" }}>{todayEvents}</span>}
               </button>
               <button onClick={() => { setPage("account"); setSelectedBasket(null); }}
-                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "account" ? "2px solid #C48830" : "1.5px solid #F0E6D0", background: page === "account" ? "#FFF8EE" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 23 }}>
+                style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", border: page === "account" ? "2px solid var(--accent)" : "1.5px solid var(--accent-border)", background: page === "account" ? "var(--accent-bg)" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 23 }}>
                 <Icon name="person" size={12} />
               </button>
             </div>
           </div>
-        </div>}
+        </div>
 
-        {notification && <div style={{ position: "absolute", top: 58, left: "50%", transform: "translateX(-50%)", zIndex: 350, background: "#fff", color: "#C48830", padding: "7px 16px", borderRadius: 12, fontSize: 17, fontWeight: 800, animation: "popIn .3s ease", boxShadow: "0 6px 20px rgba(0,0,0,.1)", border: "1px solid #33333440", whiteSpace: "nowrap" }}>{notification}</div>}
+        {notification && <div style={{ position: "absolute", top: 58, left: "50%", transform: "translateX(-50%)", zIndex: 350, background: "#fff", color: "var(--accent)", padding: "7px 16px", borderRadius: 12, fontSize: 17, fontWeight: 800, animation: "popIn .3s ease", boxShadow: "0 6px 20px rgba(0,0,0,.1)", border: "1px solid #33333440", whiteSpace: "nowrap" }}>{notification}</div>}
 
         {/* ── Scrollable Content ── */}
         <div ref={scrollRef} onScroll={(e) => {
-          if (page === "dashboard") {
-            const st = e.target.scrollTop;
-            setHeaderCollapsed(st > 30);
-          }
+          const st = e.target.scrollTop;
+          setHeaderCollapsed(st > 30);
         }} style={{ flex: 1, overflow: "auto", overflowX: "hidden", padding: "10px 12px 10px" }}>
         {selectedBasket && <BasketDetail basket={selectedBasket} onBack={() => setSelectedBasket(null)} onGoToStock={goToStock} />}
 
@@ -6286,7 +6366,7 @@ export default function App() {
             <div style={{ animation: "slideRight .4s ease both" }}>
               {/* Header */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <button onClick={() => setPortfolioView(false)} style={{ width: 30, height: 30, borderRadius: 10, border: "1px solid #33333440", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: "#C48830" }}>←</button>
+                <button onClick={() => setPortfolioView(false)} style={{ width: 30, height: 30, borderRadius: 10, border: "1px solid #33333440", background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color: "var(--accent)" }}>←</button>
                 <div>
                   <div style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Portfolio Overview</div>
                   <div style={{ fontSize: 14, color: "#33333480" }}>{myBaskets.length} baskets · {allStks.length} holdings</div>
@@ -6311,11 +6391,11 @@ export default function App() {
                   const pct = tv > 0 ? (b.value / tv * 100).toFixed(1) : 0;
                   return (
                     <div key={b.id} onClick={() => { setPortfolioView(false); if (basketStocks[b.id]) setSelectedBasket(b); }}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none", cursor: "pointer" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none", cursor: "pointer" }}>
                       <Icon name={b.icon} size={16} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{b.name}</div>
-                        <div style={{ height: 4, background: "#F5F0E8", borderRadius: 2, marginTop: 3 }}>
+                        <div style={{ height: 4, background: "var(--surface-light)", borderRadius: 2, marginTop: 3 }}>
                           <div style={{ height: "100%", width: pct + "%", background: c.a, borderRadius: 2 }} />
                         </div>
                       </div>
@@ -6330,7 +6410,7 @@ export default function App() {
 
               {/* All Holdings (sparkline rows) */}
               <div style={{ background: "#fff", borderRadius: 14, overflow: "hidden", marginBottom: 8 }}>
-                <div style={{ padding: "8px 12px", borderBottom: "1.5px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ padding: "8px 12px", borderBottom: "1.5px solid var(--accent-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>All Holdings</span>
                   <span style={{ fontSize: 12, color: "#33333480", fontWeight: 600 }}>{allStks.length} instruments</span>
                 </div>
@@ -6342,8 +6422,8 @@ export default function App() {
                   const c2 = CL[st.basketColor] || CL.terracotta;
                   return (
                     <div key={st.ticker + st.basket + i} onClick={() => goToStock(st.ticker)}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderBottom: i < allStks.length - 1 ? "1px solid #F0E6D0" : "none", transition: "background .15s", cursor: "pointer" }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderBottom: i < allStks.length - 1 ? "1px solid var(--accent-border)" : "none", transition: "background .15s", cursor: "pointer" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "var(--page-bg)"} onMouseLeave={e => e.currentTarget.style.background = ""}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.name || st.ticker}</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 1 }}>
@@ -6392,10 +6472,10 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                <div style={{ padding: "6px 8px", background: portfolioRisk.sectorConcentration > 40 ? "#FFEBEE" : "#FFF8EE", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ padding: "6px 8px", background: portfolioRisk.sectorConcentration > 40 ? "#FFEBEE" : "var(--accent-bg)", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Concentration</div>
-                    <div style={{ fontSize: 11, color: "#8A7040" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div>
+                    <div style={{ fontSize: 11, color: "var(--warm-text)" }}>Top: {portfolioRisk.topHolding.ticker} ({portfolioRisk.topHolding.pct}%)</div>
                   </div>
                   <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: "#EF5350" }}>{portfolioRisk.sectorConcentration}%</div>
                 </div>
@@ -6404,14 +6484,14 @@ export default function App() {
               {/* Per-Hatch Metrics */}
               <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 8 }}>
                 <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", marginBottom: 7 }}>Per-Hatch Metrics</div>
-                <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #F0E6D0" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "#FFFDF5", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
+                <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid var(--accent-border)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", background: "var(--page-bg)", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid var(--accent-border)" }}>
                     <div>Basket</div><div>Sharpe</div><div>Beta</div><div>Alpha</div>
                   </div>
                   {myBaskets.map((b, mi) => { const brm = basketRiskMetrics[b.id]; if (!brm) return null; return (
-                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", borderBottom: mi < myBaskets.length - 1 ? "1px solid #F0E6D0" : "none", fontSize: 15, alignItems: "center" }}>
+                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "1.4fr .7fr .7fr .7fr", padding: "6px 10px", borderBottom: mi < myBaskets.length - 1 ? "1px solid var(--accent-border)" : "none", fontSize: 15, alignItems: "center" }}>
                       <div style={{ display: "flex", gap: 4, alignItems: "center" }}><Icon name={b.icon} size={9} /><span style={{ fontWeight: 700, fontFamily: "'Instrument Serif', serif", fontSize: 12 }}>{b.name}</span></div>
-                      <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.sharpe > 1 ? "#C48830" : "#FFA726" }}>{brm.sharpe.toFixed(2)}</div>
+                      <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.sharpe > 1 ? "var(--accent)" : "#FFA726" }}>{brm.sharpe.toFixed(2)}</div>
                       <div style={{ fontFamily: "JetBrains Mono", fontWeight: 600, fontSize: 14, color: brm.beta < 1.3 ? "#5B8C5A" : "#EF5350" }}>{brm.beta.toFixed(2)}</div>
                       <div style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: brm.alpha > 0 ? "#5B8C5A" : "#EF5350" }}>{brm.alpha > 0 ? "+" : ""}{brm.alpha.toFixed(1)}%</div>
                     </div>); })}
@@ -6424,19 +6504,19 @@ export default function App() {
                 {factorExposures.map((f, fi) => {
                   const overweight = f.exposure > f.benchmark;
                   return (
-                    <div key={fi} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderTop: fi > 0 ? "1px solid #F0E6D020" : "none" }}>
+                    <div key={fi} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderTop: fi > 0 ? "1px solid var(--accent-border-a13)" : "none" }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: "#333334", width: 55 }}>{f.factor}</span>
-                      <div style={{ flex: 1, position: "relative", height: 8, background: "#F5F0E8", borderRadius: 4 }}>
-                        <div style={{ position: "absolute", left: (f.benchmark * 100) + "%", top: 0, bottom: 0, width: 1.5, background: "#A0908066", zIndex: 1 }} />
-                        <div style={{ height: "100%", width: (f.exposure * 100) + "%", background: overweight ? "#C48830" : "#5B8C5A", borderRadius: 4 }} />
+                      <div style={{ flex: 1, position: "relative", height: 8, background: "var(--surface-light)", borderRadius: 4 }}>
+                        <div style={{ position: "absolute", left: (f.benchmark * 100) + "%", top: 0, bottom: 0, width: 1.5, background: "var(--text-muted)", zIndex: 1 }} />
+                        <div style={{ height: "100%", width: (f.exposure * 100) + "%", background: overweight ? "var(--accent)" : "#5B8C5A", borderRadius: 4 }} />
                       </div>
-                      <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 800, color: overweight ? "#C48830" : "#5B8C5A", minWidth: 24, textAlign: "right" }}>{(f.exposure * 100).toFixed(0)}%</span>
+                      <span style={{ fontSize: 12, fontFamily: "JetBrains Mono", fontWeight: 800, color: overweight ? "var(--accent)" : "#5B8C5A", minWidth: 24, textAlign: "right" }}>{(f.exposure * 100).toFixed(0)}%</span>
                     </div>
                   );
                 })}
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, fontSize: 11, color: "#33333480" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 2, background: "#A0908066", borderRadius: 1 }} /><span>Benchmark</span></div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "#C48830", borderRadius: 1 }} /><span>Overweight</span></div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 2, background: "var(--text-muted)", borderRadius: 1 }} /><span>Benchmark</span></div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "var(--accent)", borderRadius: 1 }} /><span>Overweight</span></div>
                   <div style={{ display: "flex", alignItems: "center", gap: 3 }}><div style={{ width: 8, height: 4, background: "#5B8C5A", borderRadius: 1 }} /><span>Underweight</span></div>
                 </div>
               </div>
@@ -6453,7 +6533,7 @@ export default function App() {
                       {basketCorrelations[ri] && basketCorrelations[ri].map((cv, ci) => {
                         const abs = Math.abs(cv);
                         const bg = ri === ci ? "#FFF5E6" : cv > 0.5 ? "rgba(232,116,97," + (abs * 0.4) + ")" : cv < -0.05 ? "rgba(91,155,213," + (abs * 0.6) + ")" : "rgba(107,155,110," + (abs * 0.3) + ")";
-                        return <div key={ci} style={{ textAlign: "center", padding: "8px 2px", borderRadius: 6, background: bg, fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 15, color: ri === ci ? "#A09080" : "#5C4A1E" }}>{cv.toFixed(2)}</div>;
+                        return <div key={ci} style={{ textAlign: "center", padding: "8px 2px", borderRadius: 6, background: bg, fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 15, color: ri === ci ? "var(--text-muted)" : "var(--text-accent-dark)" }}>{cv.toFixed(2)}</div>;
                       })}
                     </React.Fragment>
                   ))}
@@ -6496,7 +6576,7 @@ export default function App() {
                 const isPositive = changeDollar >= 0;
                 const changeColor = isPositive ? "#5B8C5A" : "#EF5350";
                 return (<>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: "#8B6914", marginBottom: 3 }}>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: "var(--accent-dark)", marginBottom: 3 }}>
                     {chartHover ? <span style={{ transition: "all .15s" }}>{displayLabel}</span> : "Good morning, John"}
                   </div>
                   <div style={{ fontSize: 39, fontWeight: 900, fontFamily: "'Instrument Serif', serif", letterSpacing: "-1px", lineHeight: 1.1, color: "#333334", transition: "all .15s" }}>
@@ -6511,10 +6591,10 @@ export default function App() {
               })()}
             </div>
             <div style={{ margin: "18px 0 10px" }}>
-              <MiniChart data={portfolioHistory} color="#C48830" chartId="main" onHover={setChartHover} />
+              <MiniChart data={portfolioHistory} color="var(--accent)" chartId="main" onHover={setChartHover} />
             </div>
-            <div style={{ display: "flex", gap: 1, background: "#FFFDF5", borderRadius: 8, padding: 2, width: "fit-content" }}>
-              {["1D","1W","1M","3M","1Y","ALL"].map(t => <button key={t} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: t === "1Y" ? "#fff" : "transparent", color: t === "1Y" ? "#C48830" : "#A09080", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", boxShadow: t === "1Y" ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>)}
+            <div style={{ display: "flex", gap: 1, background: "var(--page-bg)", borderRadius: 8, padding: 2, width: "fit-content" }}>
+              {["1D","1W","1M","3M","1Y","ALL"].map(t => <button key={t} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: t === "1Y" ? "#fff" : "transparent", color: t === "1Y" ? "var(--accent)" : "var(--text-muted)", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", boxShadow: t === "1Y" ? "0 1px 4px rgba(0,0,0,.06)" : "none" }}>{t}</button>)}
             </div>
           </div>
 
@@ -6529,14 +6609,14 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 17 }}></span>
                 <span style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif" }}>Trade Signals</span>
-                <span style={{ fontSize: 15, fontWeight: 800, background: "#FFF8EE", color: "#C48830", padding: "2px 8px", borderRadius: 10 }}>{displaySignals.filter(s => s.status === "pending").length} pending</span>
+                <span style={{ fontSize: 15, fontWeight: 800, background: "var(--accent-bg)", color: "var(--accent)", padding: "2px 8px", borderRadius: 10 }}>{displaySignals.filter(s => s.status === "pending").length} pending</span>
               </div>
-              <button onClick={() => setPage("risklab")} style={{ background: "none", border: "none", color: "#C48830", fontWeight: 800, fontSize: 17, cursor: "pointer" }}>View All →</button>
+              <button onClick={() => setPage("risklab")} style={{ background: "none", border: "none", color: "var(--accent)", fontWeight: 800, fontSize: 17, cursor: "pointer" }}>View All →</button>
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {displaySignals.slice(0, 4).map(s => {
-                const sigCol = { BUY: "#C48830", SELL: "#EF5350", HOLD: "#FFA726", TRIM: "#FFA726" };
-                const sigBg = { BUY: "#FFF8EE", SELL: "#FFEBEE", HOLD: "#FFF3E0", TRIM: "#FFF3E0" };
+                const sigCol = { BUY: "var(--accent)", SELL: "#EF5350", HOLD: "#FFA726", TRIM: "#FFA726" };
+                const sigBg = { BUY: "var(--accent-bg)", SELL: "#FFEBEE", HOLD: "#FFF3E0", TRIM: "#FFF3E0" };
                 return (
                   <div key={s.id} onClick={() => goToStock(s.ticker)} style={{ flex: "1 1 calc(50% - 4px)", minWidth: 0, background: "#fff", border: "1px solid #33333420", borderRadius: 12, padding: "7px 10px", cursor: "pointer" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -6546,7 +6626,7 @@ export default function App() {
                     <div style={{ display: "flex", gap: 3, alignItems: "center" }}>
                       <span style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800 }}>{s.ticker}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.3, marginTop: 2 }}>{s.reason.slice(0, 50)}...</div>
+                    <div style={{ fontSize: 12, color: "var(--warm-text)", lineHeight: 1.3, marginTop: 2 }}>{s.reason.slice(0, 50)}...</div>
                     <div style={{ marginTop: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ height: 3, flex: 1, background: "#FFF5E6", borderRadius: 2, marginRight: 6 }}>
                         <div style={{ height: "100%", width: s.strength + "%", background: sigCol[s.signal], borderRadius: 2 }} />
@@ -6564,30 +6644,30 @@ export default function App() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>My Baskets</div>
-                <button onClick={() => setShowCreate(true)} style={{ background: "#C48830", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 8, fontSize: 14, fontWeight: 800, cursor: "pointer" }}>+ New</button>
+                <button onClick={() => setShowCreate(true)} style={{ background: "var(--accent)", color: "#fff", border: "none", padding: "4px 8px", borderRadius: 8, fontSize: 14, fontWeight: 800, cursor: "pointer" }}>+ New</button>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span onClick={() => setBasketView("baskets")} style={{ cursor: "pointer", transition: "color .2s" }}>⊞</span>
-                <span onClick={() => setBasketView("stocks")} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><Icon name="list" size={15} color={basketView === "stocks" ? "#C48830" : "#D0C8B8"} /></span>
-                <span onClick={() => setPortfolioView(true)} style={{ fontSize: 15, fontWeight: 800, color: "#C48830", cursor: "pointer", fontFamily: "Quicksand" }}>View →</span>
+                <span onClick={() => setBasketView("stocks")} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}><Icon name="list" size={15} color={basketView === "stocks" ? "var(--accent)" : "#D0C8B8"} /></span>
+                <span onClick={() => setPortfolioView(true)} style={{ fontSize: 15, fontWeight: 800, color: "var(--accent)", cursor: "pointer", fontFamily: "Quicksand" }}>View →</span>
               </div>
             </div>
 
             {/* Create CTA */}
             <div onClick={() => setShowCreate(true)} style={{ background: "linear-gradient(135deg,#fff,#FFF8EE)", border: "2px dashed #FFA726", borderRadius: 18, padding: "18px 20px", marginBottom: 7, cursor: "pointer", transition: "all .3s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#C48830"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#FFA726"; }}>
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = "#FFA726"; }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 14, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="egg" size={24} color="#C48830" /></div>
-                <div style={{ flex: 1 }}><div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Create Your Own Hatch</div><div style={{ fontSize: 17, color: "#8A7040", marginTop: 1 }}>Mix stocks, options, futures & crypto</div></div>
-                <div style={{ display: "flex", gap: 4 }}>{["chart-up","chart-bar","hourglass","bitcoin"].map(t => <span key={t} style={{ background: "#fff", width: 28, height: 28, borderRadius: 8, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Icon name={t} size={14} color="#C48830" /></span>)}</div>
+                <div style={{ width: 44, height: 44, borderRadius: 14, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="egg" size={24} color="var(--accent)" /></div>
+                <div style={{ flex: 1 }}><div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif" }}>Create Your Own Hatch</div><div style={{ fontSize: 17, color: "var(--warm-text)", marginTop: 1 }}>Mix stocks, options, futures & crypto</div></div>
+                <div style={{ display: "flex", gap: 4 }}>{["chart-up","chart-bar","hourglass","bitcoin"].map(t => <span key={t} style={{ background: "#fff", width: 28, height: 28, borderRadius: 8, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Icon name={t} size={14} color="var(--accent)" /></span>)}</div>
               </div>
             </div>
 
             {/* ── Baskets View (rich cards, clickable) ── */}
             {basketView === "baskets" && (() => { const _allBkts = [...myBaskets, ...customBaskets]; const _maxChg = Math.max(..._allBkts.map(b => b.change)); const _maxRetPct = Math.max(..._allBkts.filter(b => b.costBasis > 0).map(b => b.totalPL / b.costBasis)); return <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 6 }}>
               {_allBkts.map((b, i) => { const c = CL[b.color] || CL.terracotta; const health = getBasketHealth(b); const isBad = health.status === "critical" || health.status === "warning"; const retPct = b.costBasis > 0 ? b.totalPL / b.costBasis : 0; const isHighestReturn = retPct === _maxRetPct && _maxRetPct > 0; const isTrendiest = b.change === _maxChg && _maxChg > 0; return (
-                <div key={b.id} onClick={() => { if (basketStocks[b.id]) setSelectedBasket(b); }} style={{ background: isHighestReturn ? "#FFFDF0" : "#FFFDF5", border: `2px solid ${isHighestReturn ? "#DAA52066" : isBad ? health.clr + "44" : "#F0E6D0"}`, borderRadius: 18, cursor: "pointer", transition: "all .3s", overflow: "hidden" }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA520" : c.a; e.currentTarget.style.transform = "translateY(-2px)"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA52066" : isBad ? health.clr + "44" : "#F0E6D0"; e.currentTarget.style.transform = ""; }}>
+                <div key={b.id} onClick={() => { if (basketStocks[b.id]) setSelectedBasket(b); }} style={{ background: isHighestReturn ? "#FFFDF0" : "var(--page-bg)", border: `2px solid ${isHighestReturn ? "#DAA52066" : isBad ? health.clr + "44" : "var(--accent-border)"}`, borderRadius: 18, cursor: "pointer", transition: "all .3s", overflow: "hidden" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA520" : c.a; e.currentTarget.style.transform = "translateY(-2px)"; }} onMouseLeave={e => { e.currentTarget.style.borderColor = isHighestReturn ? "#DAA52066" : isBad ? health.clr + "44" : "var(--accent-border)"; e.currentTarget.style.transform = ""; }}>
                   <div style={{ background: isHighestReturn ? "linear-gradient(135deg, #FFF8E1, #FFF3CD)" : c.l, padding: "10px 16px 8px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{isHighestReturn ? <Icon name="egg" size={14} color="#DAA520" /> : <Icon name={b.icon} size={12} />}<div><div style={{ fontSize: 17, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: isHighestReturn ? "#B8860B" : undefined }}>{b.name}</div><div style={{ fontSize: 14, color: isHighestReturn ? "#DAA520" : c.a, fontWeight: 700, textTransform: "uppercase" }}>{b.strategy}</div></div></div>
@@ -6599,7 +6679,7 @@ export default function App() {
                       {isBad ? <span style={{ width: 18, height: 18, borderRadius: "50%", background: health.clr, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 15, color: "#fff", fontWeight: 900, flexShrink: 0, animation: health.status === "critical" ? "pulse 2s ease infinite" : "none" }}>!</span> : <Icon name={health.icon} size={10} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 15, fontWeight: 800, color: health.clr, fontFamily: "'Instrument Serif', serif" }}>{health.label}</div>
-                        <div style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.3, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{health.tip}</div>
+                        <div style={{ fontSize: 12, color: "var(--warm-text)", lineHeight: 1.3, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{health.tip}</div>
                       </div>
                     </div>
                     {b.totalPL !== 0 && <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ fontSize: 15, color: "#33333480", fontWeight: 700 }}>P&L</span><span style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 700, color: b.totalPL >= 0 ? "#5B8C5A" : "#EF5350" }}>{fmtS(b.totalPL)}</span></div>}
@@ -6609,8 +6689,8 @@ export default function App() {
             </div>; })()}
 
             {/* ── Stocks List View (sparkline rows) ── */}
-            {basketView === "stocks" && <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid #F0E6D0", background: "#fff" }}>
-              <div style={{ padding: "8px 12px", borderBottom: "1.5px solid #F0E6D0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {basketView === "stocks" && <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--accent-border)", background: "#fff" }}>
+              <div style={{ padding: "8px 12px", borderBottom: "1.5px solid var(--accent-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>All Holdings</span>
                 <span style={{ fontSize: 12, color: "#33333480", fontWeight: 600 }}>sorted by P&L</span>
               </div>
@@ -6633,8 +6713,8 @@ export default function App() {
                   const c2 = CL[st.basketColor] || CL.terracotta;
                   return (
                     <div key={st.ticker + st.basket + i} onClick={() => goToStock(st.ticker)}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderBottom: i < allStks.length - 1 ? "1px solid #F0E6D0" : "none", cursor: "pointer", transition: "background .15s" }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#FFFDF5"} onMouseLeave={e => e.currentTarget.style.background = ""}>
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderBottom: i < allStks.length - 1 ? "1px solid var(--accent-border)" : "none", cursor: "pointer", transition: "background .15s" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "var(--page-bg)"} onMouseLeave={e => e.currentTarget.style.background = ""}>
                       {/* Left: name + ticker + basket */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{st.name || st.ticker}</div>
@@ -6697,7 +6777,7 @@ export default function App() {
                 </div>
                 <div style={{ background: "#fff", borderRadius: 12, padding: "4px 10px", overflow: "hidden" }}>
                 {realizedTrades.map((t, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderTop: i > 0 ? "1px solid #F0E6D0" : "none" }}>
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderTop: i > 0 ? "1px solid var(--accent-border)" : "none" }}>
                     <Icon name={t.icon} size={14} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{t.ticker} <span style={{ fontWeight: 600, color: "#33333480" }}>· {t.shares} shares</span></div>
@@ -6747,10 +6827,10 @@ export default function App() {
                     <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 4 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, padding: "2px 7px", borderRadius: 5, background: clr.a + "18", color: clr.a }}>{b.strategy}</span>
                     </div>
-                    <p style={{ fontSize: 12, color: "#8A7040", lineHeight: 1.4, marginTop: 6, maxWidth: 280, margin: "6px auto 0" }}>{b.desc}</p>
+                    <p style={{ fontSize: 12, color: "var(--warm-text)", lineHeight: 1.4, marginTop: 6, maxWidth: 280, margin: "6px auto 0" }}>{b.desc}</p>
                   </div>
                   <div style={{ padding: "0 12px 12px" }}>
-                    <div className="trading-table-header" style={{ display: "grid", gridTemplateColumns: "auto 1fr 58px 36px 40px 52px", padding: "8px 4px 5px", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid #F0E6D0" }}>
+                    <div className="trading-table-header" style={{ display: "grid", gridTemplateColumns: "auto 1fr 58px 36px 40px 52px", padding: "8px 4px 5px", fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase", letterSpacing: .5, borderBottom: "1.5px solid var(--accent-border)" }}>
                       <div style={{ width: 24 }}></div><div>Item</div><div style={{ textAlign: "right" }}>Price</div><div style={{ textAlign: "right" }}>Chg</div><div style={{ textAlign: "center" }}>Qty</div><div></div>
                     </div>
                     {b.stocks.map((ticker, ti) => {
@@ -6764,8 +6844,8 @@ export default function App() {
                           <div style={{ width: 24, display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <StockLogo ticker={ticker} size={20} />
                           </div>
-                          <div onClick={() => goToStock(ticker)} style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 15, cursor: "pointer", color: "#C48830" }}>{ticker}</div>
-                          <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 14, color: "#6B5A2E" }}>${price >= 1000 ? (price / 1000).toFixed(1) + "k" : price.toFixed(0)}</div>
+                          <div onClick={() => goToStock(ticker)} style={{ fontFamily: "JetBrains Mono", fontWeight: 800, fontSize: 15, cursor: "pointer", color: "var(--accent)" }}>{ticker}</div>
+                          <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 14, color: "var(--text-accent)" }}>${price >= 1000 ? (price / 1000).toFixed(1) + "k" : price.toFixed(0)}</div>
                           <div style={{ textAlign: "right", fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 700, color: chgColor }}>{chgPct >= 0 ? "+" : ""}{chgPct.toFixed(1)}%</div>
                           <div style={{ textAlign: "center", fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800 }}>{shares}</div>
                           <div style={{ display: "flex", gap: 2, justifyContent: "flex-end" }}>
@@ -6775,16 +6855,16 @@ export default function App() {
                         </div>
                       );
                     })}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 4px 4px", borderTop: "2px solid #F0E6D0", marginTop: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 4px 4px", borderTop: "2px solid var(--accent-border)", marginTop: 4 }}>
                       <div>
                         <div style={{ fontSize: 11, color: "#33333480", textTransform: "uppercase", fontWeight: 700 }}>Basket Total</div>
                         <div style={{ fontFamily: "'Instrument Serif', serif", fontSize: 23, fontWeight: 900, color: "#333334" }}>${totalCost >= 1000 ? (totalCost / 1000).toFixed(1) + "k" : totalCost.toFixed(0)}</div>
                       </div>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <button onClick={() => addToCart(b)} style={{ width: 34, height: 34, borderRadius: 10, border: inCart ? "2px solid #5B8C5A" : "1.5px solid #F0E6D0", background: inCart ? "#E8F5E9" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <button onClick={() => addToCart(b)} style={{ width: 34, height: 34, borderRadius: 10, border: inCart ? "2px solid #5B8C5A" : "1.5px solid var(--accent-border)", background: inCart ? "#E8F5E9" : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                           {inCart ? <span style={{ fontSize: 21 }}>✅</span> : <Icon name="cart" size={14} />}
                         </button>
-                        <button onClick={() => { addToCart(b); setShowCheckout(true); setSelectedShopBasket(null); }} style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 12, padding: "9px 18px", fontSize: 15, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy Now</button>
+                        <button onClick={() => { addToCart(b); setShowCheckout(true); setSelectedShopBasket(null); }} style={{ background: "linear-gradient(135deg,var(--accent),var(--accent-light))", color: "#fff", border: "none", borderRadius: 12, padding: "9px 18px", fontSize: 15, fontWeight: 900, cursor: "pointer", fontFamily: "'Instrument Serif', serif" }}>Buy Now</button>
                       </div>
                     </div>
                   </div>
@@ -6797,9 +6877,9 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div>
               <h1 style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Market</h1>
-              <p style={{ color: "#33333480", fontSize: 12, marginTop: 1 }}>Search stocks or browse baskets</p>
+              <p style={{ color: "#33333480", fontSize: 12, marginTop: 1 }}>Search & browse the market</p>
             </div>
-            <button onClick={() => setShowCheckout(true)} style={{ position: "relative", display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 10, background: cart.length > 0 ? "linear-gradient(135deg,#C48830,#D4A03C)" : "#fff", color: cart.length > 0 ? "#fff" : "#A09080", border: cart.length > 0 ? "none" : "1.5px solid #F0E6D0", cursor: "pointer", fontSize: 15, fontWeight: 800 }}>
+            <button onClick={() => setShowCheckout(true)} style={{ position: "relative", display: "flex", alignItems: "center", gap: 3, padding: "5px 10px", borderRadius: 10, background: cart.length > 0 ? "linear-gradient(135deg,var(--accent),var(--accent-light))" : "#fff", color: cart.length > 0 ? "#fff" : "var(--text-muted)", border: cart.length > 0 ? "none" : "1.5px solid var(--accent-border)", cursor: "pointer", fontSize: 15, fontWeight: 800 }}>
               <Icon name="cart" size={12} /> {cart.length > 0 ? cart.length : ""}
               {cart.length > 0 && <span style={{ position: "absolute", top: -4, right: -4, width: 14, height: 14, borderRadius: "50%", background: "#FF7043", color: "#fff", fontSize: 11, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #fff" }}>{cart.length}</span>}
             </button>
@@ -6816,7 +6896,7 @@ export default function App() {
                 onChange={e => setStockSearch(e.target.value)}
                 style={{ flex: 1, border: "none", outline: "none", fontSize: 15, fontFamily: "Quicksand", fontWeight: 600, color: "#333334", background: "transparent" }}
               />
-              {stockSearch && <button onClick={() => setStockSearch("")} style={{ border: "none", background: "#F0E6D0", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: 14, color: "#33333480", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>}
+              {stockSearch && <button onClick={() => setStockSearch("")} style={{ border: "none", background: "var(--accent-border)", borderRadius: "50%", width: 18, height: 18, cursor: "pointer", fontSize: 14, color: "#33333480", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>}
             </div>
           </div>
 
@@ -6837,7 +6917,7 @@ export default function App() {
             );
             return (
               <div style={{ background: "#fff", borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
-                <div style={{ padding: "6px 12px", background: "#FFFDF5", borderBottom: "1px solid #33333420" }}>
+                <div style={{ padding: "6px 12px", background: "var(--page-bg)", borderBottom: "1px solid #33333420" }}>
                   <span style={{ fontSize: 12, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Individual Stocks</span>
                 </div>
                 {allStocks.map(([ticker, price], i) => (
@@ -6851,167 +6931,176 @@ export default function App() {
                     <div style={{ textAlign: "right", marginRight: 6 }}>
                       <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 700, color: "#333334" }}>${price >= 1000 ? (price / 1000).toFixed(2) + "k" : price.toFixed(2)}</div>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); notify("" + ticker + " added!"); }} style={{ background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Buy</button>
+                    <button onClick={(e) => { e.stopPropagation(); notify("" + ticker + " added!"); }} style={{ background: "linear-gradient(135deg,var(--accent),var(--accent-light))", color: "#fff", border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Buy</button>
                   </div>
                 ))}
               </div>
             );
           })()}
 
-          {/* ── Baskets Section Label ── */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Baskets</div>
-            <div style={{ flex: 1, height: 1, background: "#F0E6D0" }} />
-            <div style={{ display: "flex", gap: 3 }}>
-              <button onClick={() => setActiveScenario(null)} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid " + (!activeScenario ? "#C48830" : "#F0E6D0"), background: !activeScenario ? "#FFF8EE" : "#fff", color: !activeScenario ? "#C48830" : "#A09080", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>All</button>
-              {macroScenarios.slice(0, 4).map(s => (
-                <button key={s.id} onClick={() => setActiveScenario(activeScenario === s.id ? null : s.id)} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid " + (activeScenario === s.id ? "#C48830" : "#F0E6D0"), background: activeScenario === s.id ? "#FFF8EE" : "#fff", color: activeScenario === s.id ? "#C48830" : "#A09080", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>{s.name}</button>
+          {/* ── Market Sections (shown when not searching) ── */}
+          {stockSearch.length === 0 && <>
+
+          {/* ── 1. Stocks ── */}
+          <div style={{ marginBottom: 14, animation: "fadeUp .4s ease .05s both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <Icon name="chart-up" size={14} color="var(--accent)" />
+              <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Stocks</div>
+              <div style={{ flex: 1, height: 1, background: "var(--accent-border)" }} />
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingLeft: 2, paddingRight: 2 }}>
+              {MARKET_STOCKS.map((s, idx) => {
+                const price = explorerStockPrices[s.ticker] || 0;
+                const chg = livePrices[s.ticker]?.changePercent ?? 0;
+                return (
+                  <div key={s.ticker} onClick={() => goToStock(s.ticker)}
+                    style={{ minWidth: 130, flex: "0 0 auto", background: "#fff", borderRadius: 14, padding: "10px 10px 8px", cursor: "pointer", border: "1px solid #33333415", animation: `fadeUp .3s ease ${idx * 0.04}s both`, transition: "transform .15s, border-color .15s" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#33333440"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#33333415"; e.currentTarget.style.transform = ""; }}>
+                    <StockLogo ticker={s.ticker} size={32} />
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: "#333334", marginTop: 6 }}>{s.ticker}</div>
+                    <div style={{ fontSize: 11, color: "#33333480", fontWeight: 600, marginTop: 1 }}>{s.name}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: "#333334", marginTop: 6 }}>
+                      ${price >= 1000 ? (price / 1000).toFixed(2) + "k" : price.toFixed(2)}
+                    </div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, marginTop: 3, color: chg >= 0 ? "#5B8C5A" : "#EF5350", background: chg >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 5, display: "inline-block" }}>
+                      {chg >= 0 ? "+" : ""}{chg.toFixed(2)}%
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── 2. Options ── */}
+          <div style={{ marginBottom: 14, animation: "fadeUp .4s ease .10s both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <Icon name="chart-bar" size={14} color="#AB47BC" />
+              <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Options</div>
+              <div style={{ flex: 1, height: 1, background: "var(--accent-border)" }} />
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingLeft: 2, paddingRight: 2 }}>
+              {MARKET_OPTIONS.map((o, idx) => {
+                const underlying = o.ticker.split(" ")[0];
+                const isCall = o.ticker.includes("C ");
+                return (
+                  <div key={o.ticker} onClick={() => setPage("options")}
+                    style={{ minWidth: 150, flex: "0 0 auto", background: "#fff", borderRadius: 14, padding: "10px 10px 8px", cursor: "pointer", border: "1px solid #AB47BC18", animation: `fadeUp .3s ease ${idx * 0.04}s both`, transition: "transform .15s, border-color .15s" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#AB47BC44"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#AB47BC18"; e.currentTarget.style.transform = ""; }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <StockLogo ticker={underlying} size={28} />
+                      <span style={{ fontSize: 9, fontWeight: 900, padding: "2px 5px", borderRadius: 4, background: isCall ? "#4CAF5018" : "#EF535018", color: isCall ? "#4CAF50" : "#EF5350", textTransform: "uppercase" }}>{isCall ? "CALL" : "PUT"}</span>
+                    </div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 13, fontWeight: 800, color: "#333334", marginTop: 6 }}>{o.name}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: "#333334", marginTop: 4 }}>${o.price.toFixed(2)}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, marginTop: 3, color: o.change >= 0 ? "#5B8C5A" : "#EF5350", background: o.change >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 5, display: "inline-block" }}>
+                      {o.change >= 0 ? "+" : ""}{o.change.toFixed(1)}%
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── 3. Crypto ── */}
+          <div style={{ marginBottom: 14, animation: "fadeUp .4s ease .15s both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <Icon name="bitcoin" size={14} color="#F7931A" />
+              <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Crypto</div>
+              <div style={{ flex: 1, height: 1, background: "var(--accent-border)" }} />
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingLeft: 2, paddingRight: 2 }}>
+              {MARKET_CRYPTO.map((c, idx) => (
+                <div key={c.ticker} onClick={() => /^[A-Z]{2,5}-USD$/.test(c.ticker) ? notify(c.name + " detail coming soon!") : null}
+                  style={{ minWidth: 130, flex: "0 0 auto", background: "#fff", borderRadius: 14, padding: "10px 10px 8px", cursor: "pointer", border: `1px solid ${c.color}18`, animation: `fadeUp .3s ease ${idx * 0.04}s both`, transition: "transform .15s, border-color .15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = c.color + "44"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = c.color + "18"; e.currentTarget.style.transform = ""; }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: c.color + "12", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon name={c.icon} size={18} color={c.color} />
+                  </div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 15, fontWeight: 800, color: "#333334", marginTop: 6 }}>{c.name}</div>
+                  <div style={{ fontSize: 11, color: "#33333480", fontWeight: 600, marginTop: 1 }}>{c.ticker.replace("-USD", "")}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: "#333334", marginTop: 6 }}>
+                    {c.price >= 1000 ? "$" + (c.price / 1000).toFixed(1) + "k" : "$" + c.price.toFixed(2)}
+                  </div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, marginTop: 3, color: c.change >= 0 ? "#5B8C5A" : "#EF5350", background: c.change >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 5, display: "inline-block" }}>
+                    {c.change >= 0 ? "+" : ""}{c.change.toFixed(1)}%
+                  </div>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* ── 2-Column Flippable Card Grid ── */}
-          <div className="explorer-card-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {filteredExplorer.map((b, i) => {
-              const clr = CL[b.color] || CL.terracotta;
-              const inCart = !!cart.find(cc => cc.id === b.id);
-              const relevance = getRegimeRelevance(b, displayRegime);
-              const rm = explorerRiskMetrics[b.id];
-              const isFlipped = !!flippedCards[b.id];
-              const basketYoY = b.stocks.reduce((sum, t) => sum + (stockYoYReturns[t] || 0), 0) / b.stocks.length;
-              const retColor = basketYoY >= 0 ? "#5B8C5A" : "#EF5350";
-              const isTopPerformer = basketYoY === maxExplorerYoY;
-              return (
-                <div key={b.id} style={{ perspective: 800, animation: "fadeUp .3s ease " + (i * .03) + "s both" }}>
-                  <div style={{
-                    position: "relative", width: "100%", height: 260, transition: "transform .5s ease",
-                    transformStyle: "preserve-3d", transform: isFlipped ? "rotateY(180deg)" : "rotateY(0)",
-                  }}>
-
-                    {/* ═══ FRONT ═══ */}
-                    <div style={{
-                      position: "absolute", inset: 0, backfaceVisibility: "hidden",
-                      backgroundImage: isTopPerformer ? "url(/gold-texture.jpeg)" : undefined,
-                      backgroundSize: isTopPerformer ? "cover" : undefined,
-                      backgroundPosition: isTopPerformer ? "center" : undefined,
-                      background: isTopPerformer ? undefined : "#fff",
-                      borderRadius: 14, padding: "10px 10px 8px", cursor: "pointer",
-                      display: "flex", flexDirection: "column", overflow: "hidden",
-                    }}
-                      onMouseEnter={e => { if (!isFlipped) { e.currentTarget.style.borderColor = "#33333466"; e.currentTarget.style.boxShadow = "0 6px 18px #33333412"; }}}
-                      onMouseLeave={e => { if (!isFlipped) { e.currentTarget.style.borderColor = "#33333440"; e.currentTarget.style.boxShadow = ""; }}}>
-
-                      {/* 80% white overlay to lighten gold */}
-                      {isTopPerformer && <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.8)", borderRadius: 12, pointerEvents: "none", zIndex: 0 }} />}
-
-                      {/* Top row: YoY return badge + chart flip icon on far right */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4, position: "relative", zIndex: 1 }}>
-                        <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "JetBrains Mono", color: isTopPerformer ? "#8B6914" : retColor, background: isTopPerformer ? "#DAA52025" : retColor + "12", padding: "2px 6px", borderRadius: 5 }}>
-                          {isTopPerformer && <span style={{ fontSize: 14, marginRight: 2 }}>👑</span>}
-                          {basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}% <span style={{ fontSize: 9, fontWeight: 700, opacity: .8 }}>YoY</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          {inCart && <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#5B8C5A", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "#fff", fontSize: 12, fontWeight: 900 }}>✓</span></div>}
-                          {relevance >= 70 && !inCart && <div style={{ background: displayRegime.color, borderRadius: 4, padding: "1px 5px" }}><span style={{ color: "#fff", fontSize: 9, fontWeight: 900 }}>FIT</span></div>}
-                          <button onClick={(e) => { e.stopPropagation(); setFlippedCards(f => ({ ...f, [b.id]: !f[b.id] })); }}
-                            style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center", justifyContent: "center" }}
-                            title="View metrics"><Icon name="chart-bar" size={13} color="#A09080" /></button>
-                        </div>
-                      </div>
-
-                      {/* Big emoji + bold name */}
-                      <div style={{ textAlign: "center", marginBottom: 4, position: "relative", zIndex: 1 }} onClick={() => setSelectedShopBasket({ ...b, relevance })}>
-                        <div style={{ lineHeight: 1, marginBottom: 3, fontSize: 48 }}>{b.emoji}</div>
-                        <div style={{ fontSize: 17, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.15 }}>{b.name}</div>
-                        <div style={{ fontSize: 11, color: "#33333480", fontWeight: 700, marginTop: 2 }}>{b.strategy} · {b.risk}</div>
-                      </div>
-
-                      {/* Ticker list — max 5 + overflow */}
-                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, margin: "4px 0 6px", position: "relative", zIndex: 1 }} onClick={() => setSelectedShopBasket({ ...b, relevance })}>
-                        {b.stocks.slice(0, 5).map(t => {
-                          const yoy = stockYoYReturns[t] || 0;
-                          const yoyC = yoy >= 0 ? "#5B8C5A" : "#EF5350";
-                          return (
-                            <div key={t} onClick={(e) => { e.stopPropagation(); goToStock(t); }} style={{
-                              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
-                              fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 800, color: "#333334",
-                              background: isTopPerformer ? "rgba(255,255,255,0.5)" : "#33333406", padding: "4px 8px", borderRadius: 6,
-                              border: "1px solid " + (isTopPerformer ? "rgba(218,165,32,0.15)" : "#33333410"), cursor: "pointer",
-                            }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <StockLogo ticker={t} size={16} />
-                                <span>{t}</span>
-                              </div>
-                              <span style={{ fontSize: 12, fontWeight: 800, color: yoyC }}>{yoy >= 0 ? "+" : ""}{yoy.toFixed(1)}%</span>
-                            </div>
-                          );
-                        })}
-                        {b.stocks.length > 5 && (
-                          <div style={{ textAlign: "center", fontSize: 12, fontWeight: 800, color: "#33333480", padding: "2px 0" }}>+{b.stocks.length - 5} more</div>
-                        )}
-                      </div>
-
-                    </div>
-
-                    {/* ═══ BACK: Metrics ═══ */}
-                    <div style={{
-                      position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)",
-                      backgroundImage: isTopPerformer ? "url(/gold-texture.jpeg)" : undefined,
-                      backgroundSize: isTopPerformer ? "cover" : undefined,
-                      backgroundPosition: isTopPerformer ? "center" : undefined,
-                      background: isTopPerformer ? undefined : "#fff",
-                      border: "1px solid #33333440", borderRadius: 14, padding: "8px",
-                      display: "flex", flexDirection: "column", overflow: "hidden",
-                    }}>
-                      {/* 80% white overlay to lighten gold */}
-                      {isTopPerformer && <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.8)", borderRadius: 12, pointerEvents: "none", zIndex: 0 }} />}
-
-                      {/* Back header */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6, position: "relative", zIndex: 1 }}>
-                        <Icon name={b.icon} size={12} color={clr.a} />
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>{b.name}</div>
-                          <div style={{ fontSize: 11, color: clr.a, fontWeight: 800 }}>Risk & Performance</div>
-                        </div>
-                      </div>
-
-                      {/* Basket YoY Return */}
-                      <div style={{ background: isTopPerformer ? "#DAA52018" : retColor + "0C", borderRadius: 8, padding: "6px 6px", textAlign: "center", marginBottom: 6, position: "relative", zIndex: 1 }}>
-                        <div style={{ fontSize: 9, color: "#33333480", fontWeight: 700, textTransform: "uppercase", marginBottom: 1 }}>Basket YoY Return</div>
-                        <div style={{ fontFamily: "JetBrains Mono", fontSize: 24, fontWeight: 900, color: isTopPerformer ? "#8B6914" : retColor }}>{isTopPerformer && "👑 "}{basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}%</div>
-                      </div>
-
-                      {/* Risk Metrics */}
-                      {rm && <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3, position: "relative", zIndex: 1 }}>
-                        {[
-                          { label: "Sharpe", val: rm.sharpe.toFixed(2), good: rm.sharpe > 1, icon: "ruler" },
-                          { label: "Beta", val: rm.beta.toFixed(2), good: rm.beta < 1.5, icon: "chart-down" },
-                          { label: "Vol", val: rm.volatility.toFixed(0) + "%", good: rm.volatility < 25, icon: "wave" },
-                          { label: "Max DD", val: rm.maxDD.toFixed(0) + "%", good: rm.maxDD > -15, icon: "arrow-down" },
-                          { label: "Sortino", val: rm.sortino.toFixed(2), good: rm.sortino > 1, icon: "target" },
-                        ].map((m, mi) => (
-                          <div key={mi} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 6px", background: m.good ? "#EDF5ED" : "#FFF5F5", borderRadius: 6 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                              <Icon name={m.icon} size={9} color={m.good ? "#5B8C5A" : "#EF5350"} />
-                              <span style={{ fontSize: 12, fontWeight: 700, color: "#333334" }}>{m.label}</span>
-                            </div>
-                            <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 900, color: m.good ? "#5B8C5A" : "#EF5350" }}>{m.val}</span>
-                          </div>
-                        ))}
-                      </div>}
-
-                      {/* Risk level bar */}
-                      <div style={{ marginTop: 4, padding: "4px 8px", background: "#33333408", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center", position: "relative", zIndex: 1 }}>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: "#33333480", textTransform: "uppercase" }}>Risk Level</span>
-                        <span style={{ fontSize: 14, fontWeight: 900, color: b.risk === "Low" ? "#5B8C5A" : b.risk === "Medium" ? "#FFA726" : "#EF5350" }}>{b.risk}</span>
-                      </div>
-                    </div>
-
+          {/* ── 4. Futures ── */}
+          <div style={{ marginBottom: 14, animation: "fadeUp .4s ease .20s both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <Icon name="hourglass" size={14} color="#FFA726" />
+              <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Futures</div>
+              <div style={{ flex: 1, height: 1, background: "var(--accent-border)" }} />
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingLeft: 2, paddingRight: 2 }}>
+              {MARKET_FUTURES.map((f, idx) => (
+                <div key={f.ticker} onClick={() => notify(f.name + " detail coming soon!")}
+                  style={{ minWidth: 140, flex: "0 0 auto", background: "#fff", borderRadius: 14, padding: "10px 10px 8px", cursor: "pointer", border: "1px solid #FFA72618", animation: `fadeUp .3s ease ${idx * 0.04}s both`, transition: "transform .15s, border-color .15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = "#FFA72644"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "#FFA72618"; e.currentTarget.style.transform = ""; }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "#FFA72612", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon name={futureIcons[f.ticker] || "hourglass"} size={18} color="#FFA726" />
+                  </div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 13, fontWeight: 800, color: "#333334", marginTop: 6 }}>{f.name}</div>
+                  <div style={{ fontSize: 11, color: "#33333480", fontWeight: 600, marginTop: 1 }}>{f.ticker}</div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: "#333334", marginTop: 6 }}>
+                    {f.price >= 1000 ? "$" + f.price.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "$" + f.price.toFixed(2)}
+                  </div>
+                  <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, marginTop: 3, color: f.change >= 0 ? "#5B8C5A" : "#EF5350", background: f.change >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 5, display: "inline-block" }}>
+                    {f.change >= 0 ? "+" : ""}{f.change.toFixed(2)}%
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
+
+          {/* ── 5. Baskets ── */}
+          <div style={{ marginBottom: 14, animation: "fadeUp .4s ease .25s both" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+              <Icon name="basket" size={14} color="var(--accent)" />
+              <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "'Instrument Serif', serif", color: "#333334" }}>Baskets</div>
+              <div style={{ flex: 1, height: 1, background: "var(--accent-border)" }} />
+            </div>
+            <div className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, paddingLeft: 2, paddingRight: 2 }}>
+              {explorerBaskets.map((b, idx) => {
+                const clr = CL[b.color] || CL.terracotta;
+                const basketYoY = b.stocks.reduce((sum, t) => sum + (stockYoYReturns[t] || 0), 0) / b.stocks.length;
+                const relevance = getRegimeRelevance(b, displayRegime);
+                return (
+                  <div key={b.id} onClick={() => setSelectedShopBasket({ ...b, relevance })}
+                    style={{ minWidth: 160, flex: "0 0 auto", background: "#fff", borderRadius: 14, padding: "10px 10px 8px", cursor: "pointer", border: "1px solid #33333415", animation: `fadeUp .3s ease ${idx * 0.04}s both`, transition: "transform .15s, border-color .15s" }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#33333440"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#33333415"; e.currentTarget.style.transform = ""; }}>
+                    <div style={{ fontSize: 36, lineHeight: 1, marginBottom: 4 }}>{b.emoji}</div>
+                    <div style={{ fontSize: 15, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: "#333334", lineHeight: 1.15 }}>{b.name}</div>
+                    <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: clr.a + "14", color: clr.a }}>{b.strategy}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: "1px 5px", borderRadius: 4, background: b.risk === "Low" ? "#EDF5ED" : b.risk === "High" || b.risk === "Very High" ? "#FFEBEE" : "#FFF3E0", color: b.risk === "Low" ? "#5B8C5A" : b.risk === "High" || b.risk === "Very High" ? "#EF5350" : "#FFA726" }}>{b.risk}</span>
+                    </div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 17, fontWeight: 900, color: "#333334", marginTop: 6 }}>${b.price}</div>
+                    <div style={{ fontFamily: "JetBrains Mono", fontSize: 12, fontWeight: 800, marginTop: 3, color: basketYoY >= 0 ? "#5B8C5A" : "#EF5350", background: basketYoY >= 0 ? "#EDF5ED" : "#FFEBEE", padding: "1px 6px", borderRadius: 5, display: "inline-block" }}>
+                      {basketYoY >= 0 ? "+" : ""}{basketYoY.toFixed(1)}% YoY
+                    </div>
+                    <div style={{ display: "flex", gap: 2, marginTop: 6, flexWrap: "wrap" }}>
+                      {b.stocks.slice(0, 3).map(t => (
+                        <span key={t} style={{ fontSize: 10, fontFamily: "JetBrains Mono", fontWeight: 700, background: "#33333408", padding: "1px 4px", borderRadius: 4, color: "#33333480" }}>{t}</span>
+                      ))}
+                      {b.stocks.length > 3 && <span style={{ fontSize: 10, color: "#33333460" }}>+{b.stocks.length - 3}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          </>}
         </div>}
         {/* ══ CALENDAR ══ */}
         {page === "calendar" && !selectedBasket && <CalendarPage onNavigate={setPage} />}
@@ -7027,7 +7116,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 2, background: "#fff", borderRadius: 10, padding: 2, marginBottom: 10, flexWrap: "wrap" }}>
             {[{ id: "risklab", label: "Risk", icon: "flask" }, { id: "hedge", label: "Hedge", icon: "shield" }, { id: "stresstest", label: "Stress", icon: "explosion" }, { id: "historical", label: "History", icon: "scroll" }, { id: "contrarian", label: "Contrarian", icon: "compass" }, { id: "tides", label: "Tides", icon: "wave" }, { id: "weather", label: "Weather", icon: "cloud-sun" }, { id: "horoscope", label: "Horoscope", icon: "sparkle" }].map(t => (
               <button key={t.id} onClick={() => setRiskLabTab(t.id)}
-                style={{ flex: "1 1 auto", padding: "6px 6px", borderRadius: 7, border: "none", background: riskLabTab === t.id ? "#C48830" : "transparent", color: riskLabTab === t.id ? "#fff" : "#A09080", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", transition: "all .2s", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}><Icon name={t.icon} size={9} color={riskLabTab === t.id ? "#fff" : "#A09080"} />{t.label}</button>
+                style={{ flex: "1 1 auto", padding: "6px 6px", borderRadius: 7, border: "none", background: riskLabTab === t.id ? "var(--accent)" : "transparent", color: riskLabTab === t.id ? "#fff" : "var(--text-muted)", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "Quicksand", transition: "all .2s", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}><Icon name={t.icon} size={9} color={riskLabTab === t.id ? "#fff" : "var(--text-muted)"} />{t.label}</button>
             ))}
           </div>
           {riskLabTab === "risklab" && <RiskLabPage onOpenMacro={() => setPage("macro")} hedges={displayHedges} regime={displayRegime} />}
@@ -7041,10 +7130,15 @@ export default function App() {
         </div>}
 
         {/* ══ MY ACCOUNT ══ */}
-        {page === "account" && !selectedBasket && <MyAccountPage onNavigate={setPage} onSignOut={logout} user={user} />}
+        {page === "account" && !selectedBasket && <MyAccountPage onNavigate={setPage} onSignOut={logout} user={user} isPro={isPro} activeTier={activeTier} switchTier={switchTier} />}
 
         {/* ══ NEWS ══ */}
         {page === "news" && !selectedBasket && <NewsPage liveNews={liveNews} newsStatus={newsStatus} />}
+
+        {/* ══ OPTIONS ══ */}
+        {page === "options" && !selectedBasket && (
+          <OptionsPage goToStock={goToStock} />
+        )}
 
         {/* ══ STOCK DETAIL (standalone) ══ */}
         {page === "stock" && viewStockTicker && !selectedBasket && (
@@ -7056,31 +7150,16 @@ export default function App() {
         )}
         </div>
 
-        {/* ── Bottom Tab Bar with Center Egg ── */}
-        <div style={{ flexShrink: 0, background: "#fff", borderTop: "1px solid #33333420", padding: "8px 0 calc(env(safe-area-inset-bottom, 8px) + 6px)", display: "flex", justifyContent: "space-around", alignItems: "flex-end", zIndex: 200, position: "relative" }}>
-          {/* Hide nav borderTop behind the oval so oval border connects to nav border */}
-          <div style={{ position: "absolute", top: -1, left: "50%", marginLeft: -22, width: 44, height: 3, background: "#fff", zIndex: 1 }} />
-          {navItemsLeft.map(p => {
+        {/* ── Bottom Tab Bar ── */}
+        <div style={{ flexShrink: 0, background: "#fff", borderTop: "1px solid #33333420", padding: "6px 0 calc(env(safe-area-inset-bottom, 8px) + 4px)", display: "flex", justifyContent: "space-around", alignItems: "flex-end", zIndex: 200 }}>
+          {navItems.map(p => {
             const isActive = page === p.id && !selectedBasket;
             return (
               <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); setViewIndicatorId(null); }}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 8px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s", flex: 1 }}>
-                <Icon name={p.icon} size={19} color={isActive ? "#C48830" : "#A09080"} />
-                <span style={{ fontSize: 12, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>
-                {isActive && <div style={{ position: "absolute", top: -3, width: 4, height: 4, borderRadius: "50%", background: "#C48830" }} />}
-              </button>
-            );
-          })}
-          {/* Center Egg Spacer */}
-          <div style={{ width: 56, flexShrink: 0 }} />
-          {navItemsRight.map(p => {
-            const isActive = page === p.id && !selectedBasket;
-            return (
-              <button key={p.id} onClick={() => { setPage(p.id); setSelectedBasket(null); setPortfolioView(false); setViewStockTicker(null); setViewIndicatorId(null); }}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 8px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s", flex: 1 }}>
-                <Icon name={p.icon} size={19} color={isActive ? "#C48830" : "#A09080"} />
-                <span style={{ fontSize: 12, fontWeight: isActive ? 800 : 600, color: isActive ? "#C48830" : "#A09080", fontFamily: "Quicksand" }}>{p.label}</span>
-                {isActive && <div style={{ position: "absolute", top: -3, width: 4, height: 4, borderRadius: "50%", background: "#C48830" }} />}
+                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1, padding: "3px 4px", border: "none", background: "transparent", cursor: "pointer", position: "relative", transition: "all .15s", flex: 1 }}>
+                <Icon name={p.icon} size={18} color={isActive ? "var(--accent)" : "var(--text-muted)"} />
+                <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 600, color: isActive ? "var(--accent)" : "var(--text-muted)", fontFamily: "Quicksand" }}>{p.label}</span>
+                {isActive && <div style={{ position: "absolute", top: -3, width: 4, height: 4, borderRadius: "50%", background: "var(--accent)" }} />}
               </button>
             );
           })}
@@ -7089,8 +7168,8 @@ export default function App() {
         {/* ── Modals ── */}
         {showCreate && <CreateBasketModal onClose={() => setShowCreate(false)} onCreate={handleCreate} />}
         {showCheckout && cart.length > 0 && <CheckoutModal cart={cart} onClose={() => setShowCheckout(false)} onExecute={() => setCart([])} />}
-        {showCheckout && cart.length === 0 && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowCheckout(false)}><div style={{ background: "#fff", borderRadius: 16, padding: "36px 28px", textAlign: "center", animation: "popIn .4s ease", margin: 20 }} onClick={e => e.stopPropagation()}><div style={{ fontSize: 63, marginBottom: 8 }}>🧺</div><div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#8B6914" }}>Your cart is empty!</div><div style={{ fontSize: 18, color: "#33333480", marginBottom: 12 }}>Browse our fresh Hatches and add some eggs</div><button onClick={() => { setShowCheckout(false); setPage("explorer"); }} style={{ padding: "10px 24px", background: "linear-gradient(135deg,#C48830,#D4A03C)", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer", fontSize: 15, fontFamily: "Quicksand" }}>Start Shopping</button></div></div>}
-        <AIAgent onNotify={notify} onNavigate={setPage} agentInsights={agentState} />
+        {showCheckout && cart.length === 0 && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.3)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setShowCheckout(false)}><div style={{ background: "#fff", borderRadius: 16, padding: "36px 28px", textAlign: "center", animation: "popIn .4s ease", margin: 20 }} onClick={e => e.stopPropagation()}><div style={{ fontSize: 63, marginBottom: 8 }}>🧺</div><div style={{ fontSize: 18, fontWeight: 900, fontFamily: "'Instrument Serif', serif", marginBottom: 4, color: "#8B6914" }}>Your cart is empty!</div><div style={{ fontSize: 18, color: "#33333480", marginBottom: 12 }}>Browse our fresh Hatches and add some eggs</div><button onClick={() => { setShowCheckout(false); setPage("explorer"); }} style={{ padding: "10px 24px", background: "linear-gradient(135deg,var(--accent),var(--accent-light))", color: "#fff", border: "none", borderRadius: 14, fontWeight: 800, cursor: "pointer", fontSize: 15, fontFamily: "Quicksand" }}>Start Shopping</button></div></div>}
+        <AIAgent onNotify={notify} onNavigate={setPage} agentInsights={agentState} isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} />
     </div>
   );
 }

@@ -23,6 +23,9 @@ const INITIAL_EXPLORER_PRICES = {
 // Ticker pattern: standard stock symbols only (1-5 uppercase letters, optional dot)
 const TICKER_RE = /^[A-Z.]{1,6}$/;
 
+// Index symbols that use ^ prefix (fetched alongside regular tickers)
+const INDEX_SYMBOLS = ['^VIX', '^GSPC', '^IXIC', '^DJI'];
+
 function isQuotableTicker(ticker) {
   return TICKER_RE.test(ticker);
 }
@@ -49,6 +52,9 @@ function collectAllTickers() {
   Object.keys(INITIAL_EXPLORER_PRICES).forEach(t => {
     if (isQuotableTicker(t)) tickers.add(t);
   });
+
+  // Add market index symbols (^VIX, ^GSPC, etc.)
+  INDEX_SYMBOLS.forEach(s => tickers.add(s));
 
   return [...tickers].sort();
 }

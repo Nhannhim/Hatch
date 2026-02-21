@@ -119,9 +119,9 @@ export default function AuthPage() {
       <div style={{ width: '100%', flex: 1, background: s.bg, display: 'flex', flexDirection: 'column', fontFamily: "'Quicksand', sans-serif", transition: 'background .5s ease' }}>
         {/* Content area */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 32px', textAlign: 'center' }}>
-          <div style={{ fontSize: 72, marginBottom: 16, animation: 'popIn .5s ease both', filter: 'drop-shadow(0 4px 8px rgba(196,136,48,.25))' }}>{s.emoji}</div>
-          <h1 style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: '#333334', marginBottom: 8, animation: 'fadeUp .5s ease .1s both' }}>{s.title}</h1>
-          <p style={{ fontSize: 12, lineHeight: 1.6, color: '#6B5A2E', fontWeight: 600, maxWidth: 280, animation: 'fadeUp .5s ease .2s both' }}>{s.text}</p>
+          <div style={{ fontSize: 108, marginBottom: 16, animation: 'popIn .5s ease both', filter: 'drop-shadow(0 4px 8px rgba(196,136,48,.25))' }}>{s.emoji}</div>
+          <h1 style={{ fontSize: 30, fontWeight: 900, fontFamily: "'Instrument Serif', serif", color: '#333334', marginBottom: 8, animation: 'fadeUp .5s ease .1s both' }}>{s.title}</h1>
+          <p style={{ fontSize: 18, lineHeight: 1.6, color: '#6B5A2E', fontWeight: 600, maxWidth: 280, animation: 'fadeUp .5s ease .2s both' }}>{s.text}</p>
         </div>
 
         {/* Bottom controls */}
@@ -143,20 +143,20 @@ export default function AuthPage() {
               <>
                 <button onClick={() => setScreen('login')} style={{
                   flex: 1, padding: '13px 0', borderRadius: 14, border: '1.5px solid #C4883040',
-                  background: 'transparent', fontSize: 11, fontWeight: 800, color: '#8B6914',
+                  background: 'transparent', fontSize: 17, fontWeight: 800, color: '#8B6914',
                   cursor: 'pointer', fontFamily: "'Quicksand', sans-serif",
                 }}>Skip</button>
                 <button onClick={() => setSlide(slide + 1)} style={{
                   flex: 2, padding: '13px 0', borderRadius: 14, border: 'none',
                   background: 'linear-gradient(135deg, #C48830, #D4A03C)', color: '#fff',
-                  fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: "'Quicksand', sans-serif",
+                  fontSize: 17, fontWeight: 800, cursor: 'pointer', fontFamily: "'Quicksand', sans-serif",
                 }}>Next</button>
               </>
             ) : (
               <button onClick={() => setScreen('login')} style={{
                 flex: 1, padding: '14px 0', borderRadius: 14, border: 'none',
                 background: 'linear-gradient(135deg, #C48830, #8B6914)', color: '#fff',
-                fontSize: 12, fontWeight: 900, cursor: 'pointer', fontFamily: "'Instrument Serif', serif",
+                fontSize: 18, fontWeight: 900, cursor: 'pointer', fontFamily: "'Instrument Serif', serif",
                 boxShadow: '0 4px 16px rgba(196,136,48,.4)',
               }}>Get Started</button>
             )}
@@ -176,52 +176,52 @@ export default function AuthPage() {
             <GoldenEgg size={52} />
           </div>
           <div style={{ marginTop: 10 }}>
-            <span style={{ fontSize: 22, fontWeight: 900, fontFamily: "'Instrument Serif', serif", background: 'linear-gradient(135deg, #C48830, #8B6914)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Hatch</span>
+            <span style={{ fontSize: 33, fontWeight: 900, fontFamily: "'Instrument Serif', serif", background: 'linear-gradient(135deg, #C48830, #8B6914)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Hatch</span>
           </div>
-          <p style={{ fontSize: 8, fontWeight: 700, color: '#C8B898', letterSpacing: 2, textTransform: 'uppercase', marginTop: 2 }}>Smart Trading</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: '#C8B898', letterSpacing: 2, textTransform: 'uppercase', marginTop: 2 }}>Smart Trading</p>
         </div>
 
         {/* Title */}
-        <h1 style={{ fontSize: 18, fontWeight: 900, color: '#333334', textAlign: 'center', marginBottom: 4, fontFamily: "'Instrument Serif', serif" }}>
+        <h1 style={{ fontSize: 27, fontWeight: 900, color: '#333334', textAlign: 'center', marginBottom: 4, fontFamily: "'Instrument Serif', serif" }}>
           {isRegister ? 'Create Account' : 'Welcome Back'}
         </h1>
-        <p style={{ fontSize: 10, color: '#8A7040', textAlign: 'center', marginBottom: 20, fontWeight: 600 }}>
+        <p style={{ fontSize: 15, color: '#8A7040', textAlign: 'center', marginBottom: 20, fontWeight: 600 }}>
           {isRegister ? 'Start hatching your golden portfolio' : 'Sign in to your nest'}
         </p>
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <label style={{ fontSize: 9, fontWeight: 700, color: '#8A704080', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, display: 'block' }}>Email</label>
+            <label style={{ fontSize: 14, fontWeight: 700, color: '#8A704080', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, display: 'block' }}>Email</label>
             <input
               type="email" value={email} onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com" required
-              style={{ width: '100%', padding: '11px 12px', fontSize: 11, fontFamily: "'Quicksand', sans-serif", fontWeight: 600, border: '1.5px solid #C4883025', borderRadius: 12, outline: 'none', background: '#fff', color: '#333334', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '11px 12px', fontSize: 17, fontFamily: "'Quicksand', sans-serif", fontWeight: 600, border: '1.5px solid #C4883025', borderRadius: 12, outline: 'none', background: '#fff', color: '#333334', boxSizing: 'border-box' }}
             />
           </div>
           <div>
-            <label style={{ fontSize: 9, fontWeight: 700, color: '#8A704080', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, display: 'block' }}>Password</label>
+            <label style={{ fontSize: 14, fontWeight: 700, color: '#8A704080', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, display: 'block' }}>Password</label>
             <input
               type="password" value={password} onChange={(e) => setPassword(e.target.value)}
               placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" required minLength={6}
-              style={{ width: '100%', padding: '11px 12px', fontSize: 11, fontFamily: "'Quicksand', sans-serif", fontWeight: 600, border: '1.5px solid #C4883025', borderRadius: 12, outline: 'none', background: '#fff', color: '#333334', boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '11px 12px', fontSize: 17, fontFamily: "'Quicksand', sans-serif", fontWeight: 600, border: '1.5px solid #C4883025', borderRadius: 12, outline: 'none', background: '#fff', color: '#333334', boxSizing: 'border-box' }}
             />
           </div>
           {isRegister && (
             <div>
-              <label style={{ fontSize: 9, fontWeight: 700, color: '#8A704080', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, display: 'block' }}>Confirm Password</label>
+              <label style={{ fontSize: 14, fontWeight: 700, color: '#8A704080', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, display: 'block' }}>Confirm Password</label>
               <input
                 type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" required minLength={6}
-                style={{ width: '100%', padding: '11px 12px', fontSize: 11, fontFamily: "'Quicksand', sans-serif", fontWeight: 600, border: '1.5px solid #C4883025', borderRadius: 12, outline: 'none', background: '#fff', color: '#333334', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '11px 12px', fontSize: 17, fontFamily: "'Quicksand', sans-serif", fontWeight: 600, border: '1.5px solid #C4883025', borderRadius: 12, outline: 'none', background: '#fff', color: '#333334', boxSizing: 'border-box' }}
               />
             </div>
           )}
 
-          {error && <div style={{ fontSize: 10, fontWeight: 700, color: '#EF5350', background: '#FFEBEE', padding: '8px 12px', borderRadius: 10, textAlign: 'center' }}>{error}</div>}
+          {error && <div style={{ fontSize: 15, fontWeight: 700, color: '#EF5350', background: '#FFEBEE', padding: '8px 12px', borderRadius: 10, textAlign: 'center' }}>{error}</div>}
 
           <button type="submit" disabled={submitting} style={{
-            width: '100%', padding: '12px 0', fontSize: 12, fontWeight: 900,
+            width: '100%', padding: '12px 0', fontSize: 18, fontWeight: 900,
             fontFamily: "'Instrument Serif', serif", color: '#fff',
             background: submitting ? '#C4883088' : 'linear-gradient(135deg, #C48830, #8B6914)',
             border: 'none', borderRadius: 14, marginTop: 4,
@@ -234,10 +234,10 @@ export default function AuthPage() {
 
         {/* Switch mode */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20 }}>
-          <span style={{ fontSize: 10, color: '#8A704080', fontWeight: 600 }}>
+          <span style={{ fontSize: 15, color: '#8A704080', fontWeight: 600 }}>
             {isRegister ? 'Already have an account?' : "Don't have an account?"}
           </span>
-          <button onClick={switchMode} style={{ fontSize: 10, fontWeight: 800, color: '#C48830', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'Quicksand', sans-serif" }}>
+          <button onClick={switchMode} style={{ fontSize: 15, fontWeight: 800, color: '#C48830', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'Quicksand', sans-serif" }}>
             {isRegister ? 'Sign In' : 'Register'}
           </button>
         </div>
