@@ -6295,7 +6295,7 @@ export default function App() {
           }}>
             {/* Golden Egg + Page Name */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={() => setIsAIOpen(true)}>
-              <svg width="30" height="36" viewBox="0 0 30 36" style={{ animation: "eggWobble 3.5s ease-in-out infinite, eggGlow 3s ease-in-out infinite", flexShrink: 0 }}>
+              <svg width="26" height="32" viewBox="0 0 30 36" style={{ animation: "eggWobble 3.5s ease-in-out infinite, eggGlow 3s ease-in-out infinite", flexShrink: 0 }}>
                 <defs>
                   <radialGradient id="goldenEggHdr" cx="40%" cy="35%">
                     <stop offset="0%" stopColor="#FFF8E1"/>
@@ -6307,20 +6307,18 @@ export default function App() {
                 <ellipse cx="12" cy="14" rx="3.5" ry="5.5" fill="#fff" opacity="0.5"/>
                 <ellipse cx="18" cy="22" rx="2" ry="3" fill="#fff" opacity="0.2"/>
               </svg>
-              <div>
-                <span style={{ fontWeight: 900, fontSize: 21, fontFamily: "'Instrument Serif', serif", background: "linear-gradient(135deg,var(--accent),var(--accent-light))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", display: "block", lineHeight: 1.15 }}>
-                  {pageDisplayNames[page] || "Hatch"}
-                </span>
-                {page === "dashboard" && <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2,
-                  fontSize: 10, fontWeight: 900, letterSpacing: 1.5, textTransform: "uppercase",
-                  padding: "2px 8px", borderRadius: 6,
-                  background: isPro ? "linear-gradient(135deg, #F9E547, #C48830)" : "linear-gradient(135deg, #E0E0E0, #B0BEC5)",
-                  color: isPro ? "#5C3D0E" : "#546E7A",
-                }}>
-                  {isPro ? "Gold" : "Silver"}
-                </span>}
-              </div>
+              <span style={{ fontWeight: 900, fontSize: 28, fontFamily: "'Instrument Serif', serif", background: "linear-gradient(135deg,var(--accent),var(--accent-light))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: "32px" }}>
+                {pageDisplayNames[page] || "Hatch"}
+              </span>
+              {page === "dashboard" && <span style={{
+                display: "inline-flex", alignItems: "center",
+                fontSize: 10, fontWeight: 900, letterSpacing: 1.5, textTransform: "uppercase",
+                padding: "2px 8px", borderRadius: 6,
+                background: isPro ? "linear-gradient(135deg, #F9E547, #C48830)" : "linear-gradient(135deg, #E0E0E0, #B0BEC5)",
+                color: isPro ? "#5C3D0E" : "#546E7A",
+              }}>
+                {isPro ? "Gold" : "Silver"}
+              </span>}
             </div>
             {/* Calendar + Account */}
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
